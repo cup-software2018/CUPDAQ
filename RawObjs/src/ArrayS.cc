@@ -135,3 +135,29 @@ void ArrayS::Set(Int_t n, const unsigned short * array)
   if (!fArray) fArray = new unsigned short[fN];
   memmove(fArray, array, n * sizeof(unsigned short));
 }
+
+////////////////////////////////////////////////////////////////////////////////
+/// Stream a ArrayS object.
+/*
+void ArrayS::Streamer(TBuffer & b)
+{
+  if (b.IsReading()) {
+    Int_t n;
+    b >> n;
+    Set(n);
+    b.ReadFastArray(fArray, n);
+  }
+  else {
+    b << fN;
+    b.WriteFastArray(fArray, fN);
+  }
+}
+
+void ArrayS::DumpArray() const
+{
+  for (int i = 0; i < fN; i++) {
+    std::cout << fArray[i] << " ";
+  }
+  std::cout << std::endl;
+}
+*/

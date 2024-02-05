@@ -627,7 +627,7 @@ void FADCRawEvent::UnpackHeader_IADC(ADCHeader * header)
   header->SetLocalTriggerPattern(ctptn);
 
   for (int i = 0; i < kNCHIADC; i++) {
-    int k = i % 4;
+    int k = i / 4;
     unsigned int tbit = (unsigned int)TESTBIT(ctptn, k);
     if (tbit > 0) header->SetTriggerBit(i);
   }
