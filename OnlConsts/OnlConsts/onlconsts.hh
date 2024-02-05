@@ -1,18 +1,3 @@
-/*
- *
- *  Module:  tcb
- *
- *  Author:  Jaison Lee
- *
- *  Purpose: Constants for AMoRE online
- *
- *  Last Update:      $Author: cupsoft $
- *  Update Date:      $Date: 2023/05/10 22:29:37 $
- *  CVS/RCS Revision: $Revision: 1.5 $
- *  Status:           $State: Exp $
- *
- */
-
 #ifndef onlconsts_hh
 #define onlconsts_hh
 
