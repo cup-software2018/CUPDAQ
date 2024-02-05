@@ -54,7 +54,7 @@ fi
 
 if [ "$VERSION" ]
 then
-    
+    # plz setting modules (like root, ...), here ...!!!
     export LD_LIBRARY_PATH=${ONLDAQ_DIR}/lib:$LD_LIBRARY_PATH
 fi
 
