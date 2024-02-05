@@ -1,3 +1,5 @@
+#include "TSystem.h"
+
 #include "DAQConfig/SADCSConf.hh"
 #include "DAQSystem/CupSADCS.hh"
 #include "Notice/NoticeM64ADCS.hh"

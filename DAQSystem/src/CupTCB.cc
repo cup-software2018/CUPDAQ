@@ -6,9 +6,9 @@
 
 using namespace std;
 
-ClassImp(CupTCB) 
+ClassImp(CupTCB)
 
-CupTCB * CupTCB::fTCB = nullptr;
+    CupTCB * CupTCB::fTCB = nullptr;
 
 CupTCB::CupTCB()
     : AbsTCB()
@@ -70,17 +70,6 @@ void CupTCB::TriggerStop()
   std::lock_guard<std::mutex> lock(*fMutex);
   TCBstop(fSID);
   Reset();
-}
-
-unsigned long CupTCB::ReadRUN(unsigned long mid)
-{
-  return TCBread_RUN(fSID, mid);
-}
-
-// tcb, fadc, sadc, amoreadc
-void CupTCB::WriteLT(unsigned long mid, char * data, int len)
-{
-  TCBwrite_LT(fSID, mid, data, len);
 }
 
 void CupTCB::WriteCW(unsigned long mid, unsigned long ch, unsigned long data)
@@ -154,17 +143,6 @@ void CupTCB::WriteDLY(unsigned long mid, unsigned long ch, unsigned long data)
 unsigned long CupTCB::ReadDLY(unsigned long mid, unsigned long ch)
 {
   return TCBread_DLY(fSID, mid, ch);
-}
-
-void CupTCB::WriteAMOREDLY(unsigned long mid, unsigned long ch,
-                           unsigned long data)
-{
-  TCBwrite_AMOREDLY(fSID, mid, ch, data);
-}
-
-unsigned long CupTCB::ReadAMOREDLY(unsigned long mid, unsigned long ch)
-{
-  return TCBread_AMOREDLY(fSID, mid, ch);
 }
 
 void CupTCB::WriteTHR(unsigned long mid, unsigned long ch, unsigned long data)
@@ -279,27 +257,6 @@ unsigned long CupTCB::ReadSTLT(unsigned long mid, unsigned long ch)
   return TCBread_STLT(fSID, mid, ch);
 }
 
-void CupTCB::WriteZEROSUP(unsigned long mid, unsigned long ch,
-                          unsigned long data)
-{
-  TCBwrite_ZEROSUP(fSID, mid, ch, data);
-}
-
-unsigned long CupTCB::ReadZEROSUP(unsigned long mid, unsigned long ch)
-{
-  return TCBread_ZEROSUP(fSID, mid, ch);
-}
-
-void CupTCB::WriteZSFD(unsigned long mid, unsigned long data)
-{
-  TCBwrite_ZSFD(fSID, mid, data);
-}
-
-unsigned long CupTCB::ReadZSFD(unsigned long mid)
-{
-  return TCBread_ZSFD(fSID, mid);
-}
-
 void CupTCB::WriteDSR(unsigned long mid, unsigned long data)
 {
   TCBwrite_DSR(fSID, mid, data);
@@ -312,17 +269,6 @@ unsigned long CupTCB::ReadDSR(unsigned long mid)
 
 void CupTCB::AlignFADC(unsigned long mid) { TCB_ADCALIGN_500(fSID, mid); }
 
-// sadc
-void CupTCB::WriteFMUX(unsigned long mid, unsigned long ch)
-{
-  TCBwrite_FMUX(fSID, mid, ch);
-}
-
-unsigned long CupTCB::ReadFMUX(unsigned long mid)
-{
-  return TCBread_FMUX(fSID, mid);
-}
-
 void CupTCB::WritePSS(unsigned long mid, unsigned long ch, unsigned long data)
 {
   TCBwrite_PSS(fSID, mid, ch, data);
@@ -331,13 +277,6 @@ void CupTCB::WritePSS(unsigned long mid, unsigned long ch, unsigned long data)
 unsigned long CupTCB::ReadPSS(unsigned long mid, unsigned long ch)
 {
   return TCBread_PSS(fSID, mid, ch);
-}
-
-void CupTCB::ArmFADC(unsigned long mid) { TCBarm_FADC(fSID, mid); }
-
-unsigned long CupTCB::ReadFREADY(unsigned long mid)
-{
-  return TCBread_FREADY(fSID, mid);
 }
 
 void CupTCB::AlignSADC(unsigned long mid) { TCB_ADCALIGN_64(fSID, mid); }
@@ -370,74 +309,7 @@ float CupTCB::ReadTEMP(unsigned long mid, unsigned long ch)
   return TCBread_TEMP(fSID, mid, ch);
 }
 
-void CupTCB::AlignIADC(unsigned long mid) { TCB_ADCALIGN_MUON_DAQ(fSID, mid); }
-
-// amoreadc
-void CupTCB::WriteRT(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  TCBwrite_RT(fSID, mid, ch, data);
-}
-
-unsigned long CupTCB::ReadRT(unsigned long mid, unsigned long ch)
-{
-  return TCBread_RT(fSID, mid, ch);
-}
-
-void CupTCB::WriteST(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  TCBwrite_ST(fSID, mid, ch, data);
-}
-
-unsigned long CupTCB::ReadST(unsigned long mid, unsigned long ch)
-{
-  return TCBread_ST(fSID, mid, ch);
-}
-
-void CupTCB::WritePT(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  TCBwrite_PT(fSID, mid, ch, data);
-}
-
-unsigned long CupTCB::ReadPT(unsigned long mid, unsigned long ch)
-{
-  return TCBread_PT(fSID, mid, ch);
-}
-
-void CupTCB::WriteSR(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  TCBwrite_SR(fSID, mid, ch, data);
-}
-
-unsigned long CupTCB::ReadSR(unsigned long mid, unsigned long ch)
-{
-  return TCBread_SR(fSID, mid, ch);
-}
-
-void CupTCB::WriteDACGAIN(unsigned long mid, unsigned long ch,
-                          unsigned long data)
-{
-  TCBwrite_DACGAIN(fSID, mid, ch, data);
-}
-
-unsigned long CupTCB::ReadDACGAIN(unsigned long mid, unsigned long ch)
-{
-  return TCBread_DACGAIN(fSID, mid, ch);
-}
-
-// tcb
-void CupTCB::WriteRUNNO(unsigned long data) { TCBwrite_RUNNO(fSID, data); }
-
-unsigned long CupTCB::ReadRUNNO() { return TCBread_RUNNO(fSID); }
-
-// void CupTCB::WriteTRIGDLY(unsigned long data)
-//{
-//   TCBwrite_TRIGDLY(fSID, data);
-// }
-
-// unsigned long CupTCB::ReadTRIGDLY()
-//{
-//   return TCBread_TRIGDLY(fSID);
-// }
+void CupTCB::AlignIADC(unsigned long mid) { TCB_ADCALIGN_MUONDAQ(fSID, mid); }
 
 void CupTCB::WritePTRIG(unsigned long data) { TCBwrite_PTRIG(fSID, data); }
 
@@ -480,20 +352,6 @@ unsigned long CupTCB::ReadMTHRSADCMU()
   return TCBread_MTHR_M64ADC_MUON(fSID);
 }
 
-void CupTCB::WriteMTHRSADCLS(unsigned long data)
-{
-  TCBwrite_MTHR_M64ADC_LS(fSID, data);
-}
-
-unsigned long CupTCB::ReadMTHRSADCLS() { return TCBread_MTHR_M64ADC_LS(fSID); }
-
-void CupTCB::WriteMTHRAMOREADC(unsigned long data)
-{
-  TCBwrite_MTHR_AMOREADC(fSID, data);
-}
-
-unsigned long CupTCB::ReadMTHRAMOREADC() { return TCBread_MTHR_AMOREADC(fSID); }
-
 void CupTCB::WritePSCALESADCMU(unsigned long data)
 {
   TCBwrite_PSCALE_M64ADC_MUON(fSID, data);
@@ -503,6 +361,13 @@ unsigned long CupTCB::ReadPSCALESADCMU()
 {
   return TCBread_PSCALE_M64ADC_MUON(fSID);
 }
+
+void CupTCB::WriteMTHRSADCLS(unsigned long data)
+{
+  TCBwrite_MTHR_M64ADC_LS(fSID, data);
+}
+
+unsigned long CupTCB::ReadMTHRSADCLS() { return TCBread_MTHR_M64ADC_LS(fSID); }
 
 void CupTCB::WritePSCALESADCLS(unsigned long data)
 {
@@ -514,15 +379,19 @@ unsigned long CupTCB::ReadPSCALESADCLS()
   return TCBread_PSCALE_M64ADC_LS(fSID);
 }
 
-void CupTCB::WritePSCALEAMOREADC(unsigned long data)
+void CupTCB::WriteMTHRIADC(unsigned long data)
 {
-  TCBwrite_PSCALE_AMOREADC(fSID, data);
+  TCBwrite_MTHR_MUONDAQ(fSID, data);
 }
 
-unsigned long CupTCB::ReadPSCALEAMOREADC()
+unsigned long CupTCB::ReadMTHRIADC() { return TCBread_MTHR_MUONDAQ(fSID); }
+
+void CupTCB::WritePSCALEIADC(unsigned long data)
 {
-  return TCBread_PSCALE_AMOREADC(fSID);
+  TCBwrite_PSCALE_MUONDAQ(fSID, data);
 }
+
+unsigned long CupTCB::ReadPSCALEIADC() { return TCBread_PSCALE_MUONDAQ(fSID); }
 
 void CupTCB::WriteEXTOUT(unsigned long data) { TCBwrite_EXTOUT(fSID, data); }
 
@@ -563,3 +432,34 @@ void CupTCB::WriteEXTOUTWIDTH(unsigned long data)
 unsigned long CupTCB::ReadEXTOUTWIDTH() { return TCBread_EXTOUTWIDTH(fSID); }
 
 void CupTCB::AlignDRAM(unsigned long mid) { TCB_ADCALIGN_DRAM(fSID, mid); }
+
+void CupTCB::WriteTRGSWFADC(unsigned long fadc, unsigned long sadcmu,
+                            unsigned long sadcls, unsigned long iadc)
+{
+  TCBwrite_TRIG_SWITCH_NKFADC500(fSID, fadc, sadcmu, sadcls, iadc);
+}
+void CupTCB::WriteTRGSWSADCMU(unsigned long fadc, unsigned long sadcmu,
+                              unsigned long sadcls, unsigned long iadc)
+{
+  TCBwrite_TRIG_SWITCH_M64ADC_MUON(fSID, fadc, sadcmu, sadcls, iadc);
+}
+void CupTCB::WriteTRGSWSADCLS(unsigned long fadc, unsigned long sadcmu,
+                              unsigned long sadcls, unsigned long iadc)
+{
+  TCBwrite_TRIG_SWITCH_M64ADC_LS(fSID, fadc, sadcmu, sadcls, iadc);
+}
+void CupTCB::WriteTRGSWIADC(unsigned long fadc, unsigned long sadcmu,
+                            unsigned long sadcls, unsigned long iadc)
+{
+  TCBwrite_TRIG_SWITCH_MUONDAQ(fSID, fadc, sadcmu, sadcls, iadc);
+}
+unsigned long CupTCB::ReadTRGSWFADC() { return TCBread_SWITCH_NKFADC500(fSID); }
+unsigned long CupTCB::ReadTRGSWSADCMU()
+{
+  return TCBread_SWITCH_M64ADC_MUON(fSID);
+}
+unsigned long CupTCB::ReadTRGSWSADCLS()
+{
+  return TCBread_SWITCH_M64ADC_LS(fSID);
+}
+unsigned long CupTCB::ReadTRGSWIADC() { return TCBread_SWITCH_MUONDAQ(fSID); }

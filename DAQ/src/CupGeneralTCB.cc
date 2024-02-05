@@ -30,7 +30,7 @@ int CupGeneralTCB::Open()
 
   fTCBType = fTCBConfig->TCBTYPE();
 
-  if (fTCBType == 2) {
+  if (fTCBType == TCB::MINI) {
     fTCB = new CupMiniTCB();
     ((CupMiniTCB *)fTCB)->SetIPAddress("192.168.0.2");
     fLog->Info("CupGeneralTCB::Open", "open with MiniTCB");
@@ -62,6 +62,7 @@ void CupGeneralTCB::Close()
         fTCB->WriteHV(config->MID(), j + 1, 0.0);
       }
     }
+    fLog->Info("CupGeneralTCB::Close", "turned off all SIPM HVs");
     gSystem->Sleep(1000);
   }
 
@@ -121,6 +122,7 @@ bool CupGeneralTCB::Config()
     if (!name.Contains("SADC")) { fTCB->AlignDRAM(mid); }
   }
 
+  /*
   if (fTCBType == TCB::AMORE1) {
     fTCB->WriteDRAMON(0, 1);
     gSystem->Sleep(100);
@@ -133,11 +135,11 @@ bool CupGeneralTCB::Config()
     }
     fTCB->AlignDRAM(0);
   }
+  */
 
   fTCB->Reset();
 
   bool retval = true;
-
   for (int i = 0; i < nconf; i++) {
     auto * conf = (AbsConf *)fConfigs->At(i);
     TString name = conf->GetName();
@@ -156,9 +158,9 @@ bool CupGeneralTCB::Config()
     else if (name.EqualTo("IADCT")) {
       retval &= ConfigIADC((IADCTConf *)conf);
     }
-    else if (name.EqualTo("AMOREADC")) {
-      retval &= ConfigAmoreADC((AmoreADCConf *)conf);
-    }
+    //else if (name.EqualTo("AMOREADC")) {
+    //  retval &= ConfigAmoreADC((AmoreADCConf *)conf);
+    //}
     else {
       fLog->Warning("CupGeneralTCB::Config", "unknown kind of module : %s",
                     name.Data());
@@ -240,6 +242,7 @@ bool CupGeneralTCB::StartTrigger()
     cout << endl;
   }
 
+  /*
   nadc = fConfigs->GetNADC(ADC::AMOREADC, true);
   if (nadc > 0) {
     fLog->Info("CupGeneralTCB::StartTrigger", "Measuring AMOREADC pedestals");
@@ -253,7 +256,7 @@ bool CupGeneralTCB::StartTrigger()
     cout << "+++++++++++ AMOREADC PEDESTALS ++++++++++++" << endl;
     cout << endl;
   }
-
+  */
   fLog->Info("CupGeneralTCB::StartTrigger", "all ADCs initialized");
 
   gSystem->Sleep(1000);
@@ -287,7 +290,6 @@ bool CupGeneralTCB::ConfigFADC(FADCTConf * conf)
   }
 
   conf->PrintConf();
-
   fTCB->WriteRegisterFADC(conf);
   fTCB->PrintRegisterFADC(conf);
 
@@ -313,7 +315,6 @@ bool CupGeneralTCB::ConfigGADC(GADCTConf * conf)
   }
 
   conf->PrintConf();
-
   fTCB->WriteRegisterGADC(conf);
   fTCB->PrintRegisterGADC(conf);
 
@@ -339,7 +340,6 @@ bool CupGeneralTCB::ConfigSADC(SADCTConf * conf)
   }
 
   conf->PrintConf();
-
   fTCB->WriteRegisterSADC(conf);
   fTCB->PrintRegisterSADC(conf);
 
@@ -365,7 +365,6 @@ bool CupGeneralTCB::ConfigIADC(IADCTConf * conf)
   }
 
   conf->PrintConf();
-
   fTCB->WriteRegisterIADC(conf);
   fTCB->PrintRegisterIADC(conf);
 
@@ -374,6 +373,7 @@ bool CupGeneralTCB::ConfigIADC(IADCTConf * conf)
   return true;
 }
 
+/*
 bool CupGeneralTCB::ConfigAmoreADC(AmoreADCConf * conf)
 {
   unsigned long mid = conf->MID();
@@ -391,7 +391,6 @@ bool CupGeneralTCB::ConfigAmoreADC(AmoreADCConf * conf)
   }
 
   conf->PrintConf();
-
   fTCB->WriteRegisterAmoreADC(conf);
   fTCB->PrintRegisterAmoreADC(conf);
 
@@ -400,11 +399,11 @@ bool CupGeneralTCB::ConfigAmoreADC(AmoreADCConf * conf)
 
   return true;
 }
+*/
 
 bool CupGeneralTCB::ConfigTCB(TCBConf * conf)
 {
   conf->PrintConf();
-
   fTCB->WriteRegisterTCB(conf);
   fTCB->PrintRegisterTCB(conf);
 
@@ -431,12 +430,12 @@ int CupGeneralTCB::CheckLinkStatus()
       linked[i] = (data[0] >> i) & 0x01;
     }
   }
-  else if (fTCBType == TCB::AMORE1) {
-    nport = 24;
-    for (int i = 0; i < nport; i++) {
-      linked[i] = (data[0] >> i) & 0x1;
-    }
-  }
+  //else if (fTCBType == TCB::AMORE1) {
+  //  nport = 24;
+  //  for (int i = 0; i < nport; i++) {
+  //    linked[i] = (data[0] >> i) & 0x1;
+  //  }
+  //}
   else {
     nport = 40;
     for (int i = 0; i < 32; i++) {

@@ -40,11 +40,6 @@ void CupMiniTCB::TriggerStart() { MINITCBstart(fTCPHandle); }
 
 void CupMiniTCB::TriggerStop() { MINITCBstop(fTCPHandle); }
 
-unsigned long CupMiniTCB::ReadRUN(unsigned long mid)
-{
-  return MINITCBread_RUN(fTCPHandle, mid);
-}
-
 // tcb, fadc, sadc, amoreadc
 void CupMiniTCB::WriteCW(unsigned long mid, unsigned long ch,
                          unsigned long data)
@@ -119,17 +114,6 @@ void CupMiniTCB::WriteDLY(unsigned long mid, unsigned long ch,
 unsigned long CupMiniTCB::ReadDLY(unsigned long mid, unsigned long ch)
 {
   return MINITCBread_DLY(fTCPHandle, mid, ch);
-}
-
-void CupMiniTCB::WriteAMOREDLY(unsigned long mid, unsigned long ch,
-                               unsigned long data)
-{
-  MINITCBwrite_AMOREDLY(fTCPHandle, mid, ch, data);
-}
-
-unsigned long CupMiniTCB::ReadAMOREDLY(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_AMOREDLY(fTCPHandle, mid, ch);
 }
 
 void CupMiniTCB::WriteTHR(unsigned long mid, unsigned long ch,
@@ -254,27 +238,6 @@ unsigned long CupMiniTCB::ReadSTLT(unsigned long mid, unsigned long ch)
   return MINITCBread_STLT(fTCPHandle, mid, ch);
 }
 
-void CupMiniTCB::WriteZEROSUP(unsigned long mid, unsigned long ch,
-                              unsigned long data)
-{
-  MINITCBwrite_ZEROSUP(fTCPHandle, mid, ch, data);
-}
-
-unsigned long CupMiniTCB::ReadZEROSUP(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_ZEROSUP(fTCPHandle, mid, ch);
-}
-
-void CupMiniTCB::WriteZSFD(unsigned long mid, unsigned long data)
-{
-  MINITCBwrite_ZSFD(fTCPHandle, mid, data);
-}
-
-unsigned long CupMiniTCB::ReadZSFD(unsigned long mid)
-{
-  return MINITCBread_ZSFD(fTCPHandle, mid);
-}
-
 void CupMiniTCB::WriteDSR(unsigned long mid, unsigned long data)
 {
   MINITCBwrite_DSR(fTCPHandle, mid, data);
@@ -290,17 +253,6 @@ void CupMiniTCB::AlignFADC(unsigned long mid)
   MINITCB_ADCALIGN(fTCPHandle, mid);
 }
 
-// sadc
-void CupMiniTCB::WriteFMUX(unsigned long mid, unsigned long ch)
-{
-  MINITCBwrite_FMUX(fTCPHandle, mid, ch);
-}
-
-unsigned long CupMiniTCB::ReadFMUX(unsigned long mid)
-{
-  return MINITCBread_FMUX(fTCPHandle, mid);
-}
-
 void CupMiniTCB::WritePSS(unsigned long mid, unsigned long ch,
                           unsigned long data)
 {
@@ -310,16 +262,6 @@ void CupMiniTCB::WritePSS(unsigned long mid, unsigned long ch,
 unsigned long CupMiniTCB::ReadPSS(unsigned long mid, unsigned long ch)
 {
   return MINITCBread_PSS(fTCPHandle, mid, ch);
-}
-
-void CupMiniTCB::ArmFADC(unsigned long mid)
-{
-  MINITCBarm_FADC(fTCPHandle, mid);
-}
-
-unsigned long CupMiniTCB::ReadFREADY(unsigned long mid)
-{
-  return MINITCBread_FREADY(fTCPHandle, mid);
 }
 
 void CupMiniTCB::AlignSADC(unsigned long mid)
@@ -332,70 +274,6 @@ void CupMiniTCB::AlignGADC(unsigned long mid)
   // not yet implemented
   // MINITCB_ADCALIGN_125(fTCPHandle, mid);
 }
-
-// amoreadc
-void CupMiniTCB::WriteRT(unsigned long mid, unsigned long ch,
-                         unsigned long data)
-{
-  MINITCBwrite_RT(fTCPHandle, mid, ch, data);
-}
-
-unsigned long CupMiniTCB::ReadRT(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_RT(fTCPHandle, mid, ch);
-}
-
-void CupMiniTCB::WriteST(unsigned long mid, unsigned long ch,
-                         unsigned long data)
-{
-  MINITCBwrite_ST(fTCPHandle, mid, ch, data);
-}
-
-unsigned long CupMiniTCB::ReadST(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_ST(fTCPHandle, mid, ch);
-}
-
-void CupMiniTCB::WritePT(unsigned long mid, unsigned long ch,
-                         unsigned long data)
-{
-  MINITCBwrite_PT(fTCPHandle, mid, ch, data);
-}
-
-unsigned long CupMiniTCB::ReadPT(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_PT(fTCPHandle, mid, ch);
-}
-
-void CupMiniTCB::WriteSR(unsigned long mid, unsigned long ch,
-                         unsigned long data)
-{
-  MINITCBwrite_SR(fTCPHandle, mid, ch, data);
-}
-
-unsigned long CupMiniTCB::ReadSR(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_SR(fTCPHandle, mid, ch);
-}
-
-void CupMiniTCB::WriteDACGAIN(unsigned long mid, unsigned long ch,
-                              unsigned long data)
-{
-  MINITCBwrite_DACGAIN(fTCPHandle, mid, ch, data);
-}
-
-unsigned long CupMiniTCB::ReadDACGAIN(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_DACGAIN(fTCPHandle, mid, ch);
-}
-
-// tcb
-void CupMiniTCB::WriteRUNNO(unsigned long data)
-{
-  MINITCBwrite_RUNNO(fTCPHandle, data);
-}
-
-unsigned long CupMiniTCB::ReadRUNNO() { return MINITCBread_RUNNO(fTCPHandle); }
 
 void CupMiniTCB::WritePTRIG(unsigned long data)
 {

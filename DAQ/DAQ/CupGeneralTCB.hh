@@ -4,7 +4,7 @@
 #include "TObject.h"
 
 #include "DAQConfig/AbsConfList.hh"
-#include "DAQConfig/AmoreADCConf.hh"
+//#include "DAQConfig/AmoreADCConf.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
@@ -39,7 +39,7 @@ private:
   bool ConfigGADC(GADCTConf * conf);
   bool ConfigSADC(SADCTConf * conf);
   bool ConfigIADC(IADCTConf * conf);
-  bool ConfigAmoreADC(AmoreADCConf * conf);
+  //bool ConfigAmoreADC(AmoreADCConf * conf);
 
 private:
   ELogger * fLog;

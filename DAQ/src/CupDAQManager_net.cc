@@ -12,14 +12,14 @@ void CupDAQManager::TF_SendEvent()
   double perror = 0;
   double integral = 0;
 
-  char tmpbuf[4];
+  // char tmpbuf[4];
   char data[kMESSLEN];
-  EncodeMsg(data, kRECVEVENT);  
+  EncodeMsg(data, kRECVEVENT);
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_SendEvent", "exited by exit command");    
+    fLog->Warning("CupDAQManager::TF_SendEvent", "exited by exit command");
     return;
-  }  
+  }
   fLog->Info("CupDAQManager::TF_SendEvent", "sending event to merger started");
 
   auto * socket = new TSocket(fMergeServerIPAddr, fMergeServerPort);
@@ -49,21 +49,24 @@ void CupDAQManager::TF_SendEvent()
         fLog->Error("CupDAQManager::TF_SendEvent", "sending event failed (s)");
         break;
       }
-      state = socket->Recv(tmpbuf, 4);
-      if (state <= 0) {
-        RUNSTATE::SetError(fRunStatus);
-        fLog->Error("CupDAQManager::TF_SendEvent", "sending event failed (r)");
-        break;        
-      }
+      // state = socket->Recv(tmpbuf, 4);
+      // if (state <= 0) {
+      //   RUNSTATE::SetError(fRunStatus);
+      //   fLog->Error("CupDAQManager::TF_SendEvent", "sending event failed
+      //   (r)"); break;
+      // }
 
       delete bevent;
     }
 
     int size = fBuiltEventBuffer1.size();
     ThreadSleep(fSendSleep, perror, integral, size);
+    //std::cout << Form("size=%5d, sleep=%8d, int=%f", size, fSendSleep,
+    //                  integral)
+    //          << std::endl;    
   }
   fSendStatus = ENDED;
-  fLog->Info("CupDAQManager::TF_SendEvent", "sending event ended");  
+  fLog->Info("CupDAQManager::TF_SendEvent", "sending event ended");
 }
 
 void CupDAQManager::TF_MergeEvent()
@@ -77,7 +80,7 @@ void CupDAQManager::TF_MergeEvent()
   fMergeStatus = READY;
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_MergeEvent", "exited by exit command");    
+    fLog->Warning("CupDAQManager::TF_MergeEvent", "exited by exit command");
     return;
   }
   fLog->Info("CupDAQManager::TF_MergeEvent", "event merger started");
@@ -86,10 +89,10 @@ void CupDAQManager::TF_MergeEvent()
   auto adctype = (ADC::TYPE)(fADCType % 10);
   auto * conf = fConfigList->GetSTRGConfig(adctype);
   if (conf) fSoftTrigger->SetConfig(conf);
-  if (fSoftTrigger->IsEnabled()) { 
+  if (fSoftTrigger->IsEnabled()) {
     fSoftTrigger->SetMode(fADCMode);
-    fSoftTrigger->InitTrigger(); 
-  }  
+    fSoftTrigger->InitTrigger();
+  }
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
@@ -111,15 +114,18 @@ void CupDAQManager::TF_MergeEvent()
       totalsize += size[nd];
       nd += 1;
     }
-    totalsize /= ndaq;
 
     if (!dobuild) {
+      totalsize = 0;
       if (fDoEndRun) {
-        fLog->Info("CupDAQManager::TF_MergeEvent", "merger consumed all events");
+        fLog->Info("CupDAQManager::TF_MergeEvent",
+                   "merger consumed all events");
         break;
       }
     }
     else {
+      totalsize /= ndaq;
+
       nmerge += 1;
       auto * builtevent = new BuiltEvent();
 
@@ -130,7 +136,7 @@ void CupDAQManager::TF_MergeEvent()
 
         evtnum[nd] = bevent->GetEventNumber();
         evttime[nd] = bevent->GetTriggerTime();
-        
+
         int nadc = bevent->GetEntries();
         for (int i = 0; i < nadc; i++) {
           switch (fADCMode) {
@@ -148,7 +154,7 @@ void CupDAQManager::TF_MergeEvent()
               fTotalRawDataSize += adc->GetRawDataSize();
               break;
             }
-            default:break;
+            default: break;
           }
         }
         delete bevent;
@@ -163,7 +169,8 @@ void CupDAQManager::TF_MergeEvent()
       if (iserror) {
         RUNSTATE::SetError(fRunStatus);
         fMergeStatus = ERROR;
-        fLog->Error("CupDAQManager::TF_MergeEvent", "events from DAQs are different");
+        fLog->Error("CupDAQManager::TF_MergeEvent",
+                    "events from DAQs are different");
         break;
       }
 
@@ -199,7 +206,10 @@ void CupDAQManager::TF_MergeEvent()
       if (totalsize < 0) totalsize = 0;
     }
 
-    ThreadSleep(fMergeSleep, perror, integral, totalsize);
+    ThreadSleep(fMergeSleep, perror, integral, totalsize, 1, 10);
+    //std::cout << Form("size=%5d, sleep=%8d, int=%f", totalsize, fMergeSleep,
+    //                  integral)
+    //          << std::endl;
   }
   fMergeStatus = ENDED;
 

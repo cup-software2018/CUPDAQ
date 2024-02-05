@@ -89,13 +89,13 @@ bool CupDAQManager::ThreadWait(unsigned long & state, bool & exit) const
 }
 
 void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral,
-                                int size, int tsize)
+                                int size, int tsize, double ki)
 {
   if (!RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNNING)) return;
 
   const double Kp = sleep / 20.;
   const double Kd = sleep / 10.;
-  const double Ki = 0.01;
+  const double Ki = ki;
   const double dt = 1;
 
   const double max = 1000000;
@@ -105,6 +105,7 @@ void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral,
   double Pout = Kp * error;
 
   integral += error * dt;
+  if (integral < 0) integral = 0;
   double Iout = Ki * integral;
 
   double derivative = (error - perror) / dt;

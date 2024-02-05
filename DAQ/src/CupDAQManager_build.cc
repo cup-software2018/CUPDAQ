@@ -86,9 +86,10 @@ void CupDAQManager::BuildEvent_GLT()
       header[i] = adcevent->GetADCHeader();
       nmod += 1;
     }
-    totalsize = totalsize / nadc;
 
     if (nmod == nadc) {
+      totalsize = totalsize / nadc;
+
       CheckEventSanity(header, trgnum, trgtime, sanity);
 
       if (fADCType == ADC::SADCS || fADCType == ADC::SADCT) {
@@ -181,6 +182,9 @@ void CupDAQManager::BuildEvent_GLT()
     }
 
     ThreadSleep(fBuildSleep, perror, integral, totalsize);
+    //std::cout << Form("size=%5d, sleep=%8d, int=%f", totalsize, fBuildSleep,
+    //                  integral)
+    //          << std::endl;    
   }
 
   delete[] sanity;

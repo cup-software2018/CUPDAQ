@@ -70,7 +70,10 @@ bool CupDAQManager::OpenNewOutputFile()
         case OUTPUT::GZIP: extension = "gz"; break;
         default: break;
       }
-      TString adcname = GetADCName(fADCType);
+      //TString adcname = GetADCName(fADCType);
+      TString adcname = fDAQName;
+      adcname.ReplaceAll("DAQ", "");
+      adcname.ReplaceAll("MERGER", "");
       TString dirname = gSystem->Getenv("RAWDATA_DIR");
       if (dirname.IsNull()) {
         fLog->Warning("CupDAQManager::OpenNewOutputFile",

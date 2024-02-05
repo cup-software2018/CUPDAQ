@@ -3,9 +3,6 @@
 
 #include "TObject.h"
 
-#include "Notice/usb3tcbroot.hh"
-
-#include "DAQConfig/AmoreADCConf.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
@@ -21,27 +18,20 @@ public:
   virtual int Open() = 0;
   virtual void Close() = 0;
 
-  // tcb
   virtual void Reset() = 0;
   virtual void ResetTIMER() = 0;
   virtual void TriggerStart() = 0;
   virtual void TriggerStop() = 0;
-  virtual unsigned long ReadRUN(unsigned long mid) = 0;
+
   virtual unsigned long ReadBCOUNT(unsigned long mid) = 0;
   virtual int ReadDATA(unsigned long mid, unsigned long bcount,
                        unsigned char * data) = 0;
 
-  // tcb, fadc, sadc, amoreadc
-  virtual void WriteLT(unsigned long mid, char * data, int len) = 0;
   virtual void WriteCW(unsigned long mid, unsigned long ch,
                        unsigned long data) = 0;
   virtual unsigned long ReadCW(unsigned long mid, unsigned long ch) = 0;
-
-  // m64adc only
   virtual void WriteGW(unsigned long mid, unsigned long data) = 0;
   virtual unsigned long ReadGW(unsigned long mid) = 0;
-
-  // fadc, sadc, amoreadc
   virtual void WriteRL(unsigned long mid, unsigned long data) = 0;
   virtual unsigned long ReadRL(unsigned long mid) = 0;
   virtual void WriteDRAMON(unsigned long mid, unsigned long data) = 0;
@@ -54,22 +44,15 @@ public:
   virtual void WriteDLY(unsigned long mid, unsigned long ch,
                         unsigned long data) = 0;
   virtual unsigned long ReadDLY(unsigned long mid, unsigned long ch) = 0;
-  virtual void WriteAMOREDLY(unsigned long mid, unsigned long ch,
-                             unsigned long data) = 0;
-  virtual unsigned long ReadAMOREDLY(unsigned long mid, unsigned long ch) = 0;
   virtual void WriteTHR(unsigned long mid, unsigned long ch,
                         unsigned long data) = 0;
   virtual unsigned long ReadTHR(unsigned long mid, unsigned long ch) = 0;
-
-  // fadc, sadc
   virtual void WritePOL(unsigned long mid, unsigned long ch,
                         unsigned long data) = 0;
   virtual unsigned long ReadPOL(unsigned long mid, unsigned long ch) = 0;
   virtual void WritePSW(unsigned long mid, unsigned long ch,
                         unsigned long data) = 0;
   virtual unsigned long ReadPSW(unsigned long mid, unsigned long ch) = 0;
-
-  // fadc
   virtual void WriteAMODE(unsigned long mid, unsigned long ch,
                           unsigned long data) = 0;
   virtual unsigned long ReadAMODE(unsigned long mid, unsigned long ch) = 0;
@@ -85,6 +68,9 @@ public:
   virtual void WriteDT(unsigned long mid, unsigned long ch,
                        unsigned long data) = 0;
   virtual unsigned long ReadDT(unsigned long mid, unsigned long ch) = 0;
+  virtual void WritePSS(unsigned long mid, unsigned long ch,
+                        unsigned long data) = 0;
+  virtual unsigned long ReadPSS(unsigned long mid, unsigned long ch) = 0;
   virtual void WriteTM(unsigned long mid, unsigned long ch,
                        unsigned long data) = 0;
   virtual unsigned long ReadTM(unsigned long mid, unsigned long ch) = 0;
@@ -93,24 +79,11 @@ public:
   virtual void WriteSTLT(unsigned long mid, unsigned long ch,
                          unsigned long data) = 0;
   virtual unsigned long ReadSTLT(unsigned long mid, unsigned long ch) = 0;
-  virtual void WriteZEROSUP(unsigned long mid, unsigned long ch,
-                            unsigned long data) = 0;
-  virtual unsigned long ReadZEROSUP(unsigned long mid, unsigned long ch) = 0;
-  virtual void WriteZSFD(unsigned long mid, unsigned long data) = 0;
-  virtual unsigned long ReadZSFD(unsigned long mid) = 0;
   virtual void WriteDSR(unsigned long mid, unsigned long data) = 0;
   virtual unsigned long ReadDSR(unsigned long mid) = 0;
   virtual void AlignFADC(unsigned long mid) = 0;
-
-  // sadc
-  virtual void WriteFMUX(unsigned long mid, unsigned long ch) = 0;
-  virtual unsigned long ReadFMUX(unsigned long mid) = 0;
-  virtual void WritePSS(unsigned long mid, unsigned long ch,
-                        unsigned long data) = 0;
-  virtual unsigned long ReadPSS(unsigned long mid, unsigned long ch) = 0;
-  virtual void ArmFADC(unsigned long mid) = 0;
-  virtual unsigned long ReadFREADY(unsigned long mid) = 0;
   virtual void AlignSADC(unsigned long mid) = 0;
+  virtual void AlignGADC(unsigned long mid) = 0;
 
   // iadc
   virtual void WriteDAQMODE(unsigned long mid, unsigned long data) = 0;
@@ -120,31 +93,6 @@ public:
   virtual float ReadTEMP(unsigned long mid, unsigned long ch) = 0;
   virtual void AlignIADC(unsigned long mid) = 0;
 
-  // gadc
-  virtual void AlignGADC(unsigned long mid) = 0;
-
-  // amoreadc
-  virtual void WriteRT(unsigned long mid, unsigned long ch,
-                       unsigned long data) = 0;
-  virtual unsigned long ReadRT(unsigned long mid, unsigned long ch) = 0;
-  virtual void WriteST(unsigned long mid, unsigned long ch,
-                       unsigned long data) = 0;
-  virtual unsigned long ReadST(unsigned long mid, unsigned long ch) = 0;
-  virtual void WritePT(unsigned long mid, unsigned long ch,
-                       unsigned long data) = 0;
-  virtual unsigned long ReadPT(unsigned long mid, unsigned long ch) = 0;
-  virtual void WriteSR(unsigned long mid, unsigned long ch,
-                       unsigned long data) = 0;
-  virtual unsigned long ReadSR(unsigned long mid, unsigned long ch) = 0;
-  virtual void WriteDACGAIN(unsigned long mid, unsigned long ch,
-                            unsigned long data) = 0;
-  virtual unsigned long ReadDACGAIN(unsigned long mid, unsigned long ch) = 0;
-
-  // tcb
-  virtual void WriteRUNNO(unsigned long data) = 0;
-  virtual unsigned long ReadRUNNO() = 0;
-  //  virtual void WriteTRIGDLY(unsigned long data) = 0;
-  //  virtual unsigned long ReadTRIGDLY() = 0;
   virtual void WritePTRIG(unsigned long data) = 0;
   virtual unsigned long ReadPTRIG() = 0;
   virtual void WriteTRIGENABLE(unsigned long mid, unsigned long data) = 0;
@@ -161,10 +109,10 @@ public:
   virtual unsigned long ReadMTHRSADCLS() = 0;
   virtual void WritePSCALESADCLS(unsigned long data) = 0;
   virtual unsigned long ReadPSCALESADCLS() = 0;
-  virtual void WriteMTHRAMOREADC(unsigned long data) = 0;
-  virtual unsigned long ReadMTHRAMOREADC() = 0;
-  virtual void WritePSCALEAMOREADC(unsigned long data) = 0;
-  virtual unsigned long ReadPSCALEAMOREADC() = 0;
+  virtual void WriteMTHRIADC(unsigned long data) = 0;
+  virtual unsigned long ReadMTHRIADC() = 0;
+  virtual void WritePSCALEIADC(unsigned long data) = 0;
+  virtual unsigned long ReadPSCALEIADC() = 0;
   virtual void WriteEXTOUT(unsigned long data) = 0;
   virtual unsigned long ReadEXTOUT() = 0;
   virtual void WriteGATEDLY(unsigned long data) = 0;
@@ -178,13 +126,25 @@ public:
   virtual void ReadMIDS(unsigned long * data) = 0;
   virtual void AlignDRAM(unsigned long mid) = 0;
 
+  virtual void WriteTRGSWFADC(unsigned long fadc, unsigned long sadcmu,
+                              unsigned long sadcls, unsigned long iadc) = 0;
+  virtual void WriteTRGSWSADCMU(unsigned long fadc, unsigned long sadcmu,
+                              unsigned long sadcls, unsigned long iadc) = 0;
+  virtual void WriteTRGSWSADCLS(unsigned long fadc, unsigned long sadcmu,
+                              unsigned long sadcls, unsigned long iadc) = 0;
+  virtual void WriteTRGSWIADC(unsigned long fadc, unsigned long sadcmu,
+                              unsigned long sadcls, unsigned long iadc) = 0;
+  virtual unsigned long ReadTRGSWFADC() = 0;
+  virtual unsigned long ReadTRGSWSADCMU() = 0;
+  virtual unsigned long ReadTRGSWSADCLS() = 0;
+  virtual unsigned long ReadTRGSWIADC() = 0;
+
   // write register
   virtual void WriteRegisterTCB(TCBConf * conf);
   virtual void WriteRegisterFADC(FADCTConf * conf);
   virtual void WriteRegisterGADC(GADCTConf * conf);
   virtual void WriteRegisterSADC(SADCTConf * conf);
   virtual void WriteRegisterIADC(IADCTConf * conf);
-  virtual void WriteRegisterAmoreADC(AmoreADCConf * conf);
 
   // print register
   virtual void PrintRegisterTCB(TCBConf * conf);
@@ -192,13 +152,11 @@ public:
   virtual void PrintRegisterGADC(GADCTConf * conf);
   virtual void PrintRegisterSADC(SADCTConf * conf);
   virtual void PrintRegisterIADC(IADCTConf * conf);
-  virtual void PrintRegisterAmoreADC(AmoreADCConf * conf);
 
   virtual void MeasurePedestalFADC(FADCTConf * conf);
   virtual void MeasurePedestalGADC(GADCTConf * conf);
   virtual void MeasurePedestalSADC(SADCTConf * conf);
   virtual void MeasurePedestalIADC(IADCTConf * conf);
-  virtual void MeasurePedestalAmoreADC(AmoreADCConf * conf);
 
 protected:
   ELogger * fLog;

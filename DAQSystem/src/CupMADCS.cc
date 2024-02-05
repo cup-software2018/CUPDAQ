@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "TSystem.h"
+
 #include "DAQConfig/MADCSConf.hh"
 #include "DAQSystem/CupMADCS.hh"
 #include "Notice/NoticeNKFADC125S.hh"

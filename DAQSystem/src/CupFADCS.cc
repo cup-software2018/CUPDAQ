@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "TSystem.h"
+
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQSystem/CupFADCS.hh"
 #include "Notice/NoticeNKFADC500S.hh"

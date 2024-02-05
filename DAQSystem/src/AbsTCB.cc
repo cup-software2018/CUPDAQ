@@ -9,7 +9,7 @@ using namespace std;
 
 ClassImp(AbsTCB)
 
-AbsTCB::AbsTCB()
+    AbsTCB::AbsTCB()
     : TObject()
 {
   fLog = ELogger::Instance(true);
@@ -19,38 +19,53 @@ AbsTCB::~AbsTCB() {}
 
 void AbsTCB::WriteRegisterTCB(TCBConf * conf)
 {
-  WriteGATEDLY(conf->DLY());
+  WriteTRIGENABLE(0, conf->TM());
   WriteCW(0, 1, conf->CW());
+  WriteGATEDLY(conf->DLY());
   WritePTRIG(conf->PTRG());
   WriteMTHRFADC(conf->MTHRF());
   WritePSCALEFADC(conf->PSCF());
-
-  if (conf->TCBTYPE() == 0) { // NEOS TCB
-    WriteMTHRSADCMU(conf->MTHRMU());
-    WritePSCALESADCMU(conf->PSCMU());
-  }
-  else if (conf->TCBTYPE() == 1) { // COSINE TCB
-    WriteMTHRSADCMU(conf->MTHRMU());
-    WritePSCALESADCMU(conf->PSCMU());
-    WriteMTHRSADCLS(conf->MTHRLS());
-    WritePSCALESADCLS(conf->PSCLS());
-  }
-
   WriteDT(0, 0, conf->DTF());
-  if (conf->TCBTYPE() == 0) { WriteDT(0, 1, conf->DTMU()); }
-  else if (conf->TCBTYPE() == 1) {
-    WriteDT(0, 1, conf->DTMU());
-    WriteDT(0, 2, conf->DTLS());
-  }
 
-  if (conf->TCBTYPE() == 4) { // GBAR TCB
-    WriteGATEDLY(conf->GATEDLY());
-    WriteGATEWIDTH(conf->GATEWIDTH());
-    WriteEXTOUTWIDTH(conf->EXTOUTWIDTH());
-  }
+  if (conf->TCBTYPE() == TCB::V2) {
+    WriteMTHRSADCMU(conf->MTHRSM());
+    WritePSCALESADCMU(conf->PSCSM());
+    WriteDT(0, 1, conf->DTSM());
+    WriteMTHRSADCLS(conf->MTHRSL());
+    WritePSCALESADCLS(conf->PSCSL());
+    WriteDT(0, 2, conf->DTSL());
+    WriteMTHRIADC(conf->MTHRI());
+    WritePSCALEIADC(conf->PSCI());
+    WriteDT(0, 3, conf->DTI());
 
-  WriteTRIGENABLE(0, conf->TM());
-  WriteEXTOUT(conf->EXT());
+    int sw = conf->SWF();
+    unsigned long f = (unsigned long)TESTBIT(sw, 0);
+    unsigned long sm = (unsigned long)TESTBIT(sw, 1);
+    unsigned long sl = (unsigned long)TESTBIT(sw, 2);
+    unsigned long i = (unsigned long)TESTBIT(sw, 3);
+    WriteTRGSWFADC(f, sm, sl, i);
+
+    sw = conf->SWSM();
+    f = (unsigned long)TESTBIT(sw, 0);
+    sm = (unsigned long)TESTBIT(sw, 1);
+    sl = (unsigned long)TESTBIT(sw, 2);
+    i = (unsigned long)TESTBIT(sw, 3);
+    WriteTRGSWSADCMU(f, sm, sl, i);
+
+    sw = conf->SWSL();
+    f = (unsigned long)TESTBIT(sw, 0);
+    sm = (unsigned long)TESTBIT(sw, 1);
+    sl = (unsigned long)TESTBIT(sw, 2);
+    i = (unsigned long)TESTBIT(sw, 3);
+    WriteTRGSWSADCLS(f, sm, sl, i);
+
+    sw = conf->SWI();
+    f = (unsigned long)TESTBIT(sw, 0);
+    sm = (unsigned long)TESTBIT(sw, 1);
+    sl = (unsigned long)TESTBIT(sw, 2);
+    i = (unsigned long)TESTBIT(sw, 3);
+    WriteTRGSWIADC(f, sm, sl, i);
+  }
 }
 
 void AbsTCB::WriteRegisterFADC(FADCTConf * conf)
@@ -138,9 +153,8 @@ void AbsTCB::WriteRegisterIADC(IADCTConf * conf)
   unsigned long mid = conf->MID();
 
   int mode = conf->MODE();
-
-  if (mode > 0) WriteRL(mid, conf->RL());
-  else WriteGW(mid, conf->GW());
+  WriteRL(mid, conf->RL());
+  WriteGW(mid, conf->GW());
   WriteCW(mid, 1, conf->CW());
   WritePSW(mid, 1, conf->PSW());
   WriteDAQMODE(mid, mode);
@@ -163,62 +177,60 @@ void AbsTCB::WriteRegisterIADC(IADCTConf * conf)
   AlignIADC(mid);
 }
 
-void AbsTCB::WriteRegisterAmoreADC(AmoreADCConf * conf)
-{
-  unsigned long mid = conf->MID();
-  WriteSR(mid, 1, conf->SR());
-}
-
 // print register
 void AbsTCB::PrintRegisterTCB(TCBConf * conf)
 {
-  if (conf->TCBTYPE() == TCB::NEOS) { // NEOS TCB
-    cout << Form(" ++ TCB register: SID(%1d) TRGON(%lu) CW(%lu) DLY(%lu) "
-                 "PTRIG(%lu) \n"
-                 "                  MTHRF(%lu) PSCF(%lu) DTF(%lu)\n"
-                 "                  MTHRMU(%lu) PSCMU(%lu) DTMU(%lu)",
-                 0, ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
-                 ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0),
-                 ReadMTHRSADCMU(), ReadPSCALESADCMU(), ReadDT(0, 1))
+  if (conf->TCBTYPE() == TCB::V2) {
+    unsigned long sw = ReadTRGSWFADC();
+    int f = (int)TESTBIT(sw, 0);
+    int sm = (int)TESTBIT(sw, 1);
+    int sl = (int)TESTBIT(sw, 2);
+    int i = (int)TESTBIT(sw, 3);
+    const char * swf = Form("%d %d %d %d", f, sm, sl, i);
+
+    sw = ReadTRGSWSADCMU();
+    f = (int)TESTBIT(sw, 0);
+    sm = (int)TESTBIT(sw, 1);
+    sl = (int)TESTBIT(sw, 2);
+    i = (int)TESTBIT(sw, 3);
+    const char * swsm = Form("%d %d %d %d", f, sm, sl, i);
+
+    sw = ReadTRGSWSADCLS();
+    f = (int)TESTBIT(sw, 0);
+    sm = (int)TESTBIT(sw, 1);
+    sl = (int)TESTBIT(sw, 2);
+    i = (int)TESTBIT(sw, 3);
+    const char * swsl = Form("%d %d %d %d", f, sm, sl, i);
+
+    sw = ReadTRGSWIADC();
+    f = (int)TESTBIT(sw, 0);
+    sm = (int)TESTBIT(sw, 1);
+    sl = (int)TESTBIT(sw, 2);
+    i = (int)TESTBIT(sw, 3);
+    const char * swi = Form("%d %d %d %d", f, sm, sl, i);
+
+    cout << Form(
+                " ++ TCB register: SID(0) TRGON(%lu) CW(%lu) DLY(%lu) "
+                "PTRIG(%lu) \n"
+                "                  MTHRF(%lu)  PSCF(%lu)  DTF(%lu)  TSWF(%s) \n"
+                "                  MTHRSM(%lu) PSCSM(%lu) DTSM(%lu) TSWSM(%s) "
+                "\n"
+                "                  MTHRSL(%lu) PSCSL(%lu) DTSL(%lu) TSWSL(%s) "
+                "\n"
+                "                  MTHRI(%lu)  PSCI(%lu)  DTI(%lu)  TSWI(%s) ",
+                ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
+                ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0), swf,
+                ReadMTHRSADCMU(), ReadPSCALESADCMU(), ReadDT(0, 1), swsm,
+                ReadMTHRSADCLS(), ReadPSCALESADCLS(), ReadDT(0, 2), swsl,
+                ReadMTHRIADC(), ReadPSCALEIADC(), ReadDT(0, 3), swi)
          << endl;
   }
-  else if (conf->TCBTYPE() == TCB::COSINE) { // COSINE TCB
-    cout << Form(" ++ TCB register: SID(%1d) TRGON(%lu) CW(%lu) DLY(%lu) "
+  else {
+    cout << Form(" ++ TCB register: SID(0) TRGON(%lu) CW(%lu) DLY(%lu) "
                  "PTRIG(%lu) \n"
-                 "                  MTHRF(%lu) PSCF(%lu) DTF(%lu)\n"
-                 "                  MTHRMU(%lu) PSCMU(%lu) DTMU(%lu)\n"
-                 "                  MTHRLS(%lu) PSCLS(%lu) DTLS(%lu)",
-                 0, ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
-                 ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0),
-                 ReadMTHRSADCMU(), ReadPSCALESADCMU(), ReadDT(0, 1),
-                 ReadMTHRSADCLS(), ReadPSCALESADCLS(), ReadDT(0, 2))
-         << endl;
-  }
-  else if (conf->TCBTYPE() == TCB::MINI) { // Mini TCB
-    cout << Form(" ++ TCB register: SID(%1d) TRGON(%lu) CW(%lu) DLY(%lu) "
-                 "PTRIG(%lu) \n"
-                 "                  MTHRF(%lu) PSCF(%lu) DTF(%lu)",
-                 0, ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
+                 "                  MTHR(%lu) PSC(%lu) DT(%lu)",
+                 ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
                  ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0))
-         << endl;
-  }
-  else if (conf->TCBTYPE() == TCB::V1) { // AMORE TCB
-    cout << Form(" ++ TCB register: SID(%1d) TRGON(%lu) CW(%lu) DLY(%lu) "
-                 "PTRIG(%lu) \n"
-                 "                  MTHRF(%lu) PSCF(%lu) DTF(%lu)",
-                 0, ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
-                 ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0))
-         << endl;
-  }
-  else if (conf->TCBTYPE() == TCB::GBAR) { // GBAR TCB
-    cout << Form(" ++ TCB register: SID(%1d) TRGON(%lu) CW(%lu) DLY(%lu) "
-                 "PTRIG(%lu) \n"
-                 "                  MTHRF(%lu) PSCF(%lu) DTF(%lu)\n"
-                 "                  EXTOUT(%lu) EXTOUTWIDTH(%lu)\n"
-                 "                  GATEDLY(%lu) GATEWIDTH(%lu)",
-                 0, ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
-                 ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0), ReadEXTOUT(),
-                 ReadEXTOUTWIDTH(), ReadGATEDLY(), ReadGATEWIDTH())
          << endl;
   }
 }
@@ -491,26 +503,6 @@ void AbsTCB::PrintRegisterIADC(IADCTConf * conf)
   cout << endl;
 }
 
-void AbsTCB::PrintRegisterAmoreADC(AmoreADCConf * conf)
-{
-  int sid = conf->SID();
-  int mid = conf->MID();
-  int nch = conf->NCH();
-
-  cout << Form(" ++ AMOREADC register: SID(%d) MID(%d) NCH(%d) SR(%lu)", sid,
-               mid, nch, ReadSR(mid, 1))
-       << endl;
-
-  cout << " -----------------------------------------------" << endl;
-  cout << "        CID : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%6d", conf->CID(i));
-  }
-  cout << endl;
-  cout << " -----------------------------------------------" << endl;
-  cout << endl;
-}
-
 void AbsTCB::MeasurePedestalFADC(FADCTConf * conf)
 {
   int mid = conf->MID();
@@ -536,7 +528,7 @@ void AbsTCB::MeasurePedestalGADC(GADCTConf * conf)
     MeasurePED(mid, cid);
     cout << Form("%5lu  ", ReadPED(mid, cid)) << flush;
   }
-  cout << endl;
+  //cout << endl;
 }
 
 void AbsTCB::MeasurePedestalSADC(SADCTConf * conf)
@@ -548,7 +540,6 @@ void AbsTCB::MeasurePedestalSADC(SADCTConf * conf)
   MeasurePED(mid, 1);
   for (int i = 0; i < nch; i++) {
     int cid = conf->CID(i);
-
     cout << Form("ch%02d = %4lu  ", cid, ReadPED(mid, cid)) << flush;
     if (cid % 8 == 0) { cout << endl; }
   }
@@ -565,28 +556,9 @@ void AbsTCB::MeasurePedestalIADC(IADCTConf * conf)
   MeasurePED(mid, 1);
   for (int i = 0; i < nch; i++) {
     int cid = conf->CID(i);
-
     cout << Form("ch%02d = %4lu  ", cid, ReadPED(mid, cid)) << flush;
     if (cid % 10 == 0) { cout << endl; }
   }
   if (nch % 10 != 0) { cout << endl; }
-  // cout << endl;
-}
-
-void AbsTCB::MeasurePedestalAmoreADC(AmoreADCConf * conf)
-{
-  int mid = conf->MID();
-  int nch = conf->NCH();
-
-  cout << Form("  [mid=%d]  ", mid) << flush;
-  for (int i = 0; i < nch; i++) {
-    ULong_t cid = conf->CID(i);
-    MeasurePED(mid, cid);
-  }
-  gSystem->Sleep(1000);
-  for (int i = 0; i < nch; i++) {
-    ULong_t cid = conf->CID(i);
-    cout << Form("%5lu  ", ReadPED(mid, cid)) << flush;
-  }
   cout << endl;
 }
