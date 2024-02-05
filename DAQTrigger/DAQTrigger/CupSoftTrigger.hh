@@ -54,7 +54,9 @@ private:
 private:
   bool fDoZSUTBit;
   bool fDoZSUQSum;
+  bool fDoZSUPHeight;
   bool fDoPrescale;
+  int fPHeight;
   int fPrescale;
   TObjArray * fQsumArray;
 };

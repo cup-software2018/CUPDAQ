@@ -19,6 +19,7 @@ public:
   static ELogger * Instance(bool send = false);
   static void DeleteInstance();
 
+  void Stats(const char * log, ...);
   void Info(const char * where, const char * log, ...);
   void Debug(const char * where, const char * log, ...);
   void Warning(const char * where, const char * log, ...);

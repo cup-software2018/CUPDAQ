@@ -45,7 +45,8 @@ TString ELog::GetELog() const
   TString runstr = fRunnum > 0 ? Form(":%06d", fRunnum) : "";
   TString severitystr;
   switch (fLevel) {
-    case ELog::INFO: severitystr = " [INFO] "; break;
+    case ELog::STATS: severitystr = " [STAT] "; break;
+    case ELog::INFO: severitystr = " [INFO] "; break;    
     case ELog::WARNING: severitystr = " [WARNING] "; break;
     case ELog::ERROR: severitystr = " [ERROR] "; break;
     case ELog::DEBUG: severitystr = " [DEBUG] "; break;

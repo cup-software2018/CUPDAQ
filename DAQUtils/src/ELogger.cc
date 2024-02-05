@@ -62,6 +62,26 @@ void ELogger::DeleteInstance()
   sfLog = nullptr;
 }
 
+void ELogger::Stats(const char * log, ...)
+{
+  va_list argList;
+  char buffer[1024];
+
+  va_start(argList, log);
+  vsnprintf(buffer, 1024, log, argList);
+  va_end(argList);
+
+  //TString mess = Form("%s: %s", where, buffer);
+  ELog * elog = new ELog(ELog::STATS, buffer, fTag, fRunnum);
+
+  std::lock_guard<std::mutex> lock(fMutex);
+  if (fLogStream.is_open()) { fLogStream << elog->GetELog() << endl; }
+  elog->Print();
+
+  SendLog(elog);
+  delete elog;
+}
+
 void ELogger::Info(const char * where, const char * log, ...)
 {
   va_list argList;

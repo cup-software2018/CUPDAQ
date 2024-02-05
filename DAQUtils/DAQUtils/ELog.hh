@@ -8,7 +8,7 @@
 
 class ELog : public TObject {
 public:
-  enum SEVERITY { INFO, WARNING, ERROR, DEBUG };
+  enum SEVERITY { STATS, INFO, WARNING, ERROR, DEBUG };
 
   ELog();
   ELog(SEVERITY level, const char * log, unsigned short tag = 0,
