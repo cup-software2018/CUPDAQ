@@ -32,8 +32,10 @@ add_library(${PROJECT_NAME} SHARED
 
 if(USE_HDF5)
   set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice HDF5Utils DAQ)
+  set(LINK_EXTERNALS ${ROOT_LIBRARIES} ${libusb-1.0_LIBRARIES} ${HDF5_LIBRARY})
 else()
   set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice DAQ)
+  set(LINK_EXTERNALS ${ROOT_LIBRARIES} ${libusb-1.0_LIBRARIES})
 endif()
 
 file(GLOB ${PROJECT_NAME}_EXECUTABLES ${PROJECT_SOURCE_DIR}/test/*.cc)
@@ -41,12 +43,7 @@ file(GLOB ${PROJECT_NAME}_EXECUTABLES ${PROJECT_SOURCE_DIR}/test/*.cc)
 foreach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
   get_filename_component(testname ${testsourcefile} NAME_WE)
   add_executable(${testname} ${testsourcefile})
-  target_link_libraries(${testname}
-    ${LINK_PACKAGES}
-    ${ROOT_LIBRARIES}
-    ${HDF5_LIBRARY}
-    ${libusb-1.0_LIBRARIES}
-  )
+  target_link_libraries(${testname} ${LINK_PACKAGES} ${LINK_EXTERNALS})
   install(TARGETS ${testname} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
 
