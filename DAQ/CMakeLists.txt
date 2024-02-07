@@ -45,7 +45,7 @@ foreach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
     ${LINK_PACKAGES}
     ${ROOT_LIBRARIES}
     ${HDF5_LIBRARY}
-    ${USB_LIBRARY}
+    ${libusb-1.0_LIBRARIES}
   )
   install(TARGETS ${testname} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
