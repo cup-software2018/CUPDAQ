@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
-project(testproj)
+project(CUPDAQ)
 
 #
 # Locate the ROOT package and define a number of useful targets and variables.
