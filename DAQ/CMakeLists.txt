@@ -30,7 +30,7 @@ add_library(${PROJECT_NAME} SHARED
   G__${PROJECT_NAME}.cxx
 )
 
-if(USB_HDF5)
+if(USE_HDF5)
   set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice HDF5Utils DAQ)
 else()
   set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice DAQ)
