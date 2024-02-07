@@ -30,6 +30,22 @@ add_library(${PROJECT_NAME} SHARED
   G__${PROJECT_NAME}.cxx
 )
 
+install(PROGRAMS
+  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.so
+  DESTINATION
+  ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}_rdict.pcm
+  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.rootmap
+  DESTINATION
+  ${CMAKE_INSTALL_LIBDIR}
+)
+
+# ----------------------------------------------------------------------------
+# build executables
+# ----------------------------------------------------------------------------
 if(USE_HDF5)
   set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice HDF5Utils DAQ)
   set(LINK_EXTERNALS ${ROOT_LIBRARIES} ${libusb-1.0_LIBRARIES} ${HDF5_LIBRARY})
@@ -47,18 +63,6 @@ foreach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
   install(TARGETS ${testname} DESTINATION ${CMAKE_INSTALL_BINDIR})
 endforeach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
 
-install(PROGRAMS
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.so
-  DESTINATION
-  ${CMAKE_INSTALL_LIBDIR}
-)
-
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}_rdict.pcm
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.rootmap
-  DESTINATION
-  ${CMAKE_INSTALL_LIBDIR}
-)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/config DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(PROGRAMS
