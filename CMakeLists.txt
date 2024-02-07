@@ -8,7 +8,10 @@ project(testproj)
 find_package(ROOT REQUIRED)
 include(${ROOT_USE_FILE})
 
-# -----------------------------------------------------------------------------
+# Find libusb-1.0 package
+find_package(PkgConfig)
+pkg_check_modules(libusb-1.0 REQUIRED libusb-1.0)
+include_directories(${libusb-1.0_INCLUDE_DIRS})
 
 #
 # Locate the HDF5 package
@@ -25,8 +28,6 @@ if(HDF5_FOUND)
 endif()
 
 # -----------------------------------------------------------------------------
-include_directories("/usr/include/libusb-1.0")
-set(USB_LIBRARY "usb-1.0")
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
 set(PROJECT_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
