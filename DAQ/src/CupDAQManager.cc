@@ -88,8 +88,10 @@ ClassImp(CupDAQManager)
   fCompressionLevel = 1;
   fROOTFile = nullptr;
   fROOTTree = nullptr;
+  #ifdef ENABLE_HDF5
   fHDF5File = nullptr;
   fH5Event = nullptr;
+  #endif
   fOutputSplitTime = 60 * 60;
   fDoSplitOutputFile = false;
   fDoSplitOutputFileTCB = false;

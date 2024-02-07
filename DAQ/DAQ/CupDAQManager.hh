@@ -36,8 +36,10 @@
 #include "DAQTrigger/AbsSoftTrigger.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
 #include "DAQUtils/ELogger.hh"
+#ifdef ENABLE_HDF5
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/H5DataWriter.hh"
+#endif
 #include "Notice/usb3comroot.hh"
 #include "OnlConsts/adcconsts.hh"
 #include "OnlConsts/onlconsts.hh"
@@ -275,8 +277,10 @@ protected:
   TFile * fROOTFile;
   TTree * fROOTTree;
 
+#ifdef ENABLE_HDF5
   H5DataWriter * fHDF5File;
   AbsH5Event * fH5Event;
+#endif
 
   //
   // for histogramer

@@ -1,5 +1,7 @@
+#ifdef ENABLE_HDF5
 #include "HDF5Utils/EDM.hh"
 #include "HDF5Utils/H5Event.hh"
+#endif
 #include "OnlObjs/ADCHeader.hh"
 #include "OnlObjs/FADCRawChannel.hh"
 #include "OnlObjs/FADCRawEvent.hh"
@@ -10,6 +12,7 @@
 
 void CupDAQManager::WriteFADC_MOD_HDF5()
 {
+#ifdef ENABLE_HDF5
   fH5Event = new H5Event<FChannel_t>;
   fHDF5File->SetEvent(fH5Event);
   if (!fHDF5File->Open()) {
@@ -57,7 +60,7 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
           ttype = header->GetTriggerType();
         }
 
-        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());        
+        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
 
         for (int i = 0; i < kNCHFADC; i++) {
           if (header->GetZero(i)) continue;
@@ -88,10 +91,12 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
     int size = fBuiltEventBuffer1.size();
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
+#endif
 }
 
 void CupDAQManager::WriteSADC_MOD_HDF5()
 {
+#ifdef ENABLE_HDF5
   fH5Event = new H5Event<AChannel_t>;
   fHDF5File->SetEvent(fH5Event);
   if (!fHDF5File->Open()) {
@@ -115,7 +120,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
     case ADC::SADC: nadcch = 32; break;
     case ADC::IADC: nadcch = 40; break;
     default: break;
-  }    
+  }
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
@@ -147,7 +152,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
           ttype = header->GetTriggerType();
         }
 
-        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());        
+        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
 
         for (int i = 0; i < nadcch; i++) {
           if (header->GetZero(i)) continue;
@@ -177,12 +182,14 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
     int size = fBuiltEventBuffer1.size();
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
+#endif
 }
 
 long CupDAQManager::OpenNewHDF5File(const char * filename)
 {
   long retval = 0;
 
+#ifdef ENABLE_HDF5
   TString bname = gSystem->BaseName(filename);
   TObjArray * objs = bname.Tokenize(".");
   int subnum =
@@ -209,4 +216,9 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
 
   fLog->Info("CupDAQManager::OpenNewHDF5File", "%s opened", filename);
   return retval;
+#else
+  fLog->Error("CupDAQManager::OpenNewHDF5File",
+                  "HDF5 not supported");
+  return -1;
+#endif
 }

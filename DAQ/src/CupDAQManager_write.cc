@@ -46,12 +46,14 @@ void CupDAQManager::TF_WriteEvent()
     fROOTFile->Close();
     fLog->Info("CupDAQManager::TF_WriteEvent", "output data %s closed", fname);
   }
+#ifdef ENABLE_HDF5
   if (fHDF5File && fHDF5File->IsOpen()) {
     fTotalWrittenDataSize += fHDF5File->GetFileSize();
     const char * fname = fHDF5File->GetFilename();
     fHDF5File->Close();
     fLog->Info("CupDAQManager::TF_WriteEvent", "output data %s closed", fname);
   }
+#endif
 
   fWriteStatus = ENDED;
   fLog->Info("CupDAQManager::TF_WriteEvent", "writing output data ended");

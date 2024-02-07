@@ -30,13 +30,19 @@ add_library(${PROJECT_NAME} SHARED
   G__${PROJECT_NAME}.cxx
 )
 
+if(USB_HDF5)
+  set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice HDF5Utils DAQ)
+else()
+  set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice DAQ)
+endif()
+
 file(GLOB ${PROJECT_NAME}_EXECUTABLES ${PROJECT_SOURCE_DIR}/test/*.cc)
 
 foreach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
   get_filename_component(testname ${testsourcefile} NAME_WE)
   add_executable(${testname} ${testsourcefile})
   target_link_libraries(${testname}
-    DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice HDF5Utils DAQ
+    ${LINK_PACKAGES}
     ${ROOT_LIBRARIES}
     ${HDF5_LIBRARY}
     ${USB_LIBRARY}
