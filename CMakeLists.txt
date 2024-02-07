@@ -1,50 +1,72 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+set(PROJECT_NAME "DAQ")
 
-project(testproj)
+project(${PROJECT_NAME})
+message(STATUS "cmaking ${PROJECT_NAME} ...")
 
-#
-# Locate the ROOT package and define a number of useful targets and variables.
-#
-find_package(ROOT REQUIRED)
-include(${ROOT_USE_FILE})
+# ----------------------------------------------------------------------------
+# Locate sources and headers for this project
+# ----------------------------------------------------------------------------
+file(GLOB ${PROJECT_NAME}_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cc)
+file(GLOB ${PROJECT_NAME}_HEADERS ${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/*.hh)
 
-# -----------------------------------------------------------------------------
+file(MAKE_DIRECTORY ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME})
 
-#
-# Locate the HDF5 package
-#
-set(LIB_TYPE SHARED)
-string(TOLOWER ${LIB_TYPE} SEARCH_TYPE)
-find_package(HDF5 NAMES hdf5 COMPONENTS C ${SEARCH_TYPE})
+foreach(HEADER_i ${${PROJECT_NAME}_HEADERS})
+  configure_file(${HEADER_i} ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME} COPYONLY)
+endforeach(HEADER_i)
 
-include_directories(${HDF5_INCLUDE_DIR})
-set(HDF5_LIBRARY ${HDF5_C_${LIB_TYPE}_LIBRARY})
+configure_file(${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/LinkDef.h ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME} COPYONLY)
 
-# -----------------------------------------------------------------------------
-include_directories("/usr/include/libusb-1.0")
-set(USB_LIBRARY "usb-1.0")
+file(GLOB ${PROJECT_NAME}_HEADERS ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME}/*.hh)
+set(${PROJECT_NAME}_DICT_FILE ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME}/LinkDef.h)
 
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
-set(PROJECT_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
+root_generate_dictionary(G__${PROJECT_NAME}
+  ${${PROJECT_NAME}_HEADERS}
+  LINKDEF ${${PROJECT_NAME}_DICT_FILE}
+)
 
-set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
-set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_PREFIX}/bin)
+add_library(${PROJECT_NAME} SHARED
+  ${${PROJECT_NAME}_SOURCES}
+  G__${PROJECT_NAME}.cxx
+)
 
-include_directories(${PROJECT_INCLUDE_DIR})
+if(USB_HDF5)
+  set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice HDF5Utils DAQ)
+else()
+  set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice DAQ)
+endif()
 
-add_subdirectory(OnlConsts EXCLUDE_FROM_ALL)
-add_subdirectory(Notice)
-add_subdirectory(OnlObjs)
-add_subdirectory(RawObjs)
-add_subdirectory(HDF5Utils)
-add_subdirectory(DAQUtils)
-add_subdirectory(DAQConfig)
-add_subdirectory(DAQSystem)
-add_subdirectory(DAQTrigger)
-add_subdirectory(OnlHistogramer)
-add_subdirectory(DAQ)
+file(GLOB ${PROJECT_NAME}_EXECUTABLES ${PROJECT_SOURCE_DIR}/test/*.cc)
 
-# install
-install(DIRECTORY ${CMAKE_BINARY_DIR}/include DESTINATION ${CMAKE_INSTALL_PREFIX})
+foreach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
+  get_filename_component(testname ${testsourcefile} NAME_WE)
+  add_executable(${testname} ${testsourcefile})
+  target_link_libraries(${testname}
+    ${LINK_PACKAGES}
+    ${ROOT_LIBRARIES}
+    ${HDF5_LIBRARY}
+    ${USB_LIBRARY}
+  )
+  install(TARGETS ${testname} DESTINATION ${CMAKE_INSTALL_BINDIR})
+endforeach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
 
+install(PROGRAMS
+  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.so
+  DESTINATION
+  ${CMAKE_INSTALL_LIBDIR}
+)
 
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}_rdict.pcm
+  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.rootmap
+  DESTINATION
+  ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/config DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(PROGRAMS
+  ${PROJECT_SOURCE_DIR}/scripts/executedaq.sh
+  ${PROJECT_SOURCE_DIR}/scripts/executenulldaq.sh
+  DESTINATION
+  ${CMAKE_INSTALL_BINDIR}
+)
