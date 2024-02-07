@@ -2,8 +2,8 @@
 
 ## Requirements
 ##### ROOT: > V6 
-##### HDF5: tested with 1.14.1 
 ##### libusb-1.0 
+##### HDF5: tested with 1.14.1 (optional)
 
 ## Prerequisite
 
