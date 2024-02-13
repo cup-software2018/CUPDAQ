@@ -3,11 +3,11 @@
 ## Requirements
 ##### ROOT: > V6 
 ##### libusb-1.0 
-##### HDF5: tested with 1.14.1 (optional)
+##### (optional) HDF5: tested with 1.14.1
 
 ## Prerequisite
 
-Copy below as /etc/udev/rules.d/88-notice.rules, run "`udevadm control --reload-rules && udevadm trigger`" with root privilege.
+Copy below to /etc/udev/rules.d/88-notice.rules, run "`udevadm control --reload-rules && udevadm trigger`" with root privilege.
 ```
 SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1000", MODE="0666" 
 SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1501", MODE="0666" 
@@ -22,7 +22,7 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="2010", MODE="0666"
 ```
 >> git clone https://github.com/cup-software2018/CUPDAQ.git
 >> mkdir build; cd build
->> cmake ../CUPDAQ -DCMAKE_INSTALL_PREFIX=wheretoinstallcupdaq
+>> cmake ../CUPDAQ -DCMAKE_INSTALL_PREFIX=[where to install cupdaq]
 >> make -j[NCUP]; make install
 ```
 
