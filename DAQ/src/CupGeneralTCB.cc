@@ -122,21 +122,6 @@ bool CupGeneralTCB::Config()
     if (!name.Contains("SADC")) { fTCB->AlignDRAM(mid); }
   }
 
-  /*
-  if (fTCBType == TCB::AMORE1) {
-    fTCB->WriteDRAMON(0, 1);
-    gSystem->Sleep(100);
-    unsigned long dramon = fTCB->ReadDRAMON(0);
-    if (dramon) { fLog->Info("CupGeneralTCB::Config", "TCB[mid=0] DRAM on"); }
-    else {
-      fLog->Error("CupGeneralTCB::Config",
-                  "TCB[mid=0] error occurred during turning DRAM on");
-      return false;
-    }
-    fTCB->AlignDRAM(0);
-  }
-  */
-
   fTCB->Reset();
 
   bool retval = true;
@@ -158,9 +143,6 @@ bool CupGeneralTCB::Config()
     else if (name.EqualTo("IADCT")) {
       retval &= ConfigIADC((IADCTConf *)conf);
     }
-    //else if (name.EqualTo("AMOREADC")) {
-    //  retval &= ConfigAmoreADC((AmoreADCConf *)conf);
-    //}
     else {
       fLog->Warning("CupGeneralTCB::Config", "unknown kind of module : %s",
                     name.Data());
@@ -177,8 +159,6 @@ bool CupGeneralTCB::Config()
 
 bool CupGeneralTCB::StartTrigger()
 {
-  // fLog->Info("CupGeneralTCB::StartTrigger", "preparing trigger start");
-
   // wait for finishing DAQOFF setting
   gSystem->Sleep(2000);
 
@@ -242,21 +222,6 @@ bool CupGeneralTCB::StartTrigger()
     cout << endl;
   }
 
-  /*
-  nadc = fConfigs->GetNADC(ADC::AMOREADC, true);
-  if (nadc > 0) {
-    fLog->Info("CupGeneralTCB::StartTrigger", "Measuring AMOREADC pedestals");
-    cout << endl;
-    cout << "+++++++++++ AMOREADC PEDESTALS ++++++++++++" << endl;
-    for (int i = 0; i < nadc; i++) {
-      auto * conf = (AmoreADCConf *)fConfigs->GetConfig(ADC::AMOREADC, i);
-      if (conf->IsLinked() && conf->IsEnabled())
-        fTCB->MeasurePedestalAmoreADC(conf);
-    }
-    cout << "+++++++++++ AMOREADC PEDESTALS ++++++++++++" << endl;
-    cout << endl;
-  }
-  */
   fLog->Info("CupGeneralTCB::StartTrigger", "all ADCs initialized");
 
   gSystem->Sleep(1000);
@@ -373,34 +338,6 @@ bool CupGeneralTCB::ConfigIADC(IADCTConf * conf)
   return true;
 }
 
-/*
-bool CupGeneralTCB::ConfigAmoreADC(AmoreADCConf * conf)
-{
-  unsigned long mid = conf->MID();
-
-  if (!conf->IsEnabled()) {
-    fLog->Info("CupGeneralTCB::ConfigAmoreADC",
-               "%s[mid=%2d] is disabled, passed", conf->GetName(), mid);
-    return true;
-  }
-
-  if (!conf->IsLinked()) {
-    fLog->Error("CupGeneralTCB::ConfigAmoreADC",
-                "%s[mid=%2d] is enabled but not linked", conf->GetName(), mid);
-    return false;
-  }
-
-  conf->PrintConf();
-  fTCB->WriteRegisterAmoreADC(conf);
-  fTCB->PrintRegisterAmoreADC(conf);
-
-  fLog->Info("CupGeneralTCB::ConfigAmoreADC", "%s[mid=%2d] was configured",
-             conf->GetName(), mid);
-
-  return true;
-}
-*/
-
 bool CupGeneralTCB::ConfigTCB(TCBConf * conf)
 {
   conf->PrintConf();
@@ -430,12 +367,6 @@ int CupGeneralTCB::CheckLinkStatus()
       linked[i] = (data[0] >> i) & 0x01;
     }
   }
-  //else if (fTCBType == TCB::AMORE1) {
-  //  nport = 24;
-  //  for (int i = 0; i < nport; i++) {
-  //    linked[i] = (data[0] >> i) & 0x1;
-  //  }
-  //}
   else {
     nport = 40;
     for (int i = 0; i < 32; i++) {
@@ -470,117 +401,6 @@ int CupGeneralTCB::CheckLinkStatus()
       }
     }
   }
-
-  /*
-  if (fTCBType == 3) {
-    for (int i = 0; i < nport; i++) {
-      if (linked[i]) {
-        if (linkedMID[i] <= 40) {
-          AbsConf* conf = fConfigs->FindConfig(ADC::FADCT, linkedMID[i]);
-
-          if (conf) {
-            conf->SetLink();
-
-            if (conf->IsEnabled()) {
-              fLog->Info("CupGeneralTCB::CheckLinkStatus", "FADCT[mid=%2d] found
-  @ %d", linkedMID[i], i + 1); nlinked += 1; } else {
-              fLog->Warning("CupGeneralTCB::CheckLinkStatus", "FADCT[mid=%2d]
-  found @ %d, but disabled", linkedMID[i], i + 1);
-            }
-          } else {
-            conf = fConfigs->FindConfig(ADC::GADCT, linkedMID[i]);
-
-            if (conf) {
-              conf->SetLink();
-
-              if (conf->IsEnabled()) {
-                fLog->Info("CupGeneralTCB::CheckLinkStatus", "GADCT[mid=%2d]
-  found @ %d", linkedMID[i], i + 1); nlinked += 1; } else {
-                fLog->Warning("CupGeneralTCB::CheckLinkStatus", "GADCT[mid=%2d]
-  found @ %d, but disabled", linkedMID[i], i + 1);
-              }
-            }
-          }
-        } else if (linkedMID[i] > 64 && linkedMID[i] < 129) {
-          AbsConf* conf = fConfigs->FindConfig(ADC::SADCT, linkedMID[i]);
-
-          if (!conf)
-            continue;
-
-          conf->SetLink();
-
-          if (conf->IsEnabled()) {
-            fLog->Info("CupGeneralTCB::CheckLinkStatus", "SADCT[mid=%2d] found @
-  %d", linkedMID[i], i + 1); nlinked += 1; } else {
-            fLog->Warning("CupGeneralTCB::CheckLinkStatus", "SADCT[mid=%2d]
-  found @ %d, but disabled", linkedMID[i], i + 1);
-          }
-        }
-        if (linkedMID[i] > 128) {
-          AbsConf* conf = fConfigs->FindConfig(ADC::AMOREADC, linkedMID[i]);
-
-          if (!conf)
-            continue;
-
-          conf->SetLink();
-
-          if (conf->IsEnabled()) {
-            fLog->Info("CupGeneralTCB::CheckLinkStatus", "AMOREADC[mid=%2d]
-  found @ %d", linkedMID[i], i + 1); nlinked += 1; } else {
-            fLog->Warning("CupGeneralTCB::CheckLinkStatus", "AMOREADC[mid=%2d]
-  found @ %d, but disabled", linkedMID[i], i + 1);
-          }
-        }
-      }
-    }
-  } else {
-    for (int i = 0; i < nport; i++) {
-      if (linked[i]) {
-        if (linkedMID[i] <= 40) {
-          AbsConf* conf = fConfigs->FindConfig(ADC::FADCT, linkedMID[i]);
-
-          if (conf) {
-            conf->SetLink();
-
-            if (conf->IsEnabled()) {
-              fLog->Info("CupGeneralTCB::CheckLinkStatus", "FADCT[mid=%2d] found
-  @ %d", linkedMID[i], i + 1); nlinked += 1; } else {
-              fLog->Warning("CupGeneralTCB::CheckLinkStatus", "FADCT[mid=%2d]
-  found @ %d, but disabled", linkedMID[i], i + 1);
-            }
-          } else {
-            conf = fConfigs->FindConfig(ADC::GADCT, linkedMID[i]);
-
-            if (conf) {
-              conf->SetLink();
-
-              if (conf->IsEnabled()) {
-                fLog->Info("CupGeneralTCB::CheckLinkStatus", "GADCT[mid=%2d]
-  found @ %d", linkedMID[i], i + 1); nlinked += 1; } else {
-                fLog->Warning("CupGeneralTCB::CheckLinkStatus", "GADCT[mid=%2d]
-  found @ %d, but disabled", linkedMID[i], i + 1);
-              }
-            }
-          }
-        } else if (linkedMID[i] > 64 && linkedMID[i] < 129) {
-          AbsConf* conf = fConfigs->FindConfig(ADC::SADCT, linkedMID[i]);
-
-          if (!conf)
-            continue;
-
-          conf->SetLink();
-
-          if (conf->IsEnabled()) {
-            fLog->Info("CupGeneralTCB::CheckLinkStatus", "SADCT[mid=%2d] found @
-  %d", linkedMID[i], i + 1); nlinked += 1; } else {
-            fLog->Warning("CupGeneralTCB::CheckLinkStatus", "SADCT[mid=%2d]
-  found @ %d, but disabled", linkedMID[i], i + 1);
-          }
-        }
-      }
-    }
-  }
-  */
 
   return nlinked;
 }
