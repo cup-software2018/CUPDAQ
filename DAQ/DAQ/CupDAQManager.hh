@@ -36,10 +36,6 @@
 #include "DAQTrigger/AbsSoftTrigger.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
 #include "DAQUtils/ELogger.hh"
-#ifdef ENABLE_HDF5
-#include "HDF5Utils/AbsH5Event.hh"
-#include "HDF5Utils/H5DataWriter.hh"
-#endif
 #include "Notice/usb3comroot.hh"
 #include "OnlConsts/adcconsts.hh"
 #include "OnlConsts/onlconsts.hh"
@@ -276,11 +272,6 @@ protected:
 
   TFile * fROOTFile;
   TTree * fROOTTree;
-
-#ifdef ENABLE_HDF5
-  H5DataWriter * fHDF5File;
-  AbsH5Event * fH5Event;
-#endif
 
   //
   // for histogramer
@@ -519,61 +510,3 @@ inline const char * CupDAQManager::GetADCName(ADC::TYPE type) const
 }
 
 #endif
-
-/**
-$Log: CupDAQManager.hh,v $
-Revision 1.16  2023/05/10 22:26:30  cupsoft
-*** empty log message ***
-
-Revision 1.15  2023/03/29 23:05:19  cupsoft
-*** empty log message ***
-
-Revision 1.14  2023/02/27 22:41:13  cupsoft
-*** empty log message ***
-
-Revision 1.13  2023/02/15 06:06:28  cupsoft
-*** empty log message ***
-
-Revision 1.12  2023/02/09 07:24:04  cupsoft
-*** empty log message ***
-
-Revision 1.11  2023/01/25 07:34:54  cupsoft
-add networt merger
-
-Revision 1.10  2022/12/21 00:02:44  cupsoft
-*** empty log message ***
-
-Revision 1.12  2020/07/30 01:48:01  cupsoft
-*** empty log message ***
-
-Revision 1.11  2020/07/13 01:25:14  cupsoft
-*** empty log message ***
-
-Revision 1.10  2020/07/10 02:37:31  cupsoft
-*** empty log message ***
-
-Revision 1.9  2020/03/02 01:07:18  cupsoft
-*** empty log message ***
-
-Revision 1.8  2020/01/09 04:56:56  cupsoft
-*** empty log message ***
-
-Revision 1.7  2019/11/27 23:58:35  cupsoft
-*** empty log message ***
-
-Revision 1.6  2019/08/07 01:35:10  cupsoft
-*** empty log message ***
-
-Revision 1.5  2019/08/04 01:21:37  cupsoft
-*** empty log message ***
-
-Revision 1.4  2019/07/24 06:14:57  cupsoft
-*** empty log message ***
-
-Revision 1.3  2019/07/11 08:21:35  cupsoft
-*** empty log message ***
-
-Revision 1.2  2019/07/05 00:25:04  cupsoft
-*** empty log message ***
-
-**/

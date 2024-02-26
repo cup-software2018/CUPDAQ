@@ -381,10 +381,15 @@ int CupGeneralTCB::CheckLinkStatus()
   fTCB->ReadMIDS(linkedMID);
 
   for (int i = 0; i < nport; i++) {
+    AbsConf * conf = nullptr;
     if (linked[i]) {
-      AbsConf * conf = nullptr;
-      if (fADCType == ADC::NONE) conf = fConfigs->FindConfig(linkedMID[i]);
-      else conf = fConfigs->FindConfig(fADCType, linkedMID[i]);
+      // Cosine uses only FADC and SADC
+      if (linkedMID[i] <= 40) {
+        conf = fConfigs->FindConfig(ADC::FADCT, linkedMID[i]);
+      }
+      else {
+        conf = fConfigs->FindConfig(ADC::SADCT, linkedMID[i]);
+      }
 
       if (conf) {
         conf->SetLink();
@@ -398,6 +403,10 @@ int CupGeneralTCB::CheckLinkStatus()
                         "%s[mid=%2d] found @ %d, but disabled", conf->GetName(),
                         linkedMID[i], i + 1);
         }
+      }
+      else {
+        fLog->Info("CupGeneralTCB::CheckLinkStatus",
+                   "unknown adc found @ %d, ignore", i + 1);
       }
     }
   }

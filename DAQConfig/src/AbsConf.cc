@@ -21,13 +21,12 @@ AbsConf::AbsConf(int sid, ADC::TYPE type)
 {
   int tag = 0;
   switch (type) {
-    case ADC::FADCT: tag = 0; break;
-    case ADC::SADCT: tag = 64; break;
-    case ADC::IADCT: tag = 192; break;
+    case ADC::FADCT: fMID = fSID + (0 << 6); break;
+    case ADC::IADCT: fMID = fSID + (0 << 6); break;
+    case ADC::SADCT: fMID = fSID + (1 << 6); break;
     default: break;
   }
 
-  fMID = fSID + tag;
   fADCType = type;
 }
 
