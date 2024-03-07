@@ -27,44 +27,46 @@ void AbsTCB::WriteRegisterTCB(TCBConf * conf)
   WritePSCALEFADC(conf->PSCF());
   WriteDT(0, 0, conf->DTF());
 
-  if (conf->TCBTYPE() == TCB::V2) {
+  if (conf->TCBTYPE() == TCB::V2 || conf->TCBTYPE() == TCB::COSINE) {
     WriteMTHRSADCMU(conf->MTHRSM());
     WritePSCALESADCMU(conf->PSCSM());
     WriteDT(0, 1, conf->DTSM());
     WriteMTHRSADCLS(conf->MTHRSL());
     WritePSCALESADCLS(conf->PSCSL());
     WriteDT(0, 2, conf->DTSL());
-    WriteMTHRIADC(conf->MTHRI());
-    WritePSCALEIADC(conf->PSCI());
-    WriteDT(0, 3, conf->DTI());
+    if (conf->TCBTYPE() == TCB::V2) {
+      WriteMTHRIADC(conf->MTHRI());
+      WritePSCALEIADC(conf->PSCI());
+      WriteDT(0, 3, conf->DTI());
 
-    int sw = conf->SWF();
-    unsigned long f = (unsigned long)TESTBIT(sw, 0);
-    unsigned long sm = (unsigned long)TESTBIT(sw, 1);
-    unsigned long sl = (unsigned long)TESTBIT(sw, 2);
-    unsigned long i = (unsigned long)TESTBIT(sw, 3);
-    WriteTRGSWFADC(f, sm, sl, i);
+      int sw = conf->SWF();
+      unsigned long f = (unsigned long)TESTBIT(sw, 0);
+      unsigned long sm = (unsigned long)TESTBIT(sw, 1);
+      unsigned long sl = (unsigned long)TESTBIT(sw, 2);
+      unsigned long i = (unsigned long)TESTBIT(sw, 3);
+      WriteTRGSWFADC(f, sm, sl, i);
 
-    sw = conf->SWSM();
-    f = (unsigned long)TESTBIT(sw, 0);
-    sm = (unsigned long)TESTBIT(sw, 1);
-    sl = (unsigned long)TESTBIT(sw, 2);
-    i = (unsigned long)TESTBIT(sw, 3);
-    WriteTRGSWSADCMU(f, sm, sl, i);
+      sw = conf->SWSM();
+      f = (unsigned long)TESTBIT(sw, 0);
+      sm = (unsigned long)TESTBIT(sw, 1);
+      sl = (unsigned long)TESTBIT(sw, 2);
+      i = (unsigned long)TESTBIT(sw, 3);
+      WriteTRGSWSADCMU(f, sm, sl, i);
 
-    sw = conf->SWSL();
-    f = (unsigned long)TESTBIT(sw, 0);
-    sm = (unsigned long)TESTBIT(sw, 1);
-    sl = (unsigned long)TESTBIT(sw, 2);
-    i = (unsigned long)TESTBIT(sw, 3);
-    WriteTRGSWSADCLS(f, sm, sl, i);
+      sw = conf->SWSL();
+      f = (unsigned long)TESTBIT(sw, 0);
+      sm = (unsigned long)TESTBIT(sw, 1);
+      sl = (unsigned long)TESTBIT(sw, 2);
+      i = (unsigned long)TESTBIT(sw, 3);
+      WriteTRGSWSADCLS(f, sm, sl, i);
 
-    sw = conf->SWI();
-    f = (unsigned long)TESTBIT(sw, 0);
-    sm = (unsigned long)TESTBIT(sw, 1);
-    sl = (unsigned long)TESTBIT(sw, 2);
-    i = (unsigned long)TESTBIT(sw, 3);
-    WriteTRGSWIADC(f, sm, sl, i);
+      sw = conf->SWI();
+      f = (unsigned long)TESTBIT(sw, 0);
+      sm = (unsigned long)TESTBIT(sw, 1);
+      sl = (unsigned long)TESTBIT(sw, 2);
+      i = (unsigned long)TESTBIT(sw, 3);
+      WriteTRGSWIADC(f, sm, sl, i);
+    }
   }
 }
 
@@ -528,7 +530,7 @@ void AbsTCB::MeasurePedestalGADC(GADCTConf * conf)
     MeasurePED(mid, cid);
     cout << Form("%5lu  ", ReadPED(mid, cid)) << flush;
   }
-  //cout << endl;
+  // cout << endl;
 }
 
 void AbsTCB::MeasurePedestalSADC(SADCTConf * conf)

@@ -11,7 +11,7 @@ public:
   CupTCB();
   virtual ~CupTCB();
 
-  static CupTCB * Instance();
+  static CupTCB *Instance();
   static void DeleteInstance();
 
   virtual int Open();
@@ -22,10 +22,10 @@ public:
   virtual void ResetTIMER();
   virtual void TriggerStart();
   virtual void TriggerStop();
-  
+
   virtual unsigned long ReadBCOUNT(unsigned long mid);
   virtual int ReadDATA(unsigned long mid, unsigned long bcount,
-                       unsigned char * data);
+                       unsigned char *data);
 
   virtual void WriteCW(unsigned long mid, unsigned long ch, unsigned long data);
   virtual unsigned long ReadCW(unsigned long mid, unsigned long ch);
@@ -68,7 +68,7 @@ public:
   virtual unsigned long ReadDT(unsigned long mid, unsigned long ch);
   virtual void WritePSS(unsigned long mid, unsigned long ch,
                         unsigned long data);
-  virtual unsigned long ReadPSS(unsigned long mid, unsigned long ch);  
+  virtual unsigned long ReadPSS(unsigned long mid, unsigned long ch);
   virtual void WriteTM(unsigned long mid, unsigned long ch, unsigned long data);
   virtual unsigned long ReadTM(unsigned long mid, unsigned long ch);
   virtual void WriteTLT(unsigned long mid, unsigned long data);
@@ -110,7 +110,7 @@ public:
   virtual void WriteMTHRIADC(unsigned long data);
   virtual unsigned long ReadMTHRIADC();
   virtual void WritePSCALEIADC(unsigned long data);
-  virtual unsigned long ReadPSCALEIADC(); 
+  virtual unsigned long ReadPSCALEIADC();
   virtual void WriteEXTOUT(unsigned long data);
   virtual unsigned long ReadEXTOUT();
   virtual void WriteGATEDLY(unsigned long data);
@@ -120,30 +120,30 @@ public:
   virtual void WriteEXTOUTWIDTH(unsigned long data);
   virtual unsigned long ReadEXTOUTWIDTH();
   virtual void SendTRIG();
-  virtual void ReadLNSTAT(unsigned long * data);
-  virtual void ReadMIDS(unsigned long * data);
+  virtual void ReadLNSTAT(unsigned long *data);
+  virtual void ReadMIDS(unsigned long *data);
   virtual void AlignDRAM(unsigned long mid);
 
   virtual void WriteTRGSWFADC(unsigned long fadc, unsigned long sadcmu,
                               unsigned long sadcls, unsigned long iadc);
   virtual void WriteTRGSWSADCMU(unsigned long fadc, unsigned long sadcmu,
-                              unsigned long sadcls, unsigned long iadc);
+                                unsigned long sadcls, unsigned long iadc);
   virtual void WriteTRGSWSADCLS(unsigned long fadc, unsigned long sadcmu,
-                              unsigned long sadcls, unsigned long iadc);
+                                unsigned long sadcls, unsigned long iadc);
   virtual void WriteTRGSWIADC(unsigned long fadc, unsigned long sadcmu,
                               unsigned long sadcls, unsigned long iadc);
   virtual unsigned long ReadTRGSWFADC();
   virtual unsigned long ReadTRGSWSADCMU();
   virtual unsigned long ReadTRGSWSADCLS();
-  virtual unsigned long ReadTRGSWIADC();  
+  virtual unsigned long ReadTRGSWIADC();
 
 protected:
-  static CupTCB * fTCB;
+  static CupTCB *fTCB;
 
   int fSID;
-  usb3tcbroot * fUSB;
+  usb3tcbroot *fUSB;
 
-  std::mutex * fMutex;
+  std::mutex *fMutex;
 
   ClassDef(CupTCB, 0)
 };
