@@ -43,22 +43,23 @@
 class RunConfig : public TObject {
 public:
   static const int kNEXPERIMENT = 6;
-  static const int kNMAINMENU = 14;
+  static const int kNMAINMENU = 15;
   enum MAINCONFIG {
-    EXPERIMENT = 1,
-    DAQMODE = 2,
-    TCB = 3,
-    FADCT = 4,
-    FADCS = 5,
-    GADCT = 6,
-    GADCS = 7,
-    MADCS = 8,
-    SADCT = 9,
-    SADCS = 10,
-    IADCT = 11,
-    AMOREADC = 12,
-    STRG = 13,
-    DAQ = 14
+    INCLUDE = 1,
+    EXPERIMENT = 2,
+    DAQMODE = 3,
+    TCB = 4,
+    FADCT = 5,
+    FADCS = 6,
+    GADCT = 7,
+    GADCS = 8,
+    MADCS = 9,
+    SADCT = 10,
+    SADCS = 11,
+    IADCT = 12,
+    AMOREADC = 13,
+    STRG = 14,
+    DAQ = 15
   };
 
   static const int kNTCBMENU = 21;

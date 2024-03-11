@@ -13,13 +13,13 @@
  *
  */
 
+#include "DAQConfig/RunConfig.hh"
+
 #include <algorithm>
 #include <sstream>
 
 #include "TObjString.h"
 #include "TString.h"
-
-#include "DAQConfig/RunConfig.hh"
 
 using namespace std;
 
@@ -43,20 +43,21 @@ ClassImp(RunConfig)
 
   fConfigs = new AbsConfList();
 
-  MAINCONFIGMENU[0] = "EXPERIMENT";
-  MAINCONFIGMENU[1] = "DAQMODE";
-  MAINCONFIGMENU[2] = "TCB";
-  MAINCONFIGMENU[3] = "FADCT";
-  MAINCONFIGMENU[4] = "FADCS";
-  MAINCONFIGMENU[5] = "GADCT";
-  MAINCONFIGMENU[6] = "GADCS";
-  MAINCONFIGMENU[7] = "MADCS";
-  MAINCONFIGMENU[8] = "SADCT";
-  MAINCONFIGMENU[9] = "SADCS";
-  MAINCONFIGMENU[10] = "IADCT";
-  MAINCONFIGMENU[11] = "AMOREADC";
-  MAINCONFIGMENU[12] = "STRG";
-  MAINCONFIGMENU[13] = "DAQ";
+  MAINCONFIGMENU[0] = "INCLUDE";
+  MAINCONFIGMENU[1] = "EXPERIMENT";
+  MAINCONFIGMENU[2] = "DAQMODE";
+  MAINCONFIGMENU[3] = "TCB";
+  MAINCONFIGMENU[4] = "FADCT";
+  MAINCONFIGMENU[5] = "FADCS";
+  MAINCONFIGMENU[6] = "GADCT";
+  MAINCONFIGMENU[7] = "GADCS";
+  MAINCONFIGMENU[8] = "MADCS";
+  MAINCONFIGMENU[9] = "SADCT";
+  MAINCONFIGMENU[10] = "SADCS";
+  MAINCONFIGMENU[11] = "IADCT";
+  MAINCONFIGMENU[12] = "AMOREADC";
+  MAINCONFIGMENU[13] = "STRG";
+  MAINCONFIGMENU[14] = "DAQ";
 
   for (int i = 0; i < kNMAINMENU; i++)
     fMainItem.insert(make_pair(MAINCONFIGMENU[i], i + 1));
@@ -359,6 +360,20 @@ bool RunConfig::ReadConfig(ifstream & ticket)
     if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
 
     switch (fMainItem[key]) {
+      case INCLUDE: {
+        string fname;
+        iss >> fname;
+
+        ifstream ifs(fname);
+        if (ifs.is_open()) {
+          ReadConfig(ifs);
+        }
+        else {
+          Warning("ReadConfig", Form("there is no file %s.", fname));
+        }
+        
+        break;
+      }
       case DAQMODE: {
         int mode;
         iss >> mode;
@@ -627,7 +642,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWSM(val[0], val[1], val[2], val[3]);
         break;
-      }      
+      }
       case MTHRSL_TCB: {
         iss >> val[0];
         conf->SetMTHRSL(val[0]);
@@ -648,7 +663,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetSWSL(val[0], val[1], val[2], val[3]);
         break;
       }
-       case MTHRI_TCB: {
+      case MTHRI_TCB: {
         iss >> val[0];
         conf->SetMTHRI(val[0]);
         break;
@@ -667,7 +682,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWI(val[0], val[1], val[2], val[3]);
         break;
-      }           
+      }
       case TYPE_TCB: {
         iss >> val[0];
         conf->SetTCBTYPE(static_cast<TCB::TYPE>(val[0]));
