@@ -53,6 +53,7 @@ then
 fi
 
 # plz setting modules (like root, ...), here ...!!!
+. ~cupsoft/prod_setup.sh 1.0
 export LD_LIBRARY_PATH=${ONLDAQ_DIR}/lib:$LD_LIBRARY_PATH
 
 RUNNUMSTR=`printf "%06d" $RUNNUM`

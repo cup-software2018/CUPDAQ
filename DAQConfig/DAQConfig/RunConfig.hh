@@ -71,19 +71,19 @@ public:
     MTHRF_TCB = 5,
     PSCF_TCB = 6,
     DTF_TCB = 7,
-    SWF_TCB = 8,
+    TRGF_TCB = 8,
     MTHRSM_TCB = 9,
     PSCSM_TCB = 10,
     DTSM_TCB = 11,
-    SWSM_TCB = 12,
+    TRGSM_TCB = 12,
     MTHRSL_TCB = 13,
     PSCSL_TCB = 14,
     DTSL_TCB = 15,
-    SWSL_TCB = 16,
+    TRGSL_TCB = 16,
     MTHRI_TCB = 17,
     PSCI_TCB = 18,
     DTI_TCB = 19,
-    SWI_TCB = 20,    
+    TRGI_TCB = 20,    
     TYPE_TCB = 21
   };
 

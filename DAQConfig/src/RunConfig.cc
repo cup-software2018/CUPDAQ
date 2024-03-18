@@ -69,19 +69,19 @@ ClassImp(RunConfig)
   TCBCONFIGMENU[4] = "MTHRF";
   TCBCONFIGMENU[5] = "PSCF";
   TCBCONFIGMENU[6] = "DTF";
-  TCBCONFIGMENU[7] = "SWF";
+  TCBCONFIGMENU[7] = "TRGF";
   TCBCONFIGMENU[8] = "MTHRSM";
   TCBCONFIGMENU[9] = "PSCSM";
   TCBCONFIGMENU[10] = "DTSM";
-  TCBCONFIGMENU[11] = "SWSM";
+  TCBCONFIGMENU[11] = "TRGSM";
   TCBCONFIGMENU[12] = "MTHRSL";
   TCBCONFIGMENU[13] = "PSCSL";
   TCBCONFIGMENU[14] = "DTSL";
-  TCBCONFIGMENU[15] = "SWSL";
+  TCBCONFIGMENU[15] = "TRGSL";
   TCBCONFIGMENU[16] = "MTHRI";
   TCBCONFIGMENU[17] = "PSCI";
   TCBCONFIGMENU[18] = "DTI";
-  TCBCONFIGMENU[19] = "SWI";
+  TCBCONFIGMENU[19] = "TRGI";
   TCBCONFIGMENU[20] = "TYPE";
 
   for (int i = 0; i < kNTCBMENU; i++)
@@ -618,7 +618,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTF(val[0]);
         break;
       }
-      case SWF_TCB: {
+      case TRGF_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWF(val[0], val[1], val[2], val[3]);
         break;
@@ -638,7 +638,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTSM(val[0]);
         break;
       }
-      case SWSM_TCB: {
+      case TRGSM_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWSM(val[0], val[1], val[2], val[3]);
         break;
@@ -658,7 +658,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTSL(val[0]);
         break;
       }
-      case SWSL_TCB: {
+      case TRGSL_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWSL(val[0], val[1], val[2], val[3]);
         break;
@@ -678,7 +678,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTI(val[0]);
         break;
       }
-      case SWI_TCB: {
+      case TRGI_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWI(val[0], val[1], val[2], val[3]);
         break;
