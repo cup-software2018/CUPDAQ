@@ -371,7 +371,6 @@ bool RunConfig::ReadConfig(ifstream & ticket)
         else {
           Warning("ReadConfig", Form("there is no file %s.", fname));
         }
-        
         break;
       }
       case DAQMODE: {

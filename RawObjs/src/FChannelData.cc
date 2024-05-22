@@ -8,7 +8,7 @@
  *
  *  Last Update:      $Author: cupsoft $
  *  Update Date:      $Date: 2023/03/30 23:35:19 $
- *  CVS/RCS Revision: $Revision: 1.2 $
+ *  CVS/RCS Revision: $Revision: 1.3 $
  *  Status:           $State: Exp $
  *
  */
@@ -19,36 +19,33 @@
 ClassImp(FChannelData)
 
 FChannelData::FChannelData()
-    : TObject()
+    : TClonesArray("FChannel")
 {
-  fNCh = 0;
-  fColl = new FChannelColl("FChannel");
+  fN = 0;
 }
 
 FChannelData::FChannelData(const FChannelData & data)
-    : TObject(),
-      fColl(data.GetColl())
+    : TClonesArray(data)
 {
 }
 
-FChannelData::~FChannelData() { delete fColl; }
+FChannelData::~FChannelData() {}
 
-FChannel * FChannelData::Add() { return new ((*fColl)[fNCh++]) FChannel(); }
+FChannel * FChannelData::Add() { return new ((*this)[fN++]) FChannel(); }
 
 FChannel * FChannelData::Add(unsigned short id, int ndp)
 {
-  return new ((*fColl)[fNCh++]) FChannel(id, ndp);
+  return new ((*this)[fN++]) FChannel(id, ndp);
 }
 
-FChannel * FChannelData::Add(unsigned short id, int ndp,
-                             const unsigned short * wave)
+FChannel * FChannelData::Add(unsigned short id, int ndp, const unsigned short * wave)
 {
-  return new ((*fColl)[fNCh++]) FChannel(id, ndp, wave);
+  return new ((*this)[fN++]) FChannel(id, ndp, wave);
 }
 
 FChannel * FChannelData::Add(FChannel * ch)
 {
-  return new ((*fColl)[fNCh++]) FChannel(*ch);
+  return new ((*this)[fN++]) FChannel(*ch);
 }
 
 FChannel * FChannelData::GetChannel(unsigned short id) const
@@ -78,31 +75,6 @@ void FChannelData::CopyFrom(const FChannelData * data)
 
 void FChannelData::Clear(const Option_t *)
 {
-  fColl->Delete();
-  fNCh = 0;
+  fN = 0;
+  Delete();
 }
-
-void FChannelData::Dump() const {}
-
-/**
-$Log: FChannelData.cc,v $
-Revision 1.2  2023/03/30 23:35:19  cupsoft
-*** empty log message ***
-
-Revision 1.1  2022/12/19 00:43:47  cupsoft
-add and clean up
-
-Revision 1.2  2020/01/14 02:26:08  cupsoft
-*** empty log message ***
-
-Revision 1.1.1.1  2016/07/14 07:58:51  cupsoft
-RawObjs
-
-Revision 1.2  2016/03/17 08:12:41  jslee
-add inheritance from TArray class
-remove member array for waveform
-
-Revision 1.1.1.1  2016/02/29 08:25:13  cupsoft
-RawObjs
-
-**/

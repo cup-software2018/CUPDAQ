@@ -42,6 +42,20 @@ BuiltEvent::~BuiltEvent()
   Delete();
 }
 
+unsigned int BuiltEvent::GetTriggerType() const
+{
+  auto * adcevent = (AbsADCRaw *)At(0);
+  return adcevent->GetTriggerType();
+}
+
+
+unsigned int BuiltEvent::GetTriggerNumber() const
+{
+  auto * adcevent = (AbsADCRaw *)At(0);
+  return adcevent->GetTriggerNumber();
+}
+
+
 unsigned long BuiltEvent::GetTriggerTime() const
 {
   unsigned long fastttime = UINT64_MAX;

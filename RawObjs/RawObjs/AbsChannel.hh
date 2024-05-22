@@ -50,18 +50,3 @@ inline unsigned short AbsChannel::GetBit() const { return fBit; }
 
 #endif
 
-/**
-$Log: AbsChannel.hh,v $
-Revision 1.3  2023/03/30 23:35:19  cupsoft
-*** empty log message ***
-
-Revision 1.2  2022/12/19 00:43:47  cupsoft
-add and clean up
-
-Revision 1.1.1.1  2016/07/14 07:58:51  cupsoft
-RawObjs
-
-Revision 1.1.1.1  2016/02/29 08:25:13  cupsoft
-RawObjs
-
-**/

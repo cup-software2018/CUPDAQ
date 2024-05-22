@@ -34,6 +34,8 @@ public:
   virtual ADC::TYPE GetADCType() const;
   virtual ADC::MODE GetADCMode() const;
   virtual ADCHeader * GetADCHeader() const;
+  virtual unsigned int GetTriggerType() const;
+  virtual unsigned int GetTriggerNumber() const;
   virtual unsigned long GetTriggerTime() const;
 
   virtual void PrintHeader() const;
@@ -58,6 +60,14 @@ inline ADC::MODE AbsADCRaw::GetADCMode() const { return fMode; }
 inline int AbsADCRaw::GetRawDataSize() const { return fSize; }
 inline unsigned char * AbsADCRaw::GetRawData() const { return fData; }
 inline ADCHeader * AbsADCRaw::GetADCHeader() const { return fHeader; }
+inline unsigned int AbsADCRaw::GetTriggerType() const
+{
+  return fHeader->GetTriggerType();
+}
+inline unsigned int AbsADCRaw::GetTriggerNumber() const
+{
+  return fHeader->GetLocalTriggerNumber();
+}
 inline unsigned long AbsADCRaw::GetTriggerTime() const
 {
   return fHeader->GetLocalTriggerTime();

@@ -3,3 +3,4 @@
 /build/
 /test/
 /.clang-format
+/ld.sh

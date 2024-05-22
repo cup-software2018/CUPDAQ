@@ -174,7 +174,7 @@ void TCBwrite_DACOFF(int sid, unsigned long mid, unsigned long ch, unsigned long
   if(mid > 0)
     addr += ((ch - 1) & 0xFF) << 16;
   USB3TCBWrite(TCB_VENDOR_ID, TCB_PRODUCT_ID, sid, mid, addr, data);
-  sleep(1);
+  //sleep(1);
 }
 unsigned long TCBread_DACOFF(int sid, unsigned long mid, unsigned long ch)
 {

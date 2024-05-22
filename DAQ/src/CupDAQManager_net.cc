@@ -49,21 +49,11 @@ void CupDAQManager::TF_SendEvent()
         fLog->Error("CupDAQManager::TF_SendEvent", "sending event failed (s)");
         break;
       }
-      // state = socket->Recv(tmpbuf, 4);
-      // if (state <= 0) {
-      //   RUNSTATE::SetError(fRunStatus);
-      //   fLog->Error("CupDAQManager::TF_SendEvent", "sending event failed
-      //   (r)"); break;
-      // }
-
       delete bevent;
     }
 
     int size = fBuiltEventBuffer1.size();
     ThreadSleep(fSendSleep, perror, integral, size);
-    //std::cout << Form("size=%5d, sleep=%8d, int=%f", size, fSendSleep,
-    //                  integral)
-    //          << std::endl;    
   }
   fSendStatus = ENDED;
   fLog->Info("CupDAQManager::TF_SendEvent", "sending event ended");

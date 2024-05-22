@@ -8,11 +8,10 @@
 #include "TRandom3.h"
 #include "TServerSocket.h"
 
+#include "DAQ/CupDAQManager.hh"
 #include "OnlHistogramer/AbsHistogramer.hh"
 #include "OnlHistogramer/FADCHistogramer.hh"
 #include "OnlHistogramer/SADCHistogramer.hh"
-
-#include "DAQ/CupDAQManager.hh"
 
 using namespace std;
 
@@ -356,103 +355,118 @@ void CupDAQManager::TF_MsgServer()
           unsigned long command, dummy;
           DecodeMsg(buffer, command, dummy, dummy, dummy);
 
-          if (command == kQUERYDAQSTATUS) {
-            EncodeMsg(buffer, istcb ? fRunStatusTCB : fRunStatus);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kQUERYRUNINFO) {
-            EncodeMsg(buffer, fRunNumber, fSubRunNumber, fStartDatime,
-                      fEndDatime);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kQUERYTRGINFO) {
-            unsigned long nevent, daqtime;
-
-            mlock.lock();
-            nevent = fTriggerNumber;
-            daqtime = fTriggerTime;
-            mlock.unlock();
-
-            EncodeMsg(buffer, nevent, daqtime);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kREQUESTCONFIG) {
-            root_socket[i]->SendObject(fConfigList);
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] sent config list to DAQ", name.Data());
-          }
-          else if (command == kSPLITOUTPUTFILE) {
-            if (istcb) { fDoSplitOutputFileTCB = true; }
-            else {
-              fDoSplitOutputFile = true;
+          switch (command) {
+            case kQUERYDAQSTATUS: {
+              EncodeMsg(buffer, istcb ? fRunStatusTCB : fRunStatus);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
             }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] output file split command received", name.Data());
-          }
-          else if (command == kRECVEVENT) {
-            TMessage * mess;
-            if (root_socket[i]->Recv(mess) > 0) {
-              // root_socket[i]->Send("ok");
-              auto * event = (BuiltEvent *)mess->ReadObject(mess->GetClass());
-              int daqid = event->GetDAQID();
-              for (auto buf : fRecvEventBuffer) {
-                if (buf.first == daqid) {
-                  buf.second->push_back(event);
-                  break;
-                }
+            case kQUERYRUNINFO: {
+              EncodeMsg(buffer, fRunNumber, fSubRunNumber, fStartDatime,
+                        fEndDatime);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
+            }
+            case kQUERYTRGINFO: {
+              unsigned long nevent, daqtime;
+
+              mlock.lock();
+              nevent = fTriggerNumber;
+              daqtime = fTriggerTime;
+              mlock.unlock();
+
+              EncodeMsg(buffer, nevent, daqtime);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
+            }
+            case kREQUESTCONFIG: {
+              root_socket[i]->SendObject(fConfigList);
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] sent config list to DAQ", name.Data());
+              break;
+            }
+            case kSPLITOUTPUTFILE: {
+              if (istcb) { fDoSplitOutputFileTCB = true; }
+              else {
+                fDoSplitOutputFile = true;
               }
-              delete mess;
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] output file split command received",
+                         name.Data());
+              break;
             }
-            else {
+            case kRECVEVENT: {
+              TMessage * mess;
+              if (root_socket[i]->Recv(mess) > 0) {
+                auto * event = (BuiltEvent *)mess->ReadObject(mess->GetClass());
+                int daqid = event->GetDAQID();
+                for (auto buf : fRecvEventBuffer) {
+                  if (buf.first == daqid) {
+                    buf.second->push_back(event);
+                    break;
+                  }
+                }
+                delete mess;
+                break;
+              }
+              else {
+                fLog->Warning("CupDAQManager::TF_MsgServer",
+                              "[%s] error in event sender [ip=%s, port=%d]",
+                              name.Data(), inet_ntoa(address.sin_addr),
+                              ntohs(address.sin_port));
+              }
+            }
+            case kSETERROR: {
+              RUNSTATE::SetError(fRunStatus);
+              break;
+            }
+            case kQUERYMONITOR: {
+              EncodeMsg(buffer, fMonitorServerOn);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
+            }
+            case kCONFIGRUN: {
+              if (istcb) { fDoConfigRunTCB = true; }
+              else {
+                fDoConfigRun = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] CONFIGRUN command received", name.Data());
+              break;
+            }
+            case kSTARTRUN: {
+              if (istcb) { fDoStartRunTCB = true; }
+              else {
+                fDoStartRun = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] STARTRUN command received", name.Data());
+              break;
+            }
+            case kENDRUN: {
+              if (istcb) { fDoEndRunTCB = true; }
+              else {
+                fDoEndRun = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] ENDRUN command received", name.Data());
+              break;
+            }
+            case kEXIT: {
+              if (istcb) { fDoExitTCB = true; }
+              else {
+                fDoExit = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] EXIT command received", name.Data());
+              break;
+            }
+            default: {
               fLog->Warning("CupDAQManager::TF_MsgServer",
-                            "[%s] error in event sender [ip=%s, port=%d]",
-                            name.Data(), inet_ntoa(address.sin_addr),
-                            ntohs(address.sin_port));
+                            "[%s] Unknown command [%ld] received", name.Data(),
+                            command);
+              break;
             }
-          }
-          else if (command == kSETERROR) {
-            RUNSTATE::SetError(fRunStatus);
-          }
-          else if (command == kQUERYMONITOR) {
-            EncodeMsg(buffer, fMonitorServerOn);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kCONFIGRUN) {
-            if (istcb) { fDoConfigRunTCB = true; }
-            else {
-              fDoConfigRun = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] CONFIGRUN command received", name.Data());
-          }
-          else if (command == kSTARTRUN) {
-            if (istcb) { fDoStartRunTCB = true; }
-            else {
-              fDoStartRun = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] STARTRUN command received", name.Data());
-          }
-          else if (command == kENDRUN) {
-            if (istcb) { fDoEndRunTCB = true; }
-            else {
-              fDoEndRun = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] ENDRUN command received", name.Data());
-          }
-          else if (command == kEXIT) {
-            if (istcb) { fDoExitTCB = true; }
-            else {
-              fDoExit = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] EXIT command received", name.Data());
-          }
-          else {
-            fLog->Warning("CupDAQManager::TF_MsgServer",
-                          "[%s] Unknown command [%ld] received", name.Data(),
-                          command);
           }
         }
       }
