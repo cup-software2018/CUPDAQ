@@ -21,7 +21,6 @@ ClassImp(AChannelData)
 AChannelData::AChannelData()
     : TClonesArray("AChannel")
 {
-  fN = 0;
 }
 
 AChannelData::AChannelData(const AChannelData & data)

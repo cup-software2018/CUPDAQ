@@ -21,7 +21,6 @@ ClassImp(FChannelData)
 FChannelData::FChannelData()
     : TClonesArray("FChannel")
 {
-  fN = 0;
 }
 
 FChannelData::FChannelData(const FChannelData & data)

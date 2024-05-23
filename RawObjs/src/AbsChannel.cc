@@ -20,15 +20,12 @@ ClassImp(AbsChannel)
 AbsChannel::AbsChannel()
     : TObject()
 {
-  fID = 0;
-  fBit = 0;
 }
 
 AbsChannel::AbsChannel(unsigned short id)
     : TObject()
 {
   fID = id;
-  fBit = 0;
 }
 
 AbsChannel::AbsChannel(const AbsChannel & ch)

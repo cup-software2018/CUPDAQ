@@ -5,11 +5,6 @@ ClassImp(EventInfo)
     EventInfo::EventInfo()
     : TObject()
 {
-  fTrgType = 0;
-  fTrgNum = 0;
-  fEvtNum = 0;
-  fTrgTime = 0;
-  fNHit = 0;
 }
 
 EventInfo::EventInfo(const EventInfo & info)

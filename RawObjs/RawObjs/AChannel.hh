@@ -33,8 +33,8 @@ public:
   virtual unsigned int GetTime() const;
 
 protected:
-  unsigned int fADC;  // ADC count
-  unsigned int fTime; // Hit time
+  unsigned int fADC = 0;  // ADC count
+  unsigned int fTime = 0; // Hit time
 
   ClassDef(AChannel, 1)
 };

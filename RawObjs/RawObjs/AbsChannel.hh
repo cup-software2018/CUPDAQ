@@ -33,8 +33,8 @@ public:
   virtual unsigned short GetBit() const;
 
 protected:
-  unsigned short fID;  // channel id
-  unsigned short fBit; // trigger bit
+  unsigned short fID = 0;  // channel id
+  unsigned short fBit = 0; // trigger bit
 
   ClassDef(AbsChannel, 1)
 };

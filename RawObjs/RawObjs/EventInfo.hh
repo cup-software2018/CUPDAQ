@@ -22,11 +22,11 @@ public:
   unsigned long GetTriggerTime() const;
 
 private:
-  unsigned short fTrgType;
-  unsigned short fNHit;
-  unsigned int fTrgNum;
-  unsigned int fEvtNum;
-  unsigned long fTrgTime;
+  unsigned short fTrgType = 0;
+  unsigned short fNHit = 0;
+  unsigned int fTrgNum = 0;
+  unsigned int fEvtNum = 0;
+  unsigned long fTrgTime = 0;
 
   ClassDef(EventInfo, 1)
 };

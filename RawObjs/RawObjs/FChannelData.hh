@@ -38,7 +38,7 @@ public:
   void CopyFrom(const FChannelData * data);
 
 private:
-  int fN; //!  just for counter
+  int fN = 0; //!  just for counter
 
   ClassDef(FChannelData, 1)
 };

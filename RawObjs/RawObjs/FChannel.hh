@@ -44,8 +44,8 @@ public:
   TH1D * GetWaveformHist(double pedm = 0);
 
 protected:
-  unsigned short fPedestal; // pedestal from FADC
-  TH1D * fWaveHis;          //! just for drawing waveform
+  unsigned short fPedestal = 0; // pedestal from FADC
+  TH1D * fWaveHis = nullptr;          //! just for drawing waveform
 
   ClassDef(FChannel, 1)
 };

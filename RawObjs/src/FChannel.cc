@@ -25,32 +25,24 @@ FChannel::FChannel()
     : AbsChannel(),
       ArrayS()
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(unsigned short id)
     : AbsChannel(id),
       ArrayS()
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(unsigned short id, int ndp)
     : AbsChannel(id),
       ArrayS(ndp)
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(unsigned short id, int ndp, const unsigned short * wave)
     : AbsChannel(id),
       ArrayS(ndp, wave)
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(const FChannel & ch)

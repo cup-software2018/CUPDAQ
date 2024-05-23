@@ -20,15 +20,11 @@ ClassImp(AChannel)
 AChannel::AChannel()
     : AbsChannel()
 {
-  fADC = 0;
-  fTime = 0;
 }
 
 AChannel::AChannel(unsigned short id)
     : AbsChannel(id)
 {
-  fADC = 0;
-  fTime = 0;
 }
 
 AChannel::AChannel(const AChannel & ch)
