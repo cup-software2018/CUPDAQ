@@ -276,12 +276,7 @@ void CupDAQManager::TF_MsgServer()
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
   while (true) {
-    if (!istcb) {
-      if (fDoExit) { break; }
-    }
-    else {
-      if (fDoExitTCB) { break; }
-    }
+    if (fDoExit || fDoExitTCB) { break; }
 
     // select clients
     FD_ZERO(&readfds);
@@ -529,7 +524,7 @@ void CupDAQManager::TF_ShrinkToFit()
                     RUNSTATE::CheckError(fRunStatus) || fDoExit;
     if (runstate) break;
 
-    gSystem->Sleep(1000);
+    gSystem->Sleep(100);
   }
 
   fLog->Info("CupDAQManager::TF_ShrinkToFit",
@@ -558,7 +553,7 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
         }
       }
       if (fDoEndRunTCB || RUNSTATE::CheckError(fRunStatusTCB)) { break; }
-      gSystem->Sleep(10);
+      gSystem->Sleep(100);
     }
   }
   else {
@@ -582,7 +577,7 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
                       RUNSTATE::CheckError(fRunStatus) || fDoExit;
       if (runstate) break;
 
-      gSystem->Sleep(10);
+      gSystem->Sleep(100);
     }
   }
 
