@@ -81,7 +81,6 @@ void AbsHistogramer::Update()
   fROOTFile->cd();
 
   int nobj = fHistProxy->GetEntries();
-
   for (int i = 0; i < nobj; i++) {
     TObject * obj = fHistProxy->At(i);
     obj->Write(nullptr, TObject::kOverwrite);
