@@ -20,6 +20,8 @@ public:
 
   int GetDAQID() const;
   unsigned int GetEventNumber() const;
+  unsigned int GetTriggerNumber() const;
+  unsigned int GetTriggerType() const;  
   unsigned long GetTriggerTime() const;
 
   virtual bool IsSortable() const { return true; }

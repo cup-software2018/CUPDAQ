@@ -19,30 +19,27 @@
 ClassImp(AChannelData)
 
 AChannelData::AChannelData()
-    : TObject()
+    : TClonesArray("AChannel")
 {
-  fNCh = 0;
-  fColl = new AChannelColl("AChannel");
 }
 
 AChannelData::AChannelData(const AChannelData & data)
-    : TObject(data),
-      fColl(data.GetColl())
+    : TClonesArray(data)
 {
 }
 
-AChannelData::~AChannelData() { delete fColl; }
+AChannelData::~AChannelData() {}
 
-AChannel * AChannelData::Add() { return new ((*fColl)[fNCh++]) AChannel(); }
+AChannel * AChannelData::Add() { return new ((*this)[fN++]) AChannel(); }
 
 AChannel * AChannelData::Add(unsigned short id)
 {
-  return new ((*fColl)[fNCh++]) AChannel(id);
+  return new ((*this)[fN++]) AChannel(id);
 }
 
 AChannel * AChannelData::Add(AChannel * ch)
 {
-  return new ((*fColl)[fNCh++]) AChannel(*ch);
+  return new ((*this)[fN++]) AChannel(*ch);
 }
 
 AChannel * AChannelData::GetChannel(unsigned short id) const
@@ -72,24 +69,6 @@ void AChannelData::CopyFrom(const AChannelData * data)
 
 void AChannelData::Clear(const Option_t *)
 {
-  fColl->Delete();
-  fNCh = 0;
+  fN = 0;
+  Delete();
 }
-
-void AChannelData::Dump() const {}
-
-/**
-$Log: AChannelData.cc,v $
-Revision 1.3  2023/03/30 23:35:19  cupsoft
-*** empty log message ***
-
-Revision 1.2  2022/12/19 00:43:47  cupsoft
-add and clean up
-
-Revision 1.1.1.1  2016/07/14 07:58:51  cupsoft
-RawObjs
-
-Revision 1.1.1.1  2016/02/29 08:25:13  cupsoft
-RawObjs
-
-**/

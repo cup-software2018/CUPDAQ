@@ -5,14 +5,12 @@
 
 #include "TMessage.h"
 #include "TMonitor.h"
-#include "TRandom3.h"
 #include "TServerSocket.h"
 
+#include "DAQ/CupDAQManager.hh"
 #include "OnlHistogramer/AbsHistogramer.hh"
 #include "OnlHistogramer/FADCHistogramer.hh"
 #include "OnlHistogramer/SADCHistogramer.hh"
-
-#include "DAQ/CupDAQManager.hh"
 
 using namespace std;
 
@@ -277,12 +275,7 @@ void CupDAQManager::TF_MsgServer()
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
   while (true) {
-    if (!istcb) {
-      if (fDoExit) { break; }
-    }
-    else {
-      if (fDoExitTCB) { break; }
-    }
+    if (fDoExit || fDoExitTCB) { break; }
 
     // select clients
     FD_ZERO(&readfds);
@@ -356,103 +349,118 @@ void CupDAQManager::TF_MsgServer()
           unsigned long command, dummy;
           DecodeMsg(buffer, command, dummy, dummy, dummy);
 
-          if (command == kQUERYDAQSTATUS) {
-            EncodeMsg(buffer, istcb ? fRunStatusTCB : fRunStatus);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kQUERYRUNINFO) {
-            EncodeMsg(buffer, fRunNumber, fSubRunNumber, fStartDatime,
-                      fEndDatime);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kQUERYTRGINFO) {
-            unsigned long nevent, daqtime;
-
-            mlock.lock();
-            nevent = fTriggerNumber;
-            daqtime = fTriggerTime;
-            mlock.unlock();
-
-            EncodeMsg(buffer, nevent, daqtime);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kREQUESTCONFIG) {
-            root_socket[i]->SendObject(fConfigList);
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] sent config list to DAQ", name.Data());
-          }
-          else if (command == kSPLITOUTPUTFILE) {
-            if (istcb) { fDoSplitOutputFileTCB = true; }
-            else {
-              fDoSplitOutputFile = true;
+          switch (command) {
+            case kQUERYDAQSTATUS: {
+              EncodeMsg(buffer, istcb ? fRunStatusTCB : fRunStatus);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
             }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] output file split command received", name.Data());
-          }
-          else if (command == kRECVEVENT) {
-            TMessage * mess;
-            if (root_socket[i]->Recv(mess) > 0) {
-              // root_socket[i]->Send("ok");
-              auto * event = (BuiltEvent *)mess->ReadObject(mess->GetClass());
-              int daqid = event->GetDAQID();
-              for (auto buf : fRecvEventBuffer) {
-                if (buf.first == daqid) {
-                  buf.second->push_back(event);
-                  break;
-                }
+            case kQUERYRUNINFO: {
+              EncodeMsg(buffer, fRunNumber, fSubRunNumber, fStartDatime,
+                        fEndDatime);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
+            }
+            case kQUERYTRGINFO: {
+              unsigned long nevent, daqtime;
+
+              mlock.lock();
+              nevent = fTriggerNumber;
+              daqtime = fTriggerTime;
+              mlock.unlock();
+
+              EncodeMsg(buffer, nevent, daqtime);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
+            }
+            case kREQUESTCONFIG: {
+              root_socket[i]->SendObject(fConfigList);
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] sent config list to DAQ", name.Data());
+              break;
+            }
+            case kSPLITOUTPUTFILE: {
+              if (istcb) { fDoSplitOutputFileTCB = true; }
+              else {
+                fDoSplitOutputFile = true;
               }
-              delete mess;
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] output file split command received",
+                         name.Data());
+              break;
             }
-            else {
+            case kRECVEVENT: {
+              TMessage * mess;
+              if (root_socket[i]->Recv(mess) > 0) {
+                auto * event = (BuiltEvent *)mess->ReadObject(mess->GetClass());
+                int daqid = event->GetDAQID();
+                for (auto buf : fRecvEventBuffer) {
+                  if (buf.first == daqid) {
+                    buf.second->push_back(event);
+                    break;
+                  }
+                }
+                delete mess;
+                break;
+              }
+              else {
+                fLog->Warning("CupDAQManager::TF_MsgServer",
+                              "[%s] error in event sender [ip=%s, port=%d]",
+                              name.Data(), inet_ntoa(address.sin_addr),
+                              ntohs(address.sin_port));
+              }
+            }
+            case kSETERROR: {
+              RUNSTATE::SetError(fRunStatus);
+              break;
+            }
+            case kQUERYMONITOR: {
+              EncodeMsg(buffer, fMonitorServerOn);
+              root_socket[i]->SendRaw(buffer, kMESSLEN);
+              break;
+            }
+            case kCONFIGRUN: {
+              if (istcb) { fDoConfigRunTCB = true; }
+              else {
+                fDoConfigRun = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] CONFIGRUN command received", name.Data());
+              break;
+            }
+            case kSTARTRUN: {
+              if (istcb) { fDoStartRunTCB = true; }
+              else {
+                fDoStartRun = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] STARTRUN command received", name.Data());
+              break;
+            }
+            case kENDRUN: {
+              if (istcb) { fDoEndRunTCB = true; }
+              else {
+                fDoEndRun = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] ENDRUN command received", name.Data());
+              break;
+            }
+            case kEXIT: {
+              if (istcb) { fDoExitTCB = true; }
+              else {
+                fDoExit = true;
+              }
+              fLog->Info("CupDAQManager::TF_MsgServer",
+                         "[%s] EXIT command received", name.Data());
+              break;
+            }
+            default: {
               fLog->Warning("CupDAQManager::TF_MsgServer",
-                            "[%s] error in event sender [ip=%s, port=%d]",
-                            name.Data(), inet_ntoa(address.sin_addr),
-                            ntohs(address.sin_port));
+                            "[%s] Unknown command [%ld] received", name.Data(),
+                            command);
+              break;
             }
-          }
-          else if (command == kSETERROR) {
-            RUNSTATE::SetError(fRunStatus);
-          }
-          else if (command == kQUERYMONITOR) {
-            EncodeMsg(buffer, fMonitorServerOn);
-            root_socket[i]->SendRaw(buffer, kMESSLEN);
-          }
-          else if (command == kCONFIGRUN) {
-            if (istcb) { fDoConfigRunTCB = true; }
-            else {
-              fDoConfigRun = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] CONFIGRUN command received", name.Data());
-          }
-          else if (command == kSTARTRUN) {
-            if (istcb) { fDoStartRunTCB = true; }
-            else {
-              fDoStartRun = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] STARTRUN command received", name.Data());
-          }
-          else if (command == kENDRUN) {
-            if (istcb) { fDoEndRunTCB = true; }
-            else {
-              fDoEndRun = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] ENDRUN command received", name.Data());
-          }
-          else if (command == kEXIT) {
-            if (istcb) { fDoExitTCB = true; }
-            else {
-              fDoExit = true;
-            }
-            fLog->Info("CupDAQManager::TF_MsgServer",
-                       "[%s] EXIT command received", name.Data());
-          }
-          else {
-            fLog->Warning("CupDAQManager::TF_MsgServer",
-                          "[%s] Unknown command [%ld] received", name.Data(),
-                          command);
           }
         }
       }
@@ -515,7 +523,7 @@ void CupDAQManager::TF_ShrinkToFit()
                     RUNSTATE::CheckError(fRunStatus) || fDoExit;
     if (runstate) break;
 
-    gSystem->Sleep(1000);
+    gSystem->Sleep(100);
   }
 
   fLog->Info("CupDAQManager::TF_ShrinkToFit",
@@ -544,7 +552,7 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
         }
       }
       if (fDoEndRunTCB || RUNSTATE::CheckError(fRunStatusTCB)) { break; }
-      gSystem->Sleep(10);
+      gSystem->Sleep(100);
     }
   }
   else {
@@ -568,118 +576,9 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
                       RUNSTATE::CheckError(fRunStatus) || fDoExit;
       if (runstate) break;
 
-      gSystem->Sleep(10);
+      gSystem->Sleep(100);
     }
   }
 
   fLog->Info("CupDAQManager::TF_SplitOutput", "output splitter ended");
-}
-
-void CupDAQManager::TF_Histogramer()
-{
-  if (!ThreadWait(fRunStatus, fDoExit)) { return; }
-  fLog->Info("CupDAQManager::TF_Histogramer", "histogramer started");
-
-  //
-  // Create histogramer
-  //
-  AbsHistogramer * histogramer = nullptr;
-  switch (fADCType) {
-    case ADC::FADCT: histogramer = new FADCHistogramer(); break;
-    case ADC::FADCS: histogramer = new FADCHistogramer(); break;
-    case ADC::GADCT: histogramer = new FADCHistogramer(); break;
-    case ADC::GADCS: histogramer = new FADCHistogramer(); break;
-    case ADC::MADCS: histogramer = new FADCHistogramer(); break;
-    case ADC::SADCT: histogramer = new SADCHistogramer(); break;
-    case ADC::SADCS: histogramer = new SADCHistogramer(); break;
-    default: break;
-  }
-  histogramer->SetRunNumber(fRunNumber);
-  histogramer->SetADCType(fADCType);
-  histogramer->SetConfigList(fConfigList);
-  histogramer->SetStartDatime(fStartDatime);
-
-  // open histogramer root file
-  if (fHistFilename.IsNull()) {
-    TString filename;
-    TString dirname = gSystem->Getenv("RAWDATA_DIR");
-    if (dirname.IsNull()) {
-      fLog->Warning("CupDAQManager::TF_Histogramer",
-                    "variable RAWDATA_DIR is not set");
-      filename = Form("hist_%s_%06d.root", GetADCName(fADCType), fRunNumber);
-    }
-    else {
-      dirname += Form("/HIST/%06d", fRunNumber);
-      int isdir = gSystem->Exec(Form("test -d %s", dirname.Data()));
-      if (!isdir) {
-        gSystem->Exec(Form("mkdir %s", dirname.Data()));
-        fLog->Info("CupDAQManager::TF_Histogramer", "%s created",
-                   dirname.Data());
-      }
-      fLog->Info("CupDAQManager::TF_Histogramer", "%s already exist",
-                 dirname.Data());
-
-      filename = Form("%s/hist_%s_%06d.root", dirname.Data(),
-                      GetADCName(fADCType), fRunNumber);
-    }
-    histogramer->SetFilename(filename);
-    fHistFilename = filename;
-  }
-
-  if (!histogramer->Open()) {
-    fLog->Warning(
-        "CupDAQManager::TF_Histogramer",
-        "Can\'t open histogramer root file %s, histogramer will be ended",
-        fHistFilename.Data());
-    return;
-  }
-
-  // booking histograms
-  histogramer->Book();
-
-  int eventnumber = 0;
-  int ntotalmonitoredevent = 0;
-
-  double trate = 0.3;
-
-  double perror = 0;
-  double integral = 0;
-
-  fBenchmark->Start("Histogramer");
-  while (true) {
-    if (fBuildStatus == ENDED) {
-      if (fBuiltEventBuffer2.empty()) break;
-    }
-
-    if (RUNSTATE::CheckError(fRunStatus) || fDoExit) { break; }
-
-    BuiltEvent * builtevent = nullptr;
-
-    int size = fBuiltEventBuffer2.size();
-
-    if (size > 0) { builtevent = fBuiltEventBuffer2.popfront(); }
-
-    if (builtevent) {
-      eventnumber = builtevent->GetEventNumber();
-      if (gRandom->Rndm() < trate) {
-        histogramer->Fill(builtevent);
-        histogramer->Update();
-        ntotalmonitoredevent += 1;
-      }
-      delete builtevent;
-    }
-
-    ThreadSleep(fHistSleep, perror, integral, size);
-  }
-  fBenchmark->Stop("Histogramer");
-
-  histogramer->Close();
-  delete histogramer;
-
-  fHistogramerEnded = true;
-
-  fLog->Info("CupDAQManager::TF_Histogramer",
-             "total monitored event = %d (%.2f%%)", ntotalmonitoredevent,
-             100. * ntotalmonitoredevent / double(eventnumber));
-  fLog->Info("CupDAQManager::TF_Histogramer", "online histogramer ended");
 }

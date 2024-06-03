@@ -46,21 +46,15 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
       chdata->Clear();
 
       BuiltEvent * bevent = fBuiltEventBuffer1.popfront();
-
-      unsigned long fastttime = UINT64_MAX;
-      unsigned int tnum = 0;
-      unsigned int ttype = 0;
+      eventinfo->SetTriggerNumber(bevent->GetTriggerNumber());
+      eventinfo->SetTriggerTime(bevent->GetTriggerTime());
+      eventinfo->SetTriggerType(bevent->GetTriggerType());
+      eventinfo->SetEventNumber(fNBuiltEvent);
 
       int nadc = bevent->GetEntries();
       for (int j = 0; j < nadc; j++) {
         auto * adcraw = (FADCRawEvent *)bevent->At(j);
         auto * header = adcraw->GetADCHeader();
-
-        if (header->GetLocalTriggerTime() < fastttime) {
-          fastttime = header->GetLocalTriggerTime();
-          tnum = header->GetTriggerNumber();
-          ttype = header->GetTriggerType();
-        }
 
         AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
         if (!conf) {
@@ -79,10 +73,6 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
           channel->SetBit(header->GetTriggerBit(i));
         }
       }
-      eventinfo->SetTriggerNumber(tnum);
-      eventinfo->SetTriggerTime(fastttime);
-      eventinfo->SetTriggerType(ttype);
-
       delete bevent;
 
       wlock.lock();
@@ -127,23 +117,22 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
       chdata->Clear();
 
       BuiltEvent * bevent = fBuiltEventBuffer1.popfront();
-
-      unsigned long fastttime = UINT64_MAX;
-      unsigned int tnum = 0;
-      unsigned int ttype = 0;
+      eventinfo->SetTriggerNumber(bevent->GetTriggerNumber());
+      eventinfo->SetTriggerTime(bevent->GetTriggerTime());
+      eventinfo->SetTriggerType(bevent->GetTriggerType());
+      eventinfo->SetEventNumber(fNBuiltEvent);
 
       int nadc = bevent->GetEntries();
       for (int j = 0; j < nadc; j++) {
         auto * adcraw = (SADCRawEvent *)bevent->At(j);
         auto * header = adcraw->GetADCHeader();
 
-        if (header->GetLocalTriggerTime() < fastttime) {
-          fastttime = header->GetLocalTriggerTime();
-          tnum = header->GetTriggerNumber();
-          ttype = header->GetTriggerType();
-        }
-
         AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());        
+        if (!conf) {
+          fLog->Error("CupDAQManager::WriteFADC_MOD_ROOT", "no config for mid=%d", header->GetMID());
+          RUNSTATE::SetError(fRunStatus);
+          break;
+        }
 
         for (int i = 0; i < nadcch; i++) {
           if (header->GetZero(i)) continue;
@@ -154,10 +143,6 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
           channel->SetTime(adcraw->GetTime(i));
         }
       }
-      eventinfo->SetTriggerNumber(tnum);
-      eventinfo->SetTriggerTime(fastttime);
-      eventinfo->SetTriggerType(ttype);
-
       delete bevent;
 
       wlock.lock();

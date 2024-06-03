@@ -114,6 +114,6 @@ void AbsConfList::Dump() const
   int nadc = GetAbsLast() + 1;
   for (int i = 0; i < nadc; i++) {
     auto * conf = (AbsConf *)fCont[i];
-    cout << conf->InfoStr() << endl;
+    conf->PrintConf();
   }
 }

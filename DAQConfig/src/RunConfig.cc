@@ -13,13 +13,13 @@
  *
  */
 
+#include "DAQConfig/RunConfig.hh"
+
 #include <algorithm>
 #include <sstream>
 
 #include "TObjString.h"
 #include "TString.h"
-
-#include "DAQConfig/RunConfig.hh"
 
 using namespace std;
 
@@ -43,20 +43,21 @@ ClassImp(RunConfig)
 
   fConfigs = new AbsConfList();
 
-  MAINCONFIGMENU[0] = "EXPERIMENT";
-  MAINCONFIGMENU[1] = "DAQMODE";
-  MAINCONFIGMENU[2] = "TCB";
-  MAINCONFIGMENU[3] = "FADCT";
-  MAINCONFIGMENU[4] = "FADCS";
-  MAINCONFIGMENU[5] = "GADCT";
-  MAINCONFIGMENU[6] = "GADCS";
-  MAINCONFIGMENU[7] = "MADCS";
-  MAINCONFIGMENU[8] = "SADCT";
-  MAINCONFIGMENU[9] = "SADCS";
-  MAINCONFIGMENU[10] = "IADCT";
-  MAINCONFIGMENU[11] = "AMOREADC";
-  MAINCONFIGMENU[12] = "STRG";
-  MAINCONFIGMENU[13] = "DAQ";
+  MAINCONFIGMENU[0] = "INCLUDE";
+  MAINCONFIGMENU[1] = "EXPERIMENT";
+  MAINCONFIGMENU[2] = "DAQMODE";
+  MAINCONFIGMENU[3] = "TCB";
+  MAINCONFIGMENU[4] = "FADCT";
+  MAINCONFIGMENU[5] = "FADCS";
+  MAINCONFIGMENU[6] = "GADCT";
+  MAINCONFIGMENU[7] = "GADCS";
+  MAINCONFIGMENU[8] = "MADCS";
+  MAINCONFIGMENU[9] = "SADCT";
+  MAINCONFIGMENU[10] = "SADCS";
+  MAINCONFIGMENU[11] = "IADCT";
+  MAINCONFIGMENU[12] = "AMOREADC";
+  MAINCONFIGMENU[13] = "STRG";
+  MAINCONFIGMENU[14] = "DAQ";
 
   for (int i = 0; i < kNMAINMENU; i++)
     fMainItem.insert(make_pair(MAINCONFIGMENU[i], i + 1));
@@ -68,19 +69,19 @@ ClassImp(RunConfig)
   TCBCONFIGMENU[4] = "MTHRF";
   TCBCONFIGMENU[5] = "PSCF";
   TCBCONFIGMENU[6] = "DTF";
-  TCBCONFIGMENU[7] = "SWF";
+  TCBCONFIGMENU[7] = "TRGF";
   TCBCONFIGMENU[8] = "MTHRSM";
   TCBCONFIGMENU[9] = "PSCSM";
   TCBCONFIGMENU[10] = "DTSM";
-  TCBCONFIGMENU[11] = "SWSM";
+  TCBCONFIGMENU[11] = "TRGSM";
   TCBCONFIGMENU[12] = "MTHRSL";
   TCBCONFIGMENU[13] = "PSCSL";
   TCBCONFIGMENU[14] = "DTSL";
-  TCBCONFIGMENU[15] = "SWSL";
+  TCBCONFIGMENU[15] = "TRGSL";
   TCBCONFIGMENU[16] = "MTHRI";
   TCBCONFIGMENU[17] = "PSCI";
   TCBCONFIGMENU[18] = "DTI";
-  TCBCONFIGMENU[19] = "SWI";
+  TCBCONFIGMENU[19] = "TRGI";
   TCBCONFIGMENU[20] = "TYPE";
 
   for (int i = 0; i < kNTCBMENU; i++)
@@ -359,6 +360,19 @@ bool RunConfig::ReadConfig(ifstream & ticket)
     if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
 
     switch (fMainItem[key]) {
+      case INCLUDE: {
+        string fname;
+        iss >> fname;
+
+        ifstream ifs(fname);
+        if (ifs.is_open()) {
+          ReadConfig(ifs);
+        }
+        else {
+          Warning("ReadConfig", Form("there is no file %s.", fname));
+        }
+        break;
+      }
       case DAQMODE: {
         int mode;
         iss >> mode;
@@ -603,7 +617,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTF(val[0]);
         break;
       }
-      case SWF_TCB: {
+      case TRGF_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWF(val[0], val[1], val[2], val[3]);
         break;
@@ -623,11 +637,11 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTSM(val[0]);
         break;
       }
-      case SWSM_TCB: {
+      case TRGSM_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWSM(val[0], val[1], val[2], val[3]);
         break;
-      }      
+      }
       case MTHRSL_TCB: {
         iss >> val[0];
         conf->SetMTHRSL(val[0]);
@@ -643,12 +657,12 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTSL(val[0]);
         break;
       }
-      case SWSL_TCB: {
+      case TRGSL_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWSL(val[0], val[1], val[2], val[3]);
         break;
       }
-       case MTHRI_TCB: {
+      case MTHRI_TCB: {
         iss >> val[0];
         conf->SetMTHRI(val[0]);
         break;
@@ -663,11 +677,11 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         conf->SetDTI(val[0]);
         break;
       }
-      case SWI_TCB: {
+      case TRGI_TCB: {
         iss >> val[0] >> val[1] >> val[2] >> val[3];
         conf->SetSWI(val[0], val[1], val[2], val[3]);
         break;
-      }           
+      }
       case TYPE_TCB: {
         iss >> val[0];
         conf->SetTCBTYPE(static_cast<TCB::TYPE>(val[0]));

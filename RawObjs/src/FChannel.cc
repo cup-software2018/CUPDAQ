@@ -15,8 +15,9 @@
 
 #include <iostream>
 
-#include "RawObjs/FChannel.hh"
 #include "TH1D.h"
+#include "RawObjs/FChannel.hh"
+
 
 ClassImp(FChannel)
 
@@ -24,32 +25,24 @@ FChannel::FChannel()
     : AbsChannel(),
       ArrayS()
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(unsigned short id)
     : AbsChannel(id),
       ArrayS()
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(unsigned short id, int ndp)
     : AbsChannel(id),
       ArrayS(ndp)
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(unsigned short id, int ndp, const unsigned short * wave)
     : AbsChannel(id),
       ArrayS(ndp, wave)
 {
-  fWaveHis = nullptr;
-  fPedestal = 0;
 }
 
 FChannel::FChannel(const FChannel & ch)
@@ -112,28 +105,3 @@ TH1D * FChannel::GetWaveformHist(Double_t pedm)
   return fWaveHis;
 }
 
-/**
-$Log: FChannel.cc,v $
-Revision 1.2  2023/03/30 23:35:19  cupsoft
-*** empty log message ***
-
-Revision 1.1  2022/12/19 00:43:47  cupsoft
-add and clean up
-
-Revision 1.2  2020/01/14 02:26:08  cupsoft
-*** empty log message ***
-
-Revision 1.1.1.1  2016/07/14 07:58:51  cupsoft
-RawObjs
-
-Revision 1.3  2016/03/17 08:12:41  jslee
-add inheritance from TArray class
-remove member array for waveform
-
-Revision 1.2  2016/03/08 04:40:33  amore
-*** empty log message ***
-
-Revision 1.1.1.1  2016/02/29 08:25:13  cupsoft
-RawObjs
-
-**/
