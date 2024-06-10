@@ -27,13 +27,4 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="2010", MODE="0666"
 ```
 
 ## Usage
-
-
-
-
-
-
-
-
-
-
+this is test
