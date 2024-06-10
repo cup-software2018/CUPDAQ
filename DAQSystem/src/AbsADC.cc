@@ -1,10 +1,10 @@
-#include "TSystem.h"
-
 #include "DAQSystem/AbsADC.hh"
+
+#include "TSystem.h"
 
 ClassImp(AbsADC)
 
-AbsADC::AbsADC()
+    AbsADC::AbsADC()
     : TObject()
 {
   fSID = 0;

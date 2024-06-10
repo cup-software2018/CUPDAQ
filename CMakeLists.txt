@@ -53,6 +53,3 @@ add_subdirectory(DAQ)
 
 # install
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include DESTINATION ${CMAKE_INSTALL_PREFIX})
-
-this is test
-
