@@ -114,7 +114,7 @@ void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral,
   double output = Pout + Iout + Dout;
   output = std::max(min, std::min(max, output));
 
-  sleep += int(output);
+  sleep = int(output);
   if (sleep < 0) sleep = 0;
   perror = error;
 
