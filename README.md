@@ -25,17 +25,16 @@ To allow CUPDAQ to access connected USB devices without root privileges:
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="2010", MODE="0666"
 
 3. Reload udev rules with root privileges:
-
-  ```bash
-  sudo udevadm control --reload-rules && sudo udevadm trigger
+   
+   ```bash
+     sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ## Build and Installation
 
-  ```bash
-  git clone https://github.com/cup-software2018/CUPDAQ.git
-  cd CUPDAQ
-  cmake -S . -B build
-  cmake --build build -j
-  cmake --install build --prefix [installation_path]
+   ```bash
+     git clone https://github.com/cup-software2018/CUPDAQ.git
+     cd CUPDAQ
+     cmake -S . -B build
+     cmake --build build -j
+     cmake --install build --prefix [installation_path]
 
-## Usage
