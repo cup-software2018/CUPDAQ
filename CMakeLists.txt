@@ -1,55 +1,51 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
+# ------------------------------------------------------------
+# CUPDAQ top-level CMakeLists.txt
+# ------------------------------------------------------------
+cmake_minimum_required ( VERSION 3.16 )
+project ( CUPDAQ LANGUAGES CXX )
 
-project(CUPDAQ)
+set ( CMAKE_CXX_STANDARD 17 )
+set ( CMAKE_CXX_STANDARD_REQUIRED ON )
+set ( CMAKE_CXX_EXTENSIONS OFF )
 
-#
-# Locate the ROOT package and define a number of useful targets and variables.
-#
-find_package(ROOT REQUIRED)
-include(${ROOT_USE_FILE})
+# Installation directories
+set ( CMAKE_INSTALL_BINDIR bin )
+set ( CMAKE_INSTALL_LIBDIR lib )
+set ( CMAKE_INSTALL_INCLUDEDIR include )
 
-# Find libusb-1.0 package
-find_package(PkgConfig)
-pkg_check_modules(libusb-1.0 REQUIRED libusb-1.0)
-include_directories(${libusb-1.0_INCLUDE_DIRS})
+# ---- ROOT ----
+find_package ( ROOT REQUIRED COMPONENTS Core RIO )
+include ( ${ROOT_USE_FILE} )
 
-#
-# Locate the HDF5 package
-#
-set(LIB_TYPE SHARED)
-string(TOLOWER ${LIB_TYPE} SEARCH_TYPE)
-find_package(HDF5 QUIET NAMES hdf5 COMPONENTS C ${SEARCH_TYPE})
+# ---- libusb (via pkg-config) ----
+find_package ( PkgConfig REQUIRED )
+pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
 
-if(HDF5_FOUND)
-  include_directories(${HDF5_INCLUDE_DIR})
-  set(HDF5_LIBRARY ${HDF5_C_${LIB_TYPE}_LIBRARY})
-  option(USE_HDF5 "Use fake HDF5 implementation" ON)  
-  add_definitions(-DENABLE_HDF5)
-endif()
+# ---- HDF5 (optional) ----
+option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" OFF )
+if ( CUPDAQ_ENABLE_HDF5 )
+  find_package ( HDF5 QUIET COMPONENTS C CXX HL )
+  if ( HDF5_FOUND )
+    message ( STATUS "HDF5 found: enabling HDF5Utils module" )
+    set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2" )
+    add_definitions ( -DENABLE_HDF5 )
+    add_subdirectory ( HDF5Utils )
+  else ()
+    message ( STATUS "HDF5 not found: skipping HDF5Utils module" )
+    set(CUPDAQ_ENABLE_HDF5 OFF CACHE BOOL "Enable HDF5-based utilities" FORCE)
+  endif ()
+else ()
+  message ( STATUS "HDF5 disabled" )
+endif ()
 
-# -----------------------------------------------------------------------------
-
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/include)
-set(PROJECT_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
-
-set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_PREFIX}/lib)
-set(CMAKE_INSTALL_BINDIR ${CMAKE_INSTALL_PREFIX}/bin)
-
-include_directories(${PROJECT_INCLUDE_DIR})
-
-add_subdirectory(OnlConsts EXCLUDE_FROM_ALL)
-add_subdirectory(Notice)
-add_subdirectory(OnlObjs)
-add_subdirectory(RawObjs)
-if(USE_HDF5)
-  add_subdirectory(HDF5Utils)
-endif()
-add_subdirectory(DAQUtils)
-add_subdirectory(DAQConfig)
-add_subdirectory(DAQSystem)
-add_subdirectory(DAQTrigger)
-add_subdirectory(OnlHistogramer)
-add_subdirectory(DAQ)
-
-# install
-install(DIRECTORY ${CMAKE_BINARY_DIR}/include DESTINATION ${CMAKE_INSTALL_PREFIX})
+# ---- Submodules ----
+add_subdirectory ( OnlConsts )
+add_subdirectory ( DAQUtils )
+add_subdirectory ( Notice )
+add_subdirectory ( DAQConfig )
+add_subdirectory ( DAQSystem )
+add_subdirectory ( OnlObjs )
+add_subdirectory ( DAQTrigger )
+add_subdirectory ( OnlHistogramer )
+add_subdirectory ( RawObjs )
+add_subdirectory ( DAQ )

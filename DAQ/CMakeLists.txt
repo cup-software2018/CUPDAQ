@@ -1,73 +1,96 @@
-set(PROJECT_NAME "DAQ")
+set ( MODULE_NAME DAQ )
+message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-project(${PROJECT_NAME})
-message(STATUS "cmaking ${PROJECT_NAME} ...")
+# Sources (normal .cc)
+file ( GLOB MODULE_SOURCES src/*.cc )
 
-# ----------------------------------------------------------------------------
-# Locate sources and headers for this project
-# ----------------------------------------------------------------------------
-file(GLOB ${PROJECT_NAME}_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cc)
-file(GLOB ${PROJECT_NAME}_HEADERS ${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/*.hh)
-
-file(MAKE_DIRECTORY ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME})
-
-foreach(HEADER_i ${${PROJECT_NAME}_HEADERS})
-  configure_file(${HEADER_i} ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME} COPYONLY)
-endforeach(HEADER_i)
-
-configure_file(${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/LinkDef.h ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME} COPYONLY)
-
-file(GLOB ${PROJECT_NAME}_HEADERS ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME}/*.hh)
-set(${PROJECT_NAME}_DICT_FILE ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME}/LinkDef.h)
-
-root_generate_dictionary(G__${PROJECT_NAME}
-  ${${PROJECT_NAME}_HEADERS}
-  LINKDEF ${${PROJECT_NAME}_DICT_FILE}
+# --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
+set ( DICT_I_FLAGS
+    -I${CMAKE_SOURCE_DIR}/OnlConsts
+    -I${CMAKE_SOURCE_DIR}/Notice
+    -I${CMAKE_SOURCE_DIR}/DAQUtils
+    -I${CMAKE_SOURCE_DIR}/DAQSystem
+    -I${CMAKE_SOURCE_DIR}/DAQConfig
+    -I${CMAKE_SOURCE_DIR}/DAQTrigger
+    -I${CMAKE_SOURCE_DIR}/OnlObjs
+    -I${CMAKE_SOURCE_DIR}/RawObjs
+    -I${CMAKE_SOURCE_DIR}/OnlHistogramer
 )
 
-add_library(${PROJECT_NAME} SHARED
-  ${${PROJECT_NAME}_SOURCES}
-  G__${PROJECT_NAME}.cxx
+if ( CUPDAQ_ENABLE_HDF5 )
+    list ( APPEND DICT_I_FLAGS -I${HDF5_INCLUDE_DIRS} )
+    list ( APPEND DICT_I_FLAGS -I${CMAKE_SOURCE_DIR}/HDF5Utils )
+endif ()
+
+# ---- Specify exactly the headers for dictionary ----
+# (replace with your actual header filenames)
+set ( DICT_HEADERS
+    ${MODULE_NAME}/CupDAQManager.hh
+    ${MODULE_NAME}/CupGeneralTCB.hh
 )
 
-install(PROGRAMS
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.so
-  DESTINATION
-  ${CMAKE_INSTALL_LIBDIR}
+# Generate ROOT dictionary for only the two headers above
+ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
+    ${DICT_HEADERS}
+    LINKDEF ${MODULE_NAME}/LinkDef.h
+    OPTIONS ${DICT_I_FLAGS}
 )
 
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}_rdict.pcm
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.rootmap
-  DESTINATION
-  ${CMAKE_INSTALL_LIBDIR}
+# Build shared library (add dictionary source)
+add_library ( ${MODULE_NAME} SHARED
+    ${MODULE_SOURCES}
+    G__${MODULE_NAME}.cxx
 )
 
-# ----------------------------------------------------------------------------
-# build executables
-# ----------------------------------------------------------------------------
-if(USE_HDF5)
-  set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice HDF5Utils DAQ)
-  set(LINK_EXTERNALS ${ROOT_LIBRARIES} ${libusb-1.0_LIBRARIES} ${HDF5_LIBRARY})
-else()
-  set(LINK_PACKAGES DAQConfig DAQSystem DAQTrigger DAQUtils OnlHistogramer OnlObjs RawObjs Notice DAQ)
-  set(LINK_EXTERNALS ${ROOT_LIBRARIES} ${libusb-1.0_LIBRARIES})
-endif()
-
-file(GLOB ${PROJECT_NAME}_EXECUTABLES ${PROJECT_SOURCE_DIR}/test/*.cc)
-
-foreach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
-  get_filename_component(testname ${testsourcefile} NAME_WE)
-  add_executable(${testname} ${testsourcefile})
-  target_link_libraries(${testname} ${LINK_PACKAGES} ${LINK_EXTERNALS})
-  install(TARGETS ${testname} DESTINATION ${CMAKE_INSTALL_BINDIR})
-endforeach(testsourcefile ${${PROJECT_NAME}_EXECUTABLES})
-
-
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/config DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(PROGRAMS
-  ${PROJECT_SOURCE_DIR}/scripts/executedaq.sh
-  ${PROJECT_SOURCE_DIR}/scripts/executenulldaq.sh
-  DESTINATION
-  ${CMAKE_INSTALL_BINDIR}
+# Include paths
+target_include_directories ( ${MODULE_NAME}
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    ${ROOT_INCLUDE_DIRS}
 )
+
+if ( CUPDAQ_ENABLE_HDF5 )
+    target_include_directories ( ${MODULE_NAME} PUBLIC ${HDF5_INCLUDE_DIRS} )
+endif ()
+
+# Link ROOT and apply its compile defs
+target_link_libraries ( ${MODULE_NAME}
+    PUBLIC
+    ${ROOT_LIBRARIES}
+    OnlConsts
+    Notice
+    DAQUtils
+    DAQSystem
+    DAQConfig
+    DAQTrigger
+    OnlObjs
+    RawObjs
+    OnlHistogramer
+)
+
+if ( CUPDAQ_ENABLE_HDF5 )
+    target_link_libraries ( ${MODULE_NAME} PUBLIC ${HDF5_LIBRARIES} HDF5Utils )
+endif ()
+
+target_compile_definitions ( ${MODULE_NAME}
+    PUBLIC
+    ${ROOT_DEFINITIONS}
+)
+
+# ---- Install ----
+install ( TARGETS ${MODULE_NAME}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+install ( DIRECTORY ${MODULE_NAME}/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
+    FILES_MATCHING PATTERN "*.hh"
+)
+install ( FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}_rdict.pcm
+    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}.rootmap
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    OPTIONAL
+)
+
+add_subdirectory ( test )

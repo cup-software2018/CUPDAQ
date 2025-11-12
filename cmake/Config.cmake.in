@@ -1,0 +1,57 @@
+# CUPDAQConfig.cmake - Package configuration for CUPDAQ
+# This file is installed as: <prefix>/lib/cmake/CUPDAQ/CUPDAQConfig.cmake
+
+@PACKAGE_INIT@
+
+# ------------------------------
+# Basic install-time variables
+# ------------------------------
+set(CUPDAQ_VERSION            "@PROJECT_VERSION@")
+set(CUPDAQ_INSTALL_INCLUDEDIR "@CMAKE_INSTALL_INCLUDEDIR@")
+set(CUPDAQ_INSTALL_LIBDIR     "@CMAKE_INSTALL_LIBDIR@")
+
+# Resolve absolute paths relative to the package prefix
+set_and_check(CUPDAQ_INCLUDE_DIR "${PACKAGE_PREFIX_DIR}/${CUPDAQ_INSTALL_INCLUDEDIR}")
+set_and_check(CUPDAQ_LIBRARY_DIR "${PACKAGE_PREFIX_DIR}/${CUPDAQ_INSTALL_LIBDIR}")
+
+# ------------------------------
+# Required / optional dependencies
+# ------------------------------
+include(CMakeFindDependencyMacro)
+
+# ROOT (required for CUPDAQ)
+find_dependency(ROOT REQUIRED COMPONENTS Core RIO)
+# If available (older ROOT), apply ROOT_USE_FILE
+if (DEFINED ROOT_USE_FILE)
+  include(${ROOT_USE_FILE})
+endif()
+
+# libusb via pkg-config (optional; Notice/others may link it)
+find_package(PkgConfig QUIET)
+if (PkgConfig_FOUND)
+  pkg_check_modules(LIBUSB QUIET IMPORTED_TARGET libusb-1.0)
+endif()
+
+# HDF5 (optional; enabled at build time)
+set(CUPDAQ_HAS_HDF5 @CUPDAQ_ENABLE_HDF5@)
+if (CUPDAQ_HAS_HDF5)
+  find_dependency(HDF5 QUIET COMPONENTS C CXX HL)
+endif()
+
+# ------------------------------
+# Exported targets
+# ------------------------------
+include("${CMAKE_CURRENT_LIST_DIR}/CUPDAQTargets.cmake")
+
+# ------------------------------
+# Convenience variables for consumers
+# ------------------------------
+# Aggregate include and library dirs (optional helpers)
+set(CUPDAQ_INCLUDE_DIRS "${CUPDAQ_INCLUDE_DIR}")
+set(CUPDAQ_LIBRARY_DIRS "${CUPDAQ_LIBRARY_DIR}")
+
+# Expose feature toggles to consumers
+set(CUPDAQ_ENABLE_HDF5 ${CUPDAQ_HAS_HDF5})
+
+# Sanity: all required components present?
+check_required_components(CUPDAQ)

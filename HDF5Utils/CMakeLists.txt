@@ -1,44 +1,58 @@
-set(PROJECT_NAME "HDF5Utils")
+# ------------------------------------------------------------
+# HDF5Utils — shared library depending on HDF5
+# ------------------------------------------------------------
+set ( MODULE_NAME HDF5Utils )
+message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-project(${PROJECT_NAME})
-message(STATUS "cmaking ${PROJECT_NAME} ...")
+file ( GLOB MODULE_HEADERS ${MODULE_NAME}/*.hh )
+file ( GLOB MODULE_SOURCES src/*.cc )
 
-# ----------------------------------------------------------------------------
-# Locate sources and headers for this project
-# ----------------------------------------------------------------------------
-file(GLOB ${PROJECT_NAME}_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cc)
-file(GLOB ${PROJECT_NAME}_HEADERS ${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/*.hh)
-
-file(MAKE_DIRECTORY ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME})
-
-foreach(HEADER_i ${${PROJECT_NAME}_HEADERS})
-  configure_file(${HEADER_i} ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME} COPYONLY)
-endforeach(HEADER_i)
-
-configure_file(${PROJECT_SOURCE_DIR}/${PROJECT_NAME}/LinkDef.h ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME} COPYONLY)
-
-file(GLOB ${PROJECT_NAME}_HEADERS ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME}/*.hh)
-set(${PROJECT_NAME}_DICT_FILE ${PROJECT_INCLUDE_DIR}/${PROJECT_NAME}/LinkDef.h)
-
-root_generate_dictionary(G__${PROJECT_NAME}
-  ${${PROJECT_NAME}_HEADERS}
-  LINKDEF ${${PROJECT_NAME}_DICT_FILE}
+# --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
+set ( DICT_I_FLAGS
+    -I${HDF5_INCLUDE_DIR}
 )
 
-add_library(${PROJECT_NAME} SHARED
-  ${${PROJECT_NAME}_SOURCES}
-  G__${PROJECT_NAME}.cxx
+# Generate ROOT dictionary (pass -I for OnlConsts)
+ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
+    ${MODULE_HEADERS}
+    LINKDEF ${MODULE_NAME}/LinkDef.h
+    OPTIONS ${DICT_I_FLAGS}
 )
 
-install(PROGRAMS
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.so
-  DESTINATION
-  ${CMAKE_INSTALL_LIBDIR}
+# Build shared library
+add_library ( ${MODULE_NAME} SHARED
+    ${MODULE_SOURCES}
+    G__${MODULE_NAME}.cxx
 )
 
-install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}_rdict.pcm
-  ${CMAKE_CURRENT_BINARY_DIR}/lib${PROJECT_NAME}.rootmap
-  DESTINATION
-  ${CMAKE_INSTALL_LIBDIR}
+# Include dirs: module itself and install interface
+target_include_directories ( ${MODULE_NAME}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        ${ROOT_INCLUDE_DIRS}
+        ${HDF5_INCLUDE_DIRS}
+)
+
+target_link_libraries ( ${MODULE_NAME}
+    PUBLIC
+    ${ROOT_LIBRARIES}
+    ${HDF5_LIBRARIES}
+)
+
+target_compile_definitions ( ${MODULE_NAME} PUBLIC ${ROOT_DEFINITIONS} )
+
+# If HDF5 provides compile definitions, propagate them
+if ( DEFINED HDF5_DEFINITIONS )
+    target_compile_definitions ( ${MODULE_NAME} PUBLIC ${HDF5_DEFINITIONS} )
+endif ()
+
+# If this module uses OnlConsts or others, link them here (example commented)
+# target_link_libraries(${MODULE_NAME} PUBLIC OnlConsts)
+
+# Installation
+install ( TARGETS ${MODULE_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
+install ( DIRECTORY ${MODULE_NAME}/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
+    FILES_MATCHING PATTERN "*.hh"
 )

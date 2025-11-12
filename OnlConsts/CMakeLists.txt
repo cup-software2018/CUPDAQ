@@ -1,13 +1,19 @@
-project(OnlConsts)
+# ------------------------------------------------------------
+#  OnlConsts — header-only library
+# ------------------------------------------------------------
+set(MODULE_NAME OnlConsts)
+message(STATUS "Configuring ${MODULE_NAME} ...")
 
-#----------------------------------------------------------------------------
-# Locate sources and headers for this project
-#----------------------------------------------------------------------------
-file(GLOB OnlConsts_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cc)
-file(GLOB OnlConsts_HEADERS ${PROJECT_SOURCE_DIR}/OnlConsts/*.hh)
+# Create interface library (header-only)
+add_library(${MODULE_NAME} INTERFACE)
+target_include_directories(${MODULE_NAME}
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 
-
-file(MAKE_DIRECTORY ${PROJECT_INCLUDE_DIR}/OnlConsts)
-foreach(HEADER_i ${OnlConsts_HEADERS})
-    configure_file(${HEADER_i} ${PROJECT_INCLUDE_DIR}/OnlConsts COPYONLY)
-endforeach(HEADER_i)
+# Install headers
+install(DIRECTORY ${MODULE_NAME}/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
+        FILES_MATCHING PATTERN "*.hh"
+)
