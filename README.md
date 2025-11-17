@@ -5,7 +5,6 @@
 - **libusb-1.0**  
 - **(Optional)** **HDF5** — tested with version **1.14.1**
 
----
 
 ## Prerequisite
 
