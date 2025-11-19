@@ -1,30 +1,14 @@
-/*
- *
- *  Module:  RunConfig
- *
- *  Author:  Jaison Lee
- *
- *  Purpose: Class for configuring DAQ fronend electronics
- *
- *  Last Update:      $Author: cupsoft $
- *  Update Date:      $Date: 2023/07/18 12:25:11 $
- *  CVS/RCS Revision: $Revision: 1.28 $
- *  Status:           $State: Exp $
- *
- */
-
 #ifndef RunConfig_hh
 #define RunConfig_hh
 
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <string>
 
-#include "TObjArray.h"
 #include "TObject.h"
 
 #include "DAQConfig/AbsConfList.hh"
+#include "DAQConfig/AmoreADCConf.hh"
 #include "DAQConfig/DAQConf.hh"
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQConfig/FADCTConf.hh"
@@ -36,7 +20,6 @@
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQConfig/STRGConf.hh"
 #include "DAQConfig/TCBConf.hh"
-#include "DAQConfig/AmoreADCConf.hh"
 #include "DAQConfig/TriggerLookupTable.hh"
 #include "OnlConsts/onlconsts.hh"
 
@@ -83,7 +66,7 @@ public:
     MTHRI_TCB = 17,
     PSCI_TCB = 18,
     DTI_TCB = 19,
-    TRGI_TCB = 20,    
+    TRGI_TCB = 20,
     TYPE_TCB = 21
   };
 
@@ -308,19 +291,13 @@ public:
   };
 
   static const int kNSTRGMENU = 5;
-  enum STRGCONFIG {
-    ENABLED_STRG = 1,
-    ADCTYPE_STRG = 2,
-    ZSU_STRG = 3,
-    PSC_STRG = 4,
-    ICRD_STRG = 5
-  };
+  enum STRGCONFIG { ENABLED_STRG = 1, ADCTYPE_STRG = 2, ZSU_STRG = 3, PSC_STRG = 4, ICRD_STRG = 5 };
 
   static const int kNDAQMENU = 1;
   enum DAQCONFIG { SERVER = 1 };
 
   RunConfig();
-  virtual ~RunConfig();
+  ~RunConfig() override;
 
   bool ReadConfig(const char * fname);
   bool ReadConfig(std::ifstream & ticket);
@@ -398,118 +375,3 @@ inline void RunConfig::SetExperiment(DAQ::EXPERIMENT exp) { fExperiment = exp; }
 inline DAQ::EXPERIMENT RunConfig::GetExperiment() const { return fExperiment; }
 
 #endif
-
-/**
-$Log: RunConfig.hh,v $
-Revision 1.28  2023/07/18 12:25:11  cupsoft
-*** empty log message ***
-
-Revision 1.27  2023/03/29 23:05:27  cupsoft
-*** empty log message ***
-
-Revision 1.26  2023/03/23 04:32:42  cupsoft
-*** empty log message ***
-
-Revision 1.25  2023/01/12 03:46:12  cupsoft
-add DAQconfig
-
-Revision 1.24  2022/12/19 01:01:11  cupsoft
-add IADC things
-
-Revision 1.24  2020/07/10 02:38:36  cupsoft
-*** empty log message ***
-
-Revision 1.23  2019/11/25 02:04:07  cupsoft
-*** empty log message ***
-
-Revision 1.22  2019/07/24 07:04:23  cupsoft
-*** empty log message ***
-
-Revision 1.21  2019/07/12 07:18:42  cupsoft
-*** empty log message ***
-
-Revision 1.20  2019/07/11 08:22:10  cupsoft
-*** empty log message ***
-
-Revision 1.19  2019/07/09 07:39:06  cupsoft
-*** empty log message ***
-
-Revision 1.18  2019/05/30 23:59:05  cupsoft
-*** empty log message ***
-
-Revision 1.17  2018/11/01 01:40:44  cupsoft
-*** empty log message ***
-
-Revision 1.16  2018/09/20 01:01:10  cupsoft
-*** empty log message ***
-
-Revision 1.15  2018/04/30 05:42:41  cupsoft
-*** empty log message ***
-
-Revision 1.14  2018/01/08 05:14:45  cupsoft
-*** empty log message ***
-
-Revision 1.13  2017/06/12 02:12:21  cupsoft
-*** empty log message ***
-
-Revision 1.12  2017/05/19 01:58:58  cupsoft
-*** empty log message ***
-
-Revision 1.11  2017/04/06 23:52:36  cupsoft
-*** empty log message ***
-
-Revision 1.10  2017/04/06 12:11:56  cupsoft
-*** empty log message ***
-
-Revision 1.9  2017/03/08 05:21:44  cupsoft
-*** empty log message ***
-
-Revision 1.8  2017/01/25 02:14:18  cupsoft
-*** empty log message ***
-
-Revision 1.7  2016/12/14 04:54:26  cupsoft
-*** empty log message ***
-
-Revision 1.6  2016/12/05 09:52:50  cupsoft
-*** empty log message ***
-
-Revision 1.5  2016/11/12 04:05:28  cupsoft
-*** empty log message ***
-
-Revision 1.4  2016/10/02 10:55:13  cupsoft
-*** empty log message ***
-
-Revision 1.3  2016/10/03 06:57:03  cupsoft
-*** empty log message ***
-
-Revision 1.2  2016/10/01 17:10:53  cupsoft
-clean up
-
-Revision 1.1.1.1  2016/09/30 09:22:24  cupsoft
-DAQConfig
-
-Revision 1.4  2016/09/28 16:54:49  cupsoft
-*** empty log message ***
-
-Revision 1.3  2016/09/27 03:41:52  cupsoft
-*** empty log message ***
-
-Revision 1.2  2016/09/05 05:26:48  cupsoft
-*** empty log message ***
-
-Revision 1.1.1.1  2016/07/14 07:42:30  cupsoft
-DAQSys
-
-Revision 1.3  2016/05/10 01:57:35  cupsoft
-*** empty log message ***
-
-Revision 1.2  2016/03/23 03:26:13  cupsoft
-*** empty log message ***
-
-Revision 1.1.1.1  2016/03/08 04:37:46  amore
-DAQSts
-
-Revision 1.1.1.1  2016/02/29 08:26:44  cupsoft
-DAQSys
-
-**/

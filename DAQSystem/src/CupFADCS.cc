@@ -4,42 +4,39 @@
 
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQSystem/CupFADCS.hh"
+#include "DAQUtils/ELog.hh"
 #include "Notice/NoticeNKFADC500S.hh"
 
 using namespace std;
 
 ClassImp(CupFADCS)
 
-    CupFADCS::CupFADCS()
-    : AbsADC()
+CupFADCS::CupFADCS()
+  : AbsADC()
 {
 }
 
 CupFADCS::CupFADCS(int sid)
-    : AbsADC(sid)
+  : AbsADC(sid)
 {
 }
 
 CupFADCS::CupFADCS(AbsConf * config)
-    : AbsADC(config)
+  : AbsADC(config)
 {
 }
-
-CupFADCS::~CupFADCS() {}
 
 int CupFADCS::Open()
 {
   int stat = NKFADC500Sopen(fSID, nullptr);
   if (stat != 0) {
-    fLog->Error("CupFADCS::Open",
-                "FADCS [sid=%d]: open falied, check connection and power",
-                fSID);
+    ERROR("FADCS [sid=%d]: open failed, check connection and power", fSID);
     return stat;
   }
-  fLog->Info("CupFADCS::Open", "FADCS [sid=%d]: opened", fSID);
+  INFO("FADCS [sid=%d]: opened", fSID);
 
   if (fConfig) {
-    auto * config = (FADCSConf *)fConfig;
+    auto * config = static_cast<FADCSConf *>(fConfig);
     fEventDataSize = kNCHFADC * 128 * config->RL();
   }
 
@@ -53,7 +50,7 @@ void CupFADCS::Close()
 
   NKFADC500Sclose(fSID);
 
-  fLog->Info("CupFADCS::Close", "FADCS [sid=%d]: closed", fSID);
+  INFO("FADCS [sid=%d]: closed", fSID);
 }
 
 int CupFADCS::ReadBCount() { return NKFADC500Sread_BCOUNT(fSID); }
@@ -61,111 +58,88 @@ int CupFADCS::ReadBCount() { return NKFADC500Sread_BCOUNT(fSID); }
 int CupFADCS::ReadData(int bcount, unsigned char * data)
 {
   int state = NKFADC500Sread_DATA(fSID, bcount, data);
+  if (state != 0) { return state; }
 
   fTotalBCount += bcount;
 
-  if (fEventDataSize == 0) { return state; }
-
-  int n = kKILOBYTES * bcount / fEventDataSize;
-  unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
-
-  unsigned int itmp;
-  unsigned long ltmp, finetime, coarsetime;
-
-  std::unique_lock<std::mutex> lock(fMutex);
-
-  // get local trigger number
-  fCurrentTrgNumber = tempdata[68] & 0xFF;
-  itmp = tempdata[72] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 8);
-  itmp = tempdata[76] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 16);
-  itmp = tempdata[80] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 24);
-  fCurrentTrgNumber += 1;
-
-  // get loc starting fine time
-  finetime = tempdata[100] & 0xFF;
-  finetime = finetime * 8;
-  // get loc starting coarse time
-  ltmp = tempdata[104] & 0xFF;
-  coarsetime = ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[108] & 0xFF) << 8;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[112] & 0xFF) << 16;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[116] & 0xFF) << 24;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[120] & 0xFF) << 32;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[124] & 0xFF) << 40;
-  coarsetime += ltmp * 1000;
-  fCurrentTime = coarsetime + finetime;
+  if (fEventDataSize > 0) {
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+    UpdateTriggerAndTime(tempdata);
+  }
 
   return state;
 }
 
 int CupFADCS::ReadData(int bcount)
 {
-  auto * chunk = new ChunkData(bcount);
+  auto chunk = std::make_unique<ChunkData>(bcount);
   int state = NKFADC500Sread_DATA(fSID, bcount, chunk->data);
-  fChunkDataBuffer.push_back(chunk);
+  if (state != 0) { return state; }
 
   fTotalBCount += bcount;
 
-  if (fEventDataSize == 0) { return state; }
+  fChunkDataBuffer.push_back(std::move(chunk));
 
-  unsigned char * data = chunk->data;
-  int n = kKILOBYTES * bcount / fEventDataSize;
-  unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+  if (fEventDataSize > 0) {
+    unsigned char * data = chunk->data;
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+    UpdateTriggerAndTime(tempdata);
+  }
 
+  return state;
+}
+
+void CupFADCS::UpdateTriggerAndTime(const unsigned char * tempdata)
+{
   unsigned int itmp;
-  unsigned long ltmp, finetime, coarsetime;
+  unsigned long ltmp;
+  unsigned long finetime;
+  unsigned long coarsetime;
 
   std::unique_lock<std::mutex> lock(fMutex);
 
   // get local trigger number
   fCurrentTrgNumber = tempdata[68] & 0xFF;
   itmp = tempdata[72] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 8);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 8);
   itmp = tempdata[76] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 16);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 16);
   itmp = tempdata[80] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 24);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 24);
   fCurrentTrgNumber += 1;
 
   // get loc starting fine time
   finetime = tempdata[100] & 0xFF;
   finetime = finetime * 8;
+
   // get loc starting coarse time
   ltmp = tempdata[104] & 0xFF;
   coarsetime = ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[108] & 0xFF) << 8;
+  ltmp = static_cast<unsigned long>(tempdata[108] & 0xFF) << 8;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[112] & 0xFF) << 16;
+  ltmp = static_cast<unsigned long>(tempdata[112] & 0xFF) << 16;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[116] & 0xFF) << 24;
+  ltmp = static_cast<unsigned long>(tempdata[116] & 0xFF) << 24;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[120] & 0xFF) << 32;
+  ltmp = static_cast<unsigned long>(tempdata[120] & 0xFF) << 32;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[124] & 0xFF) << 40;
+  ltmp = static_cast<unsigned long>(tempdata[124] & 0xFF) << 40;
   coarsetime += ltmp * 1000;
-  fCurrentTime = coarsetime + finetime;
 
-  return state;
+  fCurrentTime = coarsetime + finetime;
 }
 
 bool CupFADCS::Configure()
 {
   if (!fConfig) {
-    fLog->Error("CupFADCS::Configure", "FADCS [sid=%d]: no configuration",
-                fSID);
+    ERROR("FADCS [sid=%d]: no configuration", fSID);
     return false;
   }
 
   if (!TString(fConfig->GetName()).EqualTo("FADCS")) {
-    fLog->Error("CupFADCS::Configure",
-                "FADCS [sid=%d]: configuration not matched with FADCS", fSID);
+    ERROR("FADCS [sid=%d]: configuration not matched with FADCS", fSID);
     return false;
   }
 
@@ -177,18 +151,15 @@ bool CupFADCS::Configure()
   gSystem->Sleep(10);
 
   unsigned long dramon = NKFADC500Sread_DRAMON(fSID);
-  if (dramon) {
-    fLog->Info("CupFADCS::Configure", "FADCS [sid=%d]: DRAM on", fSID);
-  }
+  if (dramon) { INFO("FADCS [sid=%d]: DRAM on", fSID); }
   else {
-    fLog->Error("CupFADCS::Configure",
-                "FADCS [sid=%d]: error occurred during turning DRAM on", fSID);
+    ERROR("FADCS [sid=%d]: error occurred during turning DRAM on", fSID);
     return false;
   }
 
   NKFADC500S_ADCALIGN_DRAM(fSID);
 
-  auto * conf = (FADCSConf *)fConfig;
+  auto * conf = static_cast<FADCSConf *>(fConfig);
   conf->PrintConf();
 
   Reset();
@@ -299,7 +270,7 @@ bool CupFADCS::Configure()
   cout << " -----------------------------------------------" << endl;
   cout << endl;
 
-  fLog->Info("CupFADCS::Configure", "FADCS [sid=%d]: configuration done", fSID);
+  INFO("FADCS [sid=%d]: configuration done", fSID);
 
   return true;
 }
@@ -308,7 +279,7 @@ bool CupFADCS::Initialize()
 {
   gSystem->Sleep(4000);
 
-  auto * conf = (FADCSConf *)fConfig;
+  auto * conf = static_cast<FADCSConf *>(fConfig);
   int nch = conf->NCH();
   cout << "+++++++++++ FADC PEDESTALS ++++++++++++" << endl;
   cout << Form("  [sid=%2d]  ", fSID) << flush;
@@ -320,7 +291,7 @@ bool CupFADCS::Initialize()
   cout << endl;
   cout << "+++++++++++ FADC PEDESTALS ++++++++++++" << endl;
 
-  fLog->Info("CupFADCS::initialize", "FADCS [sid=%d]: initialized", fSID);
+  INFO("FADCS [sid=%d]: initialized", fSID);
 
   return true;
 }
@@ -331,7 +302,7 @@ void CupFADCS::StartTrigger()
   ResetTIMER();
 
   NKFADC500Sstart(fSID);
-  fLog->Info("CupFADCS::StartTrigger", "FADCS [sid=%d]: trigger started", fSID);
+  INFO("FADCS [sid=%d]: trigger started", fSID);
 }
 
 void CupFADCS::StopTrigger()
@@ -339,137 +310,87 @@ void CupFADCS::StopTrigger()
   NKFADC500Sstop(fSID);
   Reset();
 
-  fLog->Info("CupFADCS::StopTrigger", "CupFADCS [sid=%d]: trigger stopped",
-             fSID);
+  INFO("FADCS [sid=%d]: trigger stopped", fSID);
 }
 
 void CupFADCS::Reset() { NKFADC500Sreset(fSID); }
+
 void CupFADCS::ResetTIMER() { NKFADC500SresetTIMER(fSID); }
 
-void CupFADCS::WriteCW(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_CW(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadCW(unsigned long ch)
-{
-  return NKFADC500Sread_CW(fSID, ch);
-}
+void CupFADCS::WriteCW(unsigned long ch, unsigned long data) { NKFADC500Swrite_CW(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadCW(unsigned long ch) { return NKFADC500Sread_CW(fSID, ch); }
+
 void CupFADCS::WriteRL(unsigned long data) { NKFADC500Swrite_RL(fSID, data); }
+
 unsigned long CupFADCS::ReadRL() { return NKFADC500Sread_RL(fSID); }
 
-void CupFADCS::WriteDACOFF(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_DACOFF(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadDACOFF(unsigned long ch)
-{
-  return NKFADC500Sread_DACOFF(fSID, ch);
-}
+void CupFADCS::WriteDACOFF(unsigned long ch, unsigned long data) { NKFADC500Swrite_DACOFF(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadDACOFF(unsigned long ch) { return NKFADC500Sread_DACOFF(fSID, ch); }
+
 void CupFADCS::MeasurePED(unsigned long ch) { NKFADC500Smeasure_PED(fSID, ch); }
-unsigned long CupFADCS::ReadPED(unsigned long ch)
-{
-  return NKFADC500Sread_PED(fSID, ch);
-}
-void CupFADCS::WriteDLY(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_DLY(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadDLY(unsigned long ch)
-{
-  return NKFADC500Sread_DLY(fSID, ch);
-}
-void CupFADCS::WriteTHR(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_THR(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadTHR(unsigned long ch)
-{
-  return NKFADC500Sread_THR(fSID, ch);
-}
-void CupFADCS::WritePOL(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_POL(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadPOL(unsigned long ch)
-{
-  return NKFADC500Sread_POL(fSID, ch);
-}
-void CupFADCS::WritePSW(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_PSW(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadPSW(unsigned long ch)
-{
-  return NKFADC500Sread_PSW(fSID, ch);
-}
-void CupFADCS::WriteAMODE(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_AMODE(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadAMODE(unsigned long ch)
-{
-  return NKFADC500Sread_AMODE(fSID, ch);
-}
-void CupFADCS::WritePCT(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_PCT(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadPCT(unsigned long ch)
-{
-  return NKFADC500Sread_PCT(fSID, ch);
-}
-void CupFADCS::WritePCI(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_PCI(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadPCI(unsigned long ch)
-{
-  return NKFADC500Sread_PCI(fSID, ch);
-}
-void CupFADCS::WritePWT(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_PWT(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadPWT(unsigned long ch)
-{
-  return NKFADC500Sread_PWT(fSID, ch);
-}
-void CupFADCS::WriteDT(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_DT(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadDT(unsigned long ch)
-{
-  return NKFADC500Sread_DT(fSID, ch);
-}
-void CupFADCS::WritePTRIG(unsigned long data)
-{
-  NKFADC500Swrite_PTRIG(fSID, data);
-}
+
+unsigned long CupFADCS::ReadPED(unsigned long ch) { return NKFADC500Sread_PED(fSID, ch); }
+
+void CupFADCS::WriteDLY(unsigned long ch, unsigned long data) { NKFADC500Swrite_DLY(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadDLY(unsigned long ch) { return NKFADC500Sread_DLY(fSID, ch); }
+
+void CupFADCS::WriteTHR(unsigned long ch, unsigned long data) { NKFADC500Swrite_THR(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadTHR(unsigned long ch) { return NKFADC500Sread_THR(fSID, ch); }
+
+void CupFADCS::WritePOL(unsigned long ch, unsigned long data) { NKFADC500Swrite_POL(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadPOL(unsigned long ch) { return NKFADC500Sread_POL(fSID, ch); }
+
+void CupFADCS::WritePSW(unsigned long ch, unsigned long data) { NKFADC500Swrite_PSW(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadPSW(unsigned long ch) { return NKFADC500Sread_PSW(fSID, ch); }
+
+void CupFADCS::WriteAMODE(unsigned long ch, unsigned long data) { NKFADC500Swrite_AMODE(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadAMODE(unsigned long ch) { return NKFADC500Sread_AMODE(fSID, ch); }
+
+void CupFADCS::WritePCT(unsigned long ch, unsigned long data) { NKFADC500Swrite_PCT(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadPCT(unsigned long ch) { return NKFADC500Sread_PCT(fSID, ch); }
+
+void CupFADCS::WritePCI(unsigned long ch, unsigned long data) { NKFADC500Swrite_PCI(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadPCI(unsigned long ch) { return NKFADC500Sread_PCI(fSID, ch); }
+
+void CupFADCS::WritePWT(unsigned long ch, unsigned long data) { NKFADC500Swrite_PWT(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadPWT(unsigned long ch) { return NKFADC500Sread_PWT(fSID, ch); }
+
+void CupFADCS::WriteDT(unsigned long ch, unsigned long data) { NKFADC500Swrite_DT(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadDT(unsigned long ch) { return NKFADC500Sread_DT(fSID, ch); }
+
+void CupFADCS::WritePTRIG(unsigned long data) { NKFADC500Swrite_PTRIG(fSID, data); }
+
 unsigned long CupFADCS::ReadPTRIG() { return NKFADC500Sread_PTRIG(fSID); }
+
 void CupFADCS::SendTRIG() { NKFADC500Ssend_TRIG(fSID); }
-void CupFADCS::WriteTRIGENABLE(unsigned long data)
-{
-  NKFADC500Swrite_TRIGENABLE(fSID, data);
-}
-unsigned long CupFADCS::ReadTRIGENABLE()
-{
-  return NKFADC500Sread_TRIGENABLE(fSID);
-}
-void CupFADCS::WriteTM(unsigned long ch, unsigned long data)
-{
-  NKFADC500Swrite_TM(fSID, ch, data);
-}
-unsigned long CupFADCS::ReadTM(unsigned long ch)
-{
-  return NKFADC500Sread_TM(fSID, ch);
-}
+
+void CupFADCS::WriteTRIGENABLE(unsigned long data) { NKFADC500Swrite_TRIGENABLE(fSID, data); }
+
+unsigned long CupFADCS::ReadTRIGENABLE() { return NKFADC500Sread_TRIGENABLE(fSID); }
+
+void CupFADCS::WriteTM(unsigned long ch, unsigned long data) { NKFADC500Swrite_TM(fSID, ch, data); }
+
+unsigned long CupFADCS::ReadTM(unsigned long ch) { return NKFADC500Sread_TM(fSID, ch); }
+
 void CupFADCS::WriteTLT(unsigned long data) { NKFADC500Swrite_TLT(fSID, data); }
+
 unsigned long CupFADCS::ReadTLT() { return NKFADC500Sread_TLT(fSID); }
-void CupFADCS::WritePSCALE(unsigned long data)
-{
-  NKFADC500Swrite_PSCALE(fSID, data);
-}
+
+void CupFADCS::WritePSCALE(unsigned long data) { NKFADC500Swrite_PSCALE(fSID, data); }
+
 unsigned long CupFADCS::ReadPSCALE() { return NKFADC500Sread_PSCALE(fSID); }
+
 void CupFADCS::WriteDSR(unsigned long data) { NKFADC500Swrite_DSR(fSID, data); }
+
 unsigned long CupFADCS::ReadDSR() { return NKFADC500Sread_DSR(fSID); }

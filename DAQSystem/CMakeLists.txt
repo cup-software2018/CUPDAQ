@@ -16,7 +16,7 @@ set(DICT_I_FLAGS
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
-    OPTIONS ${DICT_I_FLAGS}
+    OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
 add_library ( ${MODULE_NAME} SHARED

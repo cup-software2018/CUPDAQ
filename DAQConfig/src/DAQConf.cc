@@ -1,53 +1,39 @@
 #include "DAQConfig/DAQConf.hh"
 
-using namespace std;
-
 ClassImp(DAQConf)
 
 DAQConf::DAQConf()
-    : AbsConf()
+  : AbsConf()
 {
   SetNameTitle("DAQ", "DAQ machine");
 }
 
-DAQConf::~DAQConf() {}
-
-void DAQConf::AddDAQ(int id, string name, string ipaddr, int port)
+void DAQConf::AddDAQ(int id, std::string name, std::string ipaddr, int port)
 {
-  auto daq = std::make_tuple(id, name, ipaddr, port);
-  fDAQs.push_back(daq);
+  fDAQs.emplace_back(id, std::move(name), std::move(ipaddr), port);
 }
 
-int DAQConf::GetN() const
-{
-  return fDAQs.size();
-}
+int DAQConf::GetN() const { return static_cast<int>(fDAQs.size()); }
 
-int DAQConf::GetID(int i) const
-{
-  return get<0>(fDAQs.at(i));
-}
+int DAQConf::GetID(int i) const { return std::get<0>(fDAQs.at(i)); }
 
-string DAQConf::GetDAQName(int id) const
+std::string DAQConf::GetDAQName(int id) const
 {
-  for (auto daq : fDAQs) {
-    if (get<0>(daq) == id) return get<1>(daq);
-  }
+  for (const auto & daq : fDAQs)
+    if (std::get<0>(daq) == id) return std::get<1>(daq);
   return "none";
 }
 
-string DAQConf::GetIPAddr(int id) const
+std::string DAQConf::GetIPAddr(int id) const
 {
-  for (auto daq : fDAQs) {
-    if (get<0>(daq) == id) return get<2>(daq);
-  }
+  for (const auto & daq : fDAQs)
+    if (std::get<0>(daq) == id) return std::get<2>(daq);
   return "none";
 }
 
 int DAQConf::GetPort(int id) const
 {
-  for (auto daq : fDAQs) {
-    if (get<0>(daq) == id) return get<3>(daq);
-  }
-  return 0;  
+  for (const auto & daq : fDAQs)
+    if (std::get<0>(daq) == id) return std::get<3>(daq);
+  return 0;
 }

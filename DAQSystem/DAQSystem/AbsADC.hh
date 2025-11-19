@@ -1,13 +1,13 @@
-#ifndef AbsADC_HH
-#define AbsADC_HH
+#pragma once
 
+#include <chrono>
+#include <memory>
 #include <mutex>
 
 #include "TObject.h"
 
 #include "DAQConfig/AbsConf.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
-#include "DAQUtils/ELogger.hh"
 #include "OnlConsts/adcconsts.hh"
 
 class ChunkData {
@@ -17,6 +17,7 @@ public:
     size = s;
     data = new unsigned char[kKILOBYTES * size];
   }
+
   ~ChunkData() { delete[] data; }
 
   int size;
@@ -28,7 +29,7 @@ public:
   AbsADC();
   AbsADC(int sid);
   AbsADC(AbsConf * config);
-  virtual ~AbsADC();
+  ~AbsADC() override;
 
   virtual void SetSID(int sid);
   virtual void SetMID(int mid);
@@ -57,28 +58,25 @@ public:
   virtual unsigned long GetCurrentTime();
   virtual unsigned long GetCurrentTrgNumber();
 
-  // for chunk data buffer operation
   virtual void Bclear();
   virtual void Bshrink_to_fit();
   virtual bool Bempty();
   virtual int Bsize();
-  virtual ChunkData * Bpopfront(bool wait);
-  virtual ChunkData * Bfront(bool wait);
-  virtual void Bpop_front();
+
+  virtual std::unique_ptr<ChunkData> Bpop_front(std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
+  virtual ChunkData * Bfront(std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
 
 protected:
   int fSID;
   int fMID;
 
-  ELogger * fLog;
   AbsConf * fConfig;
-  ConcurrentDeque<ChunkData *> fChunkDataBuffer;
+  ConcurrentDeque<std::unique_ptr<ChunkData>> fChunkDataBuffer;
 
   unsigned long fTotalBCount;
   unsigned long fCurrentTime;
   unsigned long fCurrentTrgNumber;
 
-  // mutex for current time
   std::mutex fMutex;
 
   int fEventDataSize;
@@ -120,5 +118,3 @@ inline unsigned long AbsADC::GetCurrentTrgNumber()
   std::lock_guard<std::mutex> lock(fMutex);
   return fCurrentTrgNumber;
 }
-
-#endif

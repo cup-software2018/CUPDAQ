@@ -1,52 +1,49 @@
-#include "DAQSystem/CupIADCT.hh"
 #include "DAQConfig/IADCTConf.hh"
+#include "DAQSystem/CupIADCT.hh"
+#include "DAQUtils/ELog.hh"
 #include "Notice/NoticeMUONDAQ.hh"
 
 ClassImp(CupIADCT)
 
-    CupIADCT::CupIADCT()
-    : AbsADC()
+CupIADCT::CupIADCT()
+  : AbsADC()
 {
-  fMode = 0;
 }
 
 CupIADCT::CupIADCT(int sid)
-    : AbsADC(sid)
+  : AbsADC(sid)
 {
-  fMode = 0;
 }
 
 CupIADCT::CupIADCT(AbsConf * config)
-    : AbsADC(config)
+  : AbsADC(config)
 {
   if (config) {
-    auto * conf = (IADCTConf *)config;
+    auto * conf = static_cast<IADCTConf *>(config);
     fMode = conf->MODE();
-    if (fMode > 0) fEventDataSize = 512 * conf->RL();
-    else fEventDataSize = kBYTESPEREVENTIADC;
+    if (fMode > 0) { fEventDataSize = 512 * conf->RL(); }
+    else {
+      fEventDataSize = kBYTESPEREVENTIADC;
+    }
   }
 }
-
-CupIADCT::~CupIADCT() {}
 
 int CupIADCT::Open()
 {
   int stat = MUONDAQopen(fSID, nullptr);
   if (stat != 0) {
-    fLog->Error("CupIADCT::Open",
-                "IADCT [sid=%d]: open falied, check connection and power",
-                fSID);
-    return stat;                
+    ERROR("IADCT [sid=%d]: open failed, check connection and power", fSID);
+    return stat;
   }
-  fLog->Info("CupIADCT::Open", "IADCT [sid=%d]: opened", fSID);
 
+  INFO("IADCT [sid=%d]: opened", fSID);
   return stat;
 }
 
 void CupIADCT::Close()
 {
   MUONDAQclose(fSID);
-  fLog->Info("CupIADCT::Close", "IADCT [sid=%d]: closed", fSID);
+  INFO("IADCT [sid=%d]: closed", fSID);
 }
 
 int CupIADCT::ReadBCount() { return MUONDAQread_BCOUNT(fSID); }
@@ -54,96 +51,73 @@ int CupIADCT::ReadBCount() { return MUONDAQread_BCOUNT(fSID); }
 int CupIADCT::ReadData(int bcount, unsigned char * data)
 {
   int state = MUONDAQread_DATA(fSID, bcount, data);
+  if (state != 0) { return state; }
 
-  fTotalBCount += bcount;
+  fTotalBCount += static_cast<unsigned long>(bcount);
 
-  if (fEventDataSize == 0) { return state; }
-
-  int n = kKILOBYTES * bcount / fEventDataSize;
-  unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
-
-  unsigned int itmp;
-  unsigned long ltmp, finetime, coarsetime;
-
-  std::unique_lock<std::mutex> lock(fMutex);
-
-  // get local trigger number
-  fCurrentTrgNumber = tempdata[17] & 0xFF;
-  itmp = tempdata[18] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 8);
-  itmp = tempdata[19] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 16);
-  itmp = tempdata[20] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 24);
-  fCurrentTrgNumber += 1;
-
-  // get loc starting fine time
-  finetime = tempdata[25] & 0xFF;
-  finetime = finetime * 8;
-  // get loc starting coarse time
-  ltmp = tempdata[26] & 0xFF;
-  coarsetime = ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[27] & 0xFF) << 8;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[28] & 0xFF) << 16;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[29] & 0xFF) << 24;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[30] & 0xFF) << 32;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[31] & 0xFF) << 40;
-  coarsetime += ltmp * 1000;
-  fCurrentTime = coarsetime + finetime;
+  if (fEventDataSize > 0) {
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+    UpdateTriggerAndTime(tempdata);
+  }
 
   return state;
 }
 
 int CupIADCT::ReadData(int bcount)
 {
-  auto * chunk = new ChunkData(bcount);
+  auto chunk = std::make_unique<ChunkData>(bcount);
   int state = MUONDAQread_DATA(fSID, bcount, chunk->data);
-  fChunkDataBuffer.push_back(chunk);
+  if (state != 0) { return state; }
 
-  fTotalBCount += bcount;
+  fTotalBCount += static_cast<unsigned long>(bcount);
 
-  if (fEventDataSize == 0) { return state; }
+  if (fEventDataSize > 0) {
+    unsigned char * data = chunk->data;
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+    UpdateTriggerAndTime(tempdata);
+  }
 
-  unsigned char * data = chunk->data;
-  int n = kKILOBYTES * bcount / fEventDataSize;
-  unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+  fChunkDataBuffer.push_back(std::move(chunk));
 
+  return state;
+}
+
+void CupIADCT::UpdateTriggerAndTime(const unsigned char * tempdata)
+{
   unsigned int itmp;
   unsigned long ltmp, finetime, coarsetime;
 
   std::unique_lock<std::mutex> lock(fMutex);
 
-  // get local trigger number
+  // local trigger number
   fCurrentTrgNumber = tempdata[17] & 0xFF;
   itmp = tempdata[18] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 8);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 8);
   itmp = tempdata[19] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 16);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 16);
   itmp = tempdata[20] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 24);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 24);
   fCurrentTrgNumber += 1;
 
-  // get loc starting fine time
+  // local starting fine time
   finetime = tempdata[25] & 0xFF;
-  finetime = finetime * 8;
-  // get loc starting coarse time
+  finetime *= 8;
+
+  // local starting coarse time
   ltmp = tempdata[26] & 0xFF;
   coarsetime = ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[27] & 0xFF) << 8;
+  ltmp = static_cast<unsigned long>(tempdata[27] & 0xFF) << 8;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[28] & 0xFF) << 16;
+  ltmp = static_cast<unsigned long>(tempdata[28] & 0xFF) << 16;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[29] & 0xFF) << 24;
+  ltmp = static_cast<unsigned long>(tempdata[29] & 0xFF) << 24;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[30] & 0xFF) << 32;
+  ltmp = static_cast<unsigned long>(tempdata[30] & 0xFF) << 32;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[31] & 0xFF) << 40;
+  ltmp = static_cast<unsigned long>(tempdata[31] & 0xFF) << 40;
   coarsetime += ltmp * 1000;
-  fCurrentTime = coarsetime + finetime;
 
-  return state;
+  fCurrentTime = coarsetime + finetime;
 }

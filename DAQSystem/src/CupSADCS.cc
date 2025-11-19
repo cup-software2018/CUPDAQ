@@ -1,39 +1,42 @@
+#include <memory>
+
 #include "TSystem.h"
 
 #include "DAQConfig/SADCSConf.hh"
 #include "DAQSystem/CupSADCS.hh"
+#include "DAQUtils/ELog.hh"
 #include "Notice/NoticeM64ADCS.hh"
 
-ClassImp(CupSADCS) 
+ClassImp(CupSADCS)
 
 CupSADCS::CupSADCS()
-    : AbsADC()
+  : AbsADC()
 {
 }
 
 CupSADCS::CupSADCS(int sid)
-    : AbsADC(sid)
+  : AbsADC(sid)
 {
 }
 
 CupSADCS::CupSADCS(AbsConf * conf)
-    : AbsADC(conf)
+  : AbsADC(conf)
 {
 }
-
-CupSADCS::~CupSADCS() {}
 
 int CupSADCS::Open()
 {
   int stat = M64ADCSopen(fSID, nullptr);
   if (stat != 0) {
-    fLog->Error("CupSADS::Open",
-                "SADCS [sid=%d]: open falied, check connection and power",
-                fSID);
-    return stat;                
+    ERROR("SADCS [sid=%d]: open failed, check connection and power", fSID);
+    return stat;
   }
 
-  fLog->Info("CupSADS::Open", "SADCS [sid=%d]: opened", fSID);
+  INFO("SADCS [sid=%d]: opened", fSID);
+
+  // Fixed event size for SADCS
+  fEventDataSize = kBYTESPEREVENTSADC;
+
   return stat;
 }
 
@@ -43,7 +46,7 @@ void CupSADCS::Close()
   Reset();
 
   M64ADCSclose(fSID);
-  fLog->Info("CupSADS::Close", "SADCS [sid=%d]: closed", fSID);
+  INFO("SADCS [sid=%d]: closed", fSID);
 }
 
 int CupSADCS::ReadBCount() { return M64ADCSread_BCOUNT(fSID); }
@@ -51,108 +54,88 @@ int CupSADCS::ReadBCount() { return M64ADCSread_BCOUNT(fSID); }
 int CupSADCS::ReadData(int bcount, unsigned char * data)
 {
   int state = M64ADCSread_DATA(fSID, bcount, data);
+  if (state != 0) { return state; }
 
-  fTotalBCount += bcount;
+  fTotalBCount += static_cast<unsigned long>(bcount);
 
-  int n = 1024 * bcount / kBYTESPEREVENTSADC;
-  unsigned char * tempdata = &(data[kBYTESPEREVENTSADC * (n - 1)]);
+  if (fEventDataSize > 0) {
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
 
-  unsigned int itmp;
-  unsigned long ltmp, finetime, coarsetime;
-
-  std::unique_lock<std::mutex> lock(fMutex);
-
-  // get local trigger number
-  fCurrentTrgNumber = tempdata[17] & 0xFF;
-  itmp = tempdata[18] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 8);
-  itmp = tempdata[19] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 16);
-  itmp = tempdata[20] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 24);
-  fCurrentTrgNumber += 1;
-
-  // get local starting fine time
-  finetime = tempdata[25] & 0xFF;
-  finetime = finetime * 8;
-  // get local starting coarse time
-  ltmp = tempdata[26] & 0xFF;
-  coarsetime = ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[27] & 0xFF) << 8;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[28] & 0xFF) << 16;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[29] & 0xFF) << 24;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[30] & 0xFF) << 32;
-  coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[31] & 0xFF) << 40;
-  coarsetime += ltmp * 1000;
-
-  fCurrentTime = coarsetime + finetime;
+    UpdateTriggerAndTime(tempdata);
+  }
 
   return state;
 }
 
 int CupSADCS::ReadData(int bcount)
 {
-  auto * chunk = new ChunkData(bcount);
+  auto chunk = std::make_unique<ChunkData>(bcount);
   int state = M64ADCSread_DATA(fSID, bcount, chunk->data);
-  fChunkDataBuffer.push_back(chunk);
+  if (state != 0) { return state; }
 
-  fTotalBCount += bcount;
+  fTotalBCount += static_cast<unsigned long>(bcount);
 
-  int n = 1024 * bcount / kBYTESPEREVENTSADC;
-  unsigned char * data = chunk->data;
-  unsigned char * tempdata = &(data[kBYTESPEREVENTSADC * (n - 1)]);
+  if (fEventDataSize > 0) {
+    unsigned char * data = chunk->data;
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
 
+    UpdateTriggerAndTime(tempdata);
+  }
+
+  fChunkDataBuffer.push_back(std::move(chunk));
+
+  return state;
+}
+
+void CupSADCS::UpdateTriggerAndTime(const unsigned char * tempdata)
+{
   unsigned int itmp;
   unsigned long ltmp, finetime, coarsetime;
 
   std::unique_lock<std::mutex> lock(fMutex);
 
-  // get local trigger number
+  // trigger number
   fCurrentTrgNumber = tempdata[17] & 0xFF;
   itmp = tempdata[18] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 8);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 8);
   itmp = tempdata[19] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 16);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 16);
   itmp = tempdata[20] & 0xFF;
-  fCurrentTrgNumber += (unsigned int)(itmp << 24);
+  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 24);
   fCurrentTrgNumber += 1;
 
-  // get local starting fine time
+  // fine time
   finetime = tempdata[25] & 0xFF;
-  finetime = finetime * 8;
-  // get local starting coarse time
+  finetime *= 8;
+
+  // coarse time
   ltmp = tempdata[26] & 0xFF;
   coarsetime = ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[27] & 0xFF) << 8;
+  ltmp = static_cast<unsigned long>(tempdata[27] & 0xFF) << 8;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[28] & 0xFF) << 16;
+  ltmp = static_cast<unsigned long>(tempdata[28] & 0xFF) << 16;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[29] & 0xFF) << 24;
+  ltmp = static_cast<unsigned long>(tempdata[29] & 0xFF) << 24;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[30] & 0xFF) << 32;
+  ltmp = static_cast<unsigned long>(tempdata[30] & 0xFF) << 32;
   coarsetime += ltmp * 1000;
-  ltmp = (unsigned long)(tempdata[31] & 0xFF) << 40;
+  ltmp = static_cast<unsigned long>(tempdata[31] & 0xFF) << 40;
   coarsetime += ltmp * 1000;
 
   fCurrentTime = coarsetime + finetime;
-
-  return state;
 }
 
 bool CupSADCS::Configure()
 {
   if (!fConfig) {
-    fLog->Error("CupSADS::Configure", "SADCS [sid=%d]: no configuration", fSID);
+    ERROR("SADCS [sid=%d]: no configuration", fSID);
     return false;
   }
 
   if (!TString(fConfig->GetName()).EqualTo("SADCS")) {
-    fLog->Error("CupSADS::Configure",
-                "SADCS [sid=%d]: configuration not matched with GADCS", fSID);
+    ERROR("SADCS [sid=%d]: configuration not matched with SADCS", fSID);
     return false;
   }
 
@@ -162,16 +145,13 @@ bool CupSADCS::Configure()
   gSystem->Sleep(10);
 
   unsigned long dramon = M64ADCSread_DRAMON(fSID);
-  if (dramon) {
-    fLog->Info("CupSADS::Configure", "SADCS [sid=%d]: DRAM on", fSID);
-  }
+  if (dramon) { INFO("SADCS [sid=%d]: DRAM on", fSID); }
   else {
-    fLog->Error("CupSADS::Configure",
-                "SADCS [sid=%d]: error occurred during turning DRAM on", fSID);
+    ERROR("SADCS [sid=%d]: error occurred during turning DRAM on", fSID);
     return false;
   }
 
-  auto * conf = (SADCSConf *)fConfig;
+  auto * conf = static_cast<SADCSConf *>(fConfig);
   conf->PrintConf();
 
   fSID = conf->SID();
@@ -184,8 +164,8 @@ bool CupSADCS::Configure()
   WritePSW(1, conf->PSW());
 
   for (int i = 0; i < kNCHSADC; i++) {
-    WriteTHR(i + 1, conf->THR(i));
-    WriteDLY(i + 1, conf->DLY(i));
+    WriteTHR(static_cast<unsigned long>(i + 1), conf->THR(i));
+    WriteDLY(static_cast<unsigned long>(i + 1), conf->DLY(i));
   }
 
   return true;
@@ -205,58 +185,32 @@ void CupSADCS::WriteCW(unsigned long data) { M64ADCSwrite_CW(fSID, data); }
 
 unsigned long CupSADCS::ReadCW() { return M64ADCSread_CW(fSID); }
 
-void CupSADCS::WriteDRAMON(unsigned long data)
-{
-  M64ADCSwrite_DRAMON(fSID, data);
-}
+void CupSADCS::WriteDRAMON(unsigned long data) { M64ADCSwrite_DRAMON(fSID, data); }
 
 unsigned long CupSADCS::ReadDRAMON() { return M64ADCSread_DRAMON(fSID); }
 
-unsigned long CupSADCS::ReadPED(unsigned long ch)
-{
-  return M64ADCSread_PED(fSID, ch);
-}
+unsigned long CupSADCS::ReadPED(unsigned long ch) { return M64ADCSread_PED(fSID, ch); }
 
-void CupSADCS::WriteDLY(unsigned long ch, unsigned long data)
-{
-  M64ADCSwrite_DLY(fSID, ch, data);
-}
+void CupSADCS::WriteDLY(unsigned long ch, unsigned long data) { M64ADCSwrite_DLY(fSID, ch, data); }
 
-unsigned long CupSADCS::ReadDLY(unsigned long ch)
-{
-  return M64ADCSread_DLY(fSID, ch);
-}
+unsigned long CupSADCS::ReadDLY(unsigned long ch) { return M64ADCSread_DLY(fSID, ch); }
 
-void CupSADCS::WriteTHR(unsigned long ch, unsigned long data)
-{
-  M64ADCSwrite_THR(fSID, ch, data);
-}
+void CupSADCS::WriteTHR(unsigned long ch, unsigned long data) { M64ADCSwrite_THR(fSID, ch, data); }
 
-unsigned long CupSADCS::ReadTHR(unsigned long ch)
-{
-  return M64ADCSread_THR(fSID, ch);
-}
+unsigned long CupSADCS::ReadTHR(unsigned long ch) { return M64ADCSread_THR(fSID, ch); }
 
-void CupSADCS::WritePSW(unsigned long ch, unsigned long data)
-{
-  M64ADCSwrite_PSW(fSID, ch, data);
-}
+void CupSADCS::WritePSW(unsigned long ch, unsigned long data) { M64ADCSwrite_PSW(fSID, ch, data); }
 
-unsigned long CupSADCS::ReadPSW(unsigned long ch)
-{
-  return M64ADCSread_PSW(fSID, ch);
-}
+unsigned long CupSADCS::ReadPSW(unsigned long ch) { return M64ADCSread_PSW(fSID, ch); }
 
-void CupSADCS::WritePTRIG(unsigned long data)
-{
-  M64ADCSwrite_PTRIG(fSID, data);
-}
+void CupSADCS::WritePTRIG(unsigned long data) { M64ADCSwrite_PTRIG(fSID, data); }
 
 unsigned long CupSADCS::ReadPTRIG() { return M64ADCSread_PTRIG(fSID); }
 
 void CupSADCS::WriteTM(unsigned long data) { M64ADCSwrite_TM(fSID, data); }
 
 unsigned long CupSADCS::ReadTM() { return M64ADCSread_TM(fSID); }
+
 void CupSADCS::WriteMTHR(unsigned long data) { M64ADCSwrite_MTHR(fSID, data); }
 
 unsigned long CupSADCS::ReadMTHR() { return M64ADCSread_MTHR(fSID); }
@@ -267,22 +221,14 @@ void CupSADCS::SendADCRST() { M64ADCSsend_ADCRST(fSID); }
 
 void CupSADCS::SendADCCAL() { M64ADCSsend_ADCCAL(fSID); }
 
-void CupSADCS::WriteADCDLY(unsigned long ch, unsigned long data)
-{
-  M64ADCSwrite_ADCDLY(fSID, ch, data);
-}
+void CupSADCS::WriteADCDLY(unsigned long ch, unsigned long data) { M64ADCSwrite_ADCDLY(fSID, ch, data); }
 
-void CupSADCS::WriteADCALIGN(unsigned long data)
-{
-  M64ADCSwrite_ADCALIGN(fSID, data);
-}
+void CupSADCS::WriteADCALIGN(unsigned long data) { M64ADCSwrite_ADCALIGN(fSID, data); }
 
 unsigned long CupSADCS::ReadADCSTAT() { return M64ADCSread_ADCSTAT(fSID); }
 
-void CupSADCS::WriteBITSLIP(unsigned long ch, unsigned long data)
-{
-  M64ADCSwrite_BITSLIP(fSID, ch, data);
-}
+void CupSADCS::WriteBITSLIP(unsigned long ch, unsigned long data) { M64ADCSwrite_BITSLIP(fSID, ch, data); }
+
 void CupSADCS::WriteFMUX(unsigned long ch) { M64ADCSwrite_FMUX(fSID, ch); }
 
 unsigned long CupSADCS::ReadFMUX() { return M64ADCSread_FMUX(fSID); }
@@ -293,7 +239,4 @@ unsigned long CupSADCS::ReadFREADY() { return M64ADCSread_FREADY(fSID); }
 
 void CupSADCS::ALIGNSADCS() { M64ADCS_ADCALIGN_64(fSID); }
 
-void CupSADCS::ReadFADCBUF(unsigned long * data)
-{
-  M64ADCSread_FADCBUF(fSID, data);
-}
+void CupSADCS::ReadFADCBUF(unsigned long * data) { M64ADCSread_FADCBUF(fSID, data); }

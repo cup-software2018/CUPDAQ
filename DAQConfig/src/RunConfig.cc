@@ -1,32 +1,17 @@
-/*
- *
- *  Module:  RunConfig
- *
- *  Author:  Jaison Lee
- *
- *  Purpose: Class for configuring DAQ frontend electronics
- *
- *  Last Update:      $Author: cupsoft $
- *  Update Date:      $Date: 2023/07/18 12:25:11 $
- *  CVS/RCS Revision: $Revision: 1.33 $
- *  Status:           $State: Exp $
- *
- */
-
-#include "DAQConfig/RunConfig.hh"
-
 #include <algorithm>
 #include <sstream>
 
 #include "TObjString.h"
 #include "TString.h"
 
+#include "DAQConfig/RunConfig.hh"
+
 using namespace std;
 
 ClassImp(RunConfig)
 
-    RunConfig::RunConfig()
-    : TObject()
+RunConfig::RunConfig()
+  : TObject()
 {
   fDAQMode = 0;
   fExperiment = DAQ::NONE;
@@ -365,9 +350,7 @@ bool RunConfig::ReadConfig(ifstream & ticket)
         iss >> fname;
 
         ifstream ifs(fname);
-        if (ifs.is_open()) {
-          ReadConfig(ifs);
-        }
+        if (ifs.is_open()) { ReadConfig(ifs); }
         else {
           Warning("ReadConfig", Form("there is no file %s.", fname));
         }
@@ -387,8 +370,7 @@ bool RunConfig::ReadConfig(ifstream & ticket)
         }
         else {
           fExperiment = DAQ::NONE;
-          Warning("ReadConfig",
-                  Form("experiment %s is ambiguous.", exp.data()));
+          Warning("ReadConfig", Form("experiment %s is ambiguous.", exp.data()));
         }
         break;
       }
@@ -549,8 +531,7 @@ bool RunConfig::ReadConfig(ifstream & ticket)
         break;
       }
       default: {
-        Warning("ReadConfig",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ReadConfig", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -688,8 +669,7 @@ bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
         break;
       }
       default: {
-        Warning("ConfigTCB",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigTCB", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -742,9 +722,7 @@ bool RunConfig::ConfigFADCT(std::ifstream & ticket, FADCTConf * conf)
       case PID_FADCT: {
         for (int i = 0; i < nch; i++) {
           iss >> val[i];
-          if (iss.fail()) {
-            Warning("ConfigFADCT", "PMT ID is not defined ....");
-          }
+          if (iss.fail()) { Warning("ConfigFADCT", "PMT ID is not defined ...."); }
           conf->SetPID(i, val[i]);
         }
         break;
@@ -1023,8 +1001,7 @@ bool RunConfig::ConfigFADCT(std::ifstream & ticket, FADCTConf * conf)
         break;
       }
       default: {
-        Warning("ConfigFADCT",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigFADCT", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -1076,9 +1053,7 @@ bool RunConfig::ConfigFADCS(std::ifstream & ticket, FADCSConf * conf)
       case PID_FADCS: {
         for (int i = 0; i < nch; i++) {
           iss >> val[i];
-          if (iss.fail()) {
-            Warning("ConfigFADCS", "PMT ID is not defined ....");
-          }
+          if (iss.fail()) { Warning("ConfigFADCS", "PMT ID is not defined ...."); }
           conf->SetPID(i, val[i]);
         }
         break;
@@ -1269,8 +1244,7 @@ bool RunConfig::ConfigFADCS(std::ifstream & ticket, FADCSConf * conf)
         break;
       }
       default: {
-        Warning("ConfigFADCS",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigFADCS", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -1322,9 +1296,7 @@ bool RunConfig::ConfigGADCT(std::ifstream & ticket, GADCTConf * conf)
       case PID_GADCT: {
         for (int i = 0; i < nch; i++) {
           iss >> val[i];
-          if (iss.fail()) {
-            Warning("ConfigGADCT", "PMT ID is not defined ....");
-          }
+          if (iss.fail()) { Warning("ConfigGADCT", "PMT ID is not defined ...."); }
           conf->SetPID(i, val[i]);
         }
         break;
@@ -1500,8 +1472,7 @@ bool RunConfig::ConfigGADCT(std::ifstream & ticket, GADCTConf * conf)
         break;
       }
       default: {
-        Warning("ConfigGADCT",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigGADCT", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -1553,9 +1524,7 @@ bool RunConfig::ConfigGADCS(std::ifstream & ticket, GADCSConf * conf)
       case PID_GADCS: {
         for (int i = 0; i < nch; i++) {
           iss >> val[i];
-          if (iss.fail()) {
-            Warning("ConfigGADCS", "PMT ID is not defined ....");
-          }
+          if (iss.fail()) { Warning("ConfigGADCS", "PMT ID is not defined ...."); }
           conf->SetPID(i, val[i]);
         }
         break;
@@ -1746,8 +1715,7 @@ bool RunConfig::ConfigGADCS(std::ifstream & ticket, GADCSConf * conf)
         break;
       }
       default: {
-        Warning("ConfigGADCS",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigGADCS", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -1799,9 +1767,7 @@ bool RunConfig::ConfigMADCS(std::ifstream & ticket, MADCSConf * conf)
       case PID_MADCS: {
         for (int i = 0; i < nch; i++) {
           iss >> val[i];
-          if (iss.fail()) {
-            Warning("ConfigMADCS", "PMT ID is not defined ....");
-          }
+          if (iss.fail()) { Warning("ConfigMADCS", "PMT ID is not defined ...."); }
           conf->SetPID(i, val[i]);
         }
         break;
@@ -1992,8 +1958,7 @@ bool RunConfig::ConfigMADCS(std::ifstream & ticket, MADCSConf * conf)
         break;
       }
       default: {
-        Warning("ConfigMADCS",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigMADCS", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -2151,8 +2116,7 @@ bool RunConfig::ConfigSADCT(std::ifstream & ticket, SADCTConf * conf)
         break;
       }
       default: {
-        Warning("ConfigSADCT",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigSADCT", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -2325,8 +2289,7 @@ bool RunConfig::ConfigSADCS(std::ifstream & ticket, SADCSConf * conf)
         break;
       }
       default: {
-        Warning("ConfigSADCS",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigSADCS", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -2604,8 +2567,7 @@ bool RunConfig::ConfigIADCT(std::ifstream & ticket, IADCTConf * conf)
         break;
       }
       default: {
-        Warning("ConfigIADCT",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigIADCT", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -2781,8 +2743,7 @@ bool RunConfig::ConfigAmoreADC(std::ifstream & ticket, AmoreADCConf * conf)
         break;
       }
       default: {
-        Warning("ConfigAMOREADC",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigAMOREADC", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -2839,8 +2800,7 @@ bool RunConfig::ConfigSTRG(std::ifstream & ticket, STRGConf * conf)
         break;
       }
       default: {
-        Warning("ConfigSTRG",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigSTRG", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -2877,8 +2837,7 @@ bool RunConfig::ConfigDAQ(std::ifstream & ticket, DAQConf * conf)
         break;
       }
       default: {
-        Warning("ConfigDAQ",
-                Form("Configuration item %s is ambiguous.", key.data()));
+        Warning("ConfigDAQ", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }
@@ -2886,130 +2845,3 @@ bool RunConfig::ConfigDAQ(std::ifstream & ticket, DAQConf * conf)
 
   return retVal;
 }
-
-/**
-$Log: RunConfig.cc,v $
-Revision 1.33  2023/07/18 12:25:11  cupsoft
-*** empty log message ***
-
-Revision 1.32  2023/03/23 04:32:42  cupsoft
-*** empty log message ***
-
-Revision 1.31  2023/02/08 02:04:34  cupsoft
-*** empty log message ***
-
-Revision 1.30  2023/01/12 03:46:12  cupsoft
-add DAQconfig
-
-Revision 1.29  2023/01/06 05:25:10  cupsoft
-*** empty log message ***
-
-Revision 1.28  2022/12/19 01:01:11  cupsoft
-add IADC things
-
-Revision 1.28  2020/07/10 02:38:36  cupsoft
-*** empty log message ***
-
-Revision 1.27  2020/01/09 04:57:26  cupsoft
-*** empty log message ***
-
-Revision 1.26  2019/11/25 02:04:07  cupsoft
-*** empty log message ***
-
-Revision 1.25  2019/07/24 07:04:23  cupsoft
-*** empty log message ***
-
-Revision 1.24  2019/07/12 07:18:42  cupsoft
-*** empty log message ***
-
-Revision 1.23  2019/07/11 08:22:11  cupsoft
-*** empty log message ***
-
-Revision 1.22  2019/07/09 07:39:06  cupsoft
-*** empty log message ***
-
-Revision 1.21  2019/07/05 00:11:07  cupsoft
-*** empty log message ***
-
-Revision 1.20  2019/05/30 23:59:05  cupsoft
-*** empty log message ***
-
-Revision 1.19  2018/11/01 01:40:44  cupsoft
-*** empty log message ***
-
-Revision 1.18  2018/09/20 01:01:10  cupsoft
-*** empty log message ***
-
-Revision 1.17  2018/04/30 05:42:41  cupsoft
-*** empty log message ***
-
-Revision 1.16  2018/02/21 02:32:37  cupsoft
-*** empty log message ***
-
-Revision 1.15  2018/01/09 04:52:05  cupsoft
-*** empty log message ***
-
-Revision 1.14  2018/01/08 05:14:45  cupsoft
-*** empty log message ***
-
-Revision 1.13  2017/06/12 02:12:22  cupsoft
-*** empty log message ***
-
-Revision 1.12  2017/05/19 01:58:58  cupsoft
-*** empty log message ***
-
-Revision 1.11  2017/04/06 23:52:37  cupsoft
-*** empty log message ***
-
-Revision 1.10  2017/04/06 12:11:57  cupsoft
-*** empty log message ***
-
-Revision 1.9  2017/03/08 05:21:44  cupsoft
-*** empty log message ***
-
-Revision 1.8  2017/01/25 02:14:18  cupsoft
-*** empty log message ***
-
-Revision 1.7  2016/12/14 04:54:27  cupsoft
-*** empty log message ***
-
-Revision 1.6  2016/12/05 09:52:51  cupsoft
-*** empty log message ***
-
-Revision 1.5  2016/11/12 04:05:28  cupsoft
-*** empty log message ***
-
-Revision 1.4  2016/10/02 10:55:13  cupsoft
-*** empty log message ***
-
-Revision 1.3  2016/10/03 06:57:04  cupsoft
-*** empty log message ***
-
-Revision 1.2  2016/10/01 17:10:54  cupsoft
-clean up
-
-Revision 1.1.1.1  2016/09/30 09:22:24  cupsoft
-DAQConfig
-
-Revision 1.4  2016/09/28 16:54:49  cupsoft
-*** empty log message ***
-
-Revision 1.3  2016/09/27 03:41:55  cupsoft
-*** empty log message ***
-
-Revision 1.2  2016/09/05 05:26:51  cupsoft
-*** empty log message ***
-
-Revision 1.1.1.1  2016/07/14 07:42:30  cupsoft
-DAQSys
-
-Revision 1.2  2016/05/10 01:57:35  cupsoft
-*** empty log message ***
-
-Revision 1.1.1.1  2016/03/08 04:37:46  amore
-DAQSts
-
-Revision 1.1.1.1  2016/02/29 08:26:44  cupsoft
-DAQSys
-
-**/

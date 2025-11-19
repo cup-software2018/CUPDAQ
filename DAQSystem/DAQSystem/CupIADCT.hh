@@ -9,22 +9,24 @@ public:
   CupIADCT();
   CupIADCT(int sid);
   CupIADCT(AbsConf * conf);
-  virtual ~CupIADCT();
+  ~CupIADCT() override = default;
 
-  virtual int Open();
-  virtual void Close();
+  int Open() override;
+  void Close() override;
 
-  virtual bool Configure() { return true; }
-  virtual bool Initialize() { return true; }
-  virtual void StartTrigger() {}
-  virtual void StopTrigger() {}
+  bool Configure() override { return true; }
+  bool Initialize() override { return true; }
+  void StartTrigger() override {}
+  void StopTrigger() override {}
 
-  virtual int ReadBCount();
-  virtual int ReadData(int count, unsigned char * data);
-  virtual int ReadData(int count);
+  int ReadBCount() override;
+  int ReadData(int bcount, unsigned char * data) override;
+  int ReadData(int bcount) override;
 
 private:
-  int fMode;
+  int fMode{0};
+
+  void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   ClassDef(CupIADCT, 0)
 };

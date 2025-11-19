@@ -1,6 +1,8 @@
 #ifndef AbsADCRaw_hh
 #define AbsADCRaw_hh
 
+#include <cstring>
+
 #include "TObject.h"
 
 #include "DAQConfig/AbsConf.hh"
@@ -13,12 +15,12 @@ protected:
   ADC::TYPE fType;
   ADC::MODE fMode;
   ADCHeader * fHeader;
-  int fSize; //
-  unsigned char * fData; //[fSize]
+  int fSize;
+  unsigned char * fData;
 
 public:
   AbsADCRaw();
-  AbsADCRaw(int s, ADC::TYPE);
+  AbsADCRaw(int s, ADC::TYPE type);
   AbsADCRaw(const AbsADCRaw & raw);
   virtual ~AbsADCRaw();
 
@@ -46,31 +48,32 @@ public:
 inline void AbsADCRaw::SetRawDataSize(int size)
 {
   fSize = size;
-  if (fData) delete[] fData;
+  delete[] fData;
   fData = new unsigned char[fSize];
-  memset(fData, 0, fSize * sizeof(unsigned char));
+  std::memset(fData, 0, static_cast<std::size_t>(fSize));
 }
+
 inline void AbsADCRaw::SetADCType(ADC::TYPE type) { fType = type; }
+
 inline void AbsADCRaw::SetTimeCalConsts(TimeCalConsts * c)
 {
-  fHeader->SetTimeCalConsts(c);
+  if (fHeader) { fHeader->SetTimeCalConsts(c); }
 }
+
 inline ADC::TYPE AbsADCRaw::GetADCType() const { return fType; }
+
 inline ADC::MODE AbsADCRaw::GetADCMode() const { return fMode; }
+
 inline int AbsADCRaw::GetRawDataSize() const { return fSize; }
+
 inline unsigned char * AbsADCRaw::GetRawData() const { return fData; }
+
 inline ADCHeader * AbsADCRaw::GetADCHeader() const { return fHeader; }
-inline unsigned int AbsADCRaw::GetTriggerType() const
-{
-  return fHeader->GetTriggerType();
-}
-inline unsigned int AbsADCRaw::GetTriggerNumber() const
-{
-  return fHeader->GetLocalTriggerNumber();
-}
-inline unsigned long AbsADCRaw::GetTriggerTime() const
-{
-  return fHeader->GetLocalTriggerTime();
-}
+
+inline unsigned int AbsADCRaw::GetTriggerType() const { return fHeader ? fHeader->GetTriggerType() : 0U; }
+
+inline unsigned int AbsADCRaw::GetTriggerNumber() const { return fHeader ? fHeader->GetLocalTriggerNumber() : 0U; }
+
+inline unsigned long AbsADCRaw::GetTriggerTime() const { return fHeader ? fHeader->GetLocalTriggerTime() : 0UL; }
 
 #endif

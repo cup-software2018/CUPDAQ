@@ -9,19 +9,19 @@ public:
   CupGADCS();
   CupGADCS(int sid);
   CupGADCS(AbsConf * config);
-  virtual ~CupGADCS();
+  ~CupGADCS() override = default;
 
-  virtual int Open();
-  virtual void Close();
+  int Open() override;
+  void Close() override;
 
-  virtual bool Configure();
-  virtual bool Initialize();
-  virtual void StartTrigger();
-  virtual void StopTrigger();
+  bool Configure() override;
+  bool Initialize() override;
+  void StartTrigger() override;
+  void StopTrigger() override;
 
-  virtual int ReadBCount();
-  virtual int ReadData(int count, unsigned char * data);
-  virtual int ReadData(int count);
+  int ReadBCount() override;
+  int ReadData(int count, unsigned char * data) override;
+  int ReadData(int count) override;
 
   void Reset();
   void ResetTIMER();
@@ -42,8 +42,6 @@ public:
   unsigned long ReadPOL(unsigned long ch);
   void WritePSW(unsigned long ch, unsigned long data);
   unsigned long ReadPSW(unsigned long ch);
-  //  void WriteAMODE(unsigned long ch, unsigned long data);
-  //  unsigned long ReadAMODE(unsigned long ch);
   void WritePCT(unsigned long ch, unsigned long data);
   unsigned long ReadPCT(unsigned long ch);
   void WritePCI(unsigned long ch, unsigned long data);
@@ -62,11 +60,12 @@ public:
   unsigned long ReadTLT();
   void WriteZEROSUP(unsigned long ch, unsigned long data);
   unsigned long ReadZEROSUP(unsigned long ch);
-  // void WritePSCALE(unsigned long data);
-  // unsigned long ReadPSCALE();
   void WriteDSR(unsigned long data);
   unsigned long ReadDSR();
   void SendTRIG();
+
+private:
+  void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   ClassDef(CupGADCS, 0)
 };

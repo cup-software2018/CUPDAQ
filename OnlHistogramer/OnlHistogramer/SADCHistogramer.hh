@@ -5,11 +5,11 @@
 
 class SADCHistogramer : public AbsHistogramer {
 public:
-  SADCHistogramer();
-  virtual ~SADCHistogramer();
+  SADCHistogramer() = default;
+  ~SADCHistogramer() override = default;
 
-  virtual void Book();
-  virtual void Fill(BuiltEvent * bevent);
+  void Book() override;
+  void Fill(BuiltEvent * bevent) override;
 };
 
 #endif

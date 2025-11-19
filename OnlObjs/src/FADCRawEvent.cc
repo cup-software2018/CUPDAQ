@@ -1,26 +1,23 @@
-#include "OnlObjs/FADCRawEvent.hh"
-#include "OnlObjs/FADCRawChannel.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/MADCSConf.hh"
-
-#include <iostream>
-using namespace std;
+#include "OnlObjs/FADCRawChannel.hh"
+#include "OnlObjs/FADCRawEvent.hh"
 
 ClassImp(FADCRawEvent)
 
 FADCRawEvent::FADCRawEvent()
-    : AbsADCRaw()
+  : AbsADCRaw()
 {
   fNCH = 0;
   fNDP = 0;
   fChannel = nullptr;
-  fMode = ADC::FMODE;  
+  fMode = ADC::FMODE;
 }
 
 FADCRawEvent::FADCRawEvent(int n, int s, ADC::TYPE type)
-    : AbsADCRaw(s, type)
+  : AbsADCRaw(s, type)
 {
   switch (type) {
     case ADC::FADC: fNCH = kNCHFADC; break;
@@ -31,18 +28,18 @@ FADCRawEvent::FADCRawEvent(int n, int s, ADC::TYPE type)
   }
 
   fNDP = n;
-  fChannel = new FADCRawChannel*[fNCH];
+  fChannel = new FADCRawChannel *[fNCH];
   for (int i = 0; i < fNCH; i++)
     fChannel[i] = new FADCRawChannel(fNDP);
   fMode = ADC::FMODE;
 }
 
 FADCRawEvent::FADCRawEvent(const FADCRawEvent & raw)
-    : AbsADCRaw(raw)
+  : AbsADCRaw(raw)
 {
   fNCH = raw.GetNCH();
   fNDP = raw.GetNDP();
-  fChannel = new FADCRawChannel*[fNCH];
+  fChannel = new FADCRawChannel *[fNCH];
   for (int i = 0; i < fNCH; i++) {
     FADCRawChannel * ch = raw.GetChannel(i);
     fChannel[i] = new FADCRawChannel(*ch);
@@ -69,7 +66,6 @@ void FADCRawEvent::Unpack(AbsConf * config, int verbose)
     default: break;
   }
 }
-
 
 void FADCRawEvent::Unpack_FADC(AbsConf * config, int verbose)
 {
@@ -104,11 +100,11 @@ void FADCRawEvent::Unpack_FADC(AbsConf * config, int verbose)
     // get ADC value
     //
     for (int j = 0; j < fNDP; j++) {
-      unsigned short adc  = (unsigned short)(fData[4 * (32 + j * 2) + i] & 0xFF);
+      unsigned short adc = (unsigned short)(fData[4 * (32 + j * 2) + i] & 0xFF);
       itmp = (unsigned short)(fData[4 * (32 + j * 2 + 1) + i] & 0xFF);
       adc += itmp << 8;
       if (pol == 0) { adc = 4096 - adc; }
-      fChannel[i]->SetADC(j, adc);      
+      fChannel[i]->SetADC(j, adc);
     }
   }
 }

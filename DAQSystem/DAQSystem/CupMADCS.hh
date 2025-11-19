@@ -9,19 +9,19 @@ public:
   CupMADCS();
   CupMADCS(int sid);
   CupMADCS(AbsConf * config);
-  virtual ~CupMADCS();
+  ~CupMADCS() override = default;
 
-  virtual int Open();
-  virtual void Close();
+  int Open() override;
+  void Close() override;
 
-  virtual bool Configure();
-  virtual bool Initialize();
-  virtual void StartTrigger();
-  virtual void StopTrigger();
+  bool Configure() override;
+  bool Initialize() override;
+  void StartTrigger() override;
+  void StopTrigger() override;
 
-  virtual int ReadBCount();
-  virtual int ReadData(int count, unsigned char * data);
-  virtual int ReadData(int count);
+  int ReadBCount() override;
+  int ReadData(int count, unsigned char * data) override;
+  int ReadData(int count) override;
 
   void Reset();
   void ResetTIMER();
@@ -65,6 +65,9 @@ public:
   void WriteDSR(unsigned long data);
   unsigned long ReadDSR();
   void SendTRIG();
+
+private:
+  void UpdateTriggerAndTime(unsigned char * tempdata);
 
   ClassDef(CupMADCS, 0)
 };

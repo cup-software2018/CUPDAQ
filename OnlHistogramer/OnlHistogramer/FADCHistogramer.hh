@@ -5,14 +5,14 @@
 
 class FADCHistogramer : public AbsHistogramer {
 public:
-  FADCHistogramer();
-  virtual ~FADCHistogramer();
+  FADCHistogramer() = default;
+  ~FADCHistogramer() override = default;
 
-  virtual void Book();
-  virtual void Fill(BuiltEvent * bevent);
+  void Book() override;
+  void Fill(BuiltEvent * bevent) override;
 
 private:
-  int fNDP;
+  int fNDP{};
 };
 
 #endif

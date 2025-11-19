@@ -11,14 +11,22 @@ private:
 
 public:
   TimeCalConsts();
-  virtual ~TimeCalConsts();
+  ~TimeCalConsts() override;
 
   void Add(int mid, int value);
   int GetConst(int mid) const;
 
-  virtual void Print(Option_t * opt = "") const;
+  void Print(Option_t * opt = "") const override;
 
   ClassDef(TimeCalConsts, 1)
 };
+
+inline void TimeCalConsts::Add(int mid, int value) { calconsts.insert({mid, value}); }
+
+inline int TimeCalConsts::GetConst(int mid) const
+{
+  auto item = calconsts.find(mid);
+  return (item != calconsts.end()) ? item->second : -1;
+}
 
 #endif

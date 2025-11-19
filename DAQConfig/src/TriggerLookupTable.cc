@@ -6,11 +6,9 @@
 ClassImp(TriggerLookupTable)
 
 TriggerLookupTable::TriggerLookupTable()
-    : TObject()
+  : TObject()
 {
 }
-
-TriggerLookupTable::~TriggerLookupTable() {}
 
 UShort_t TriggerLookupTable::GetTLT(const char * val)
 {
@@ -45,8 +43,7 @@ UShort_t TriggerLookupTable::GetTLT(const char * val)
   }
 
   for (int i = 0; i < 4; i++) {
-    a.ReplaceAll(TString(Form("%d", i + 1)).Data(), 1,
-                 TString(Form("int([%d])", i)).Data(), 8);
+    a.ReplaceAll(TString(Form("%d", i + 1)).Data(), 1, TString(Form("int([%d])", i)).Data(), 8);
   }
 
   a = "(" + a + ")";
@@ -58,9 +55,9 @@ UShort_t TriggerLookupTable::GetTLT(const char * val)
   auto * tlt = new TFormula("TLT", a.Data());
 
   unsigned int tch1, tch2, tch3, tch4, shift;
-  unsigned long tltf, triggerf;
+  unsigned long tltf = 0;
+  unsigned long triggerf = 0;
 
-  tltf = 0;
   for (tch4 = 0; tch4 <= 1; tch4++) {
     for (tch3 = 0; tch3 <= 1; tch3++) {
       for (tch2 = 0; tch2 <= 1; tch2++) {
@@ -70,7 +67,7 @@ UShort_t TriggerLookupTable::GetTLT(const char * val)
           tlt->SetParameter(2, tch3);
           tlt->SetParameter(3, tch4);
 
-          triggerf = (unsigned long)tlt->Eval(0);
+          triggerf = static_cast<unsigned long>(tlt->Eval(0.0));
 
           shift = (tch4 << 3) | (tch3 << 2) | (tch2 << 1) | tch1;
           tltf = tltf + (triggerf << shift);
@@ -79,9 +76,9 @@ UShort_t TriggerLookupTable::GetTLT(const char * val)
     }
   }
 
-  tltf = tltf & 0xFFFF;
+  tltf &= 0xFFFFUL;
 
   delete tlt;
 
-  return tltf;
+  return static_cast<UShort_t>(tltf);
 }

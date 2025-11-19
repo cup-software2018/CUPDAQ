@@ -1,18 +1,3 @@
-/*
- *
- *  Module:  STRGConf
- *
- *  Author:  Jaison Lee
- *
- *  Purpose: Software trigger configuration class
- *
- *  Last Update:      $Author: cupsoft $
- *  Update Date:      $Date: 2023/03/23 04:32:42 $
- *  CVS/RCS Revision: $Revision: 1.2 $
- *  Status:           $State: Exp $
- *
- */
-
 #ifndef STRGConf_hh
 #define STRGConf_hh
 
@@ -24,25 +9,25 @@
 class STRGConf : public AbsConf {
 public:
   STRGConf();
-  virtual ~STRGConf();
+  ~STRGConf() override = default;
 
-  virtual void SetZSUMode(int val);
-  virtual void SetPrescale(int val);
-  virtual void SetInputCard(const char * fname);
+  void SetZSUMode(int val);
+  void SetPrescale(int val);
+  void SetInputCard(const char * fname);
 
-  virtual int GetZSUMode() const;
-  virtual int GetPrescale() const;
-  virtual const char * GetInputCard() const;
+  int GetZSUMode() const;
+  int GetPrescale() const;
+  const char * GetInputCard() const;
 
-  virtual void SetCID(int ch, int val) {}
-  virtual void SetPID(int ch, int val) {}
-  virtual int CID(int ch) const { return 0; }
-  virtual int PID(int ch) const { return 0; }
-  virtual void PrintConf() const {}
+  void SetCID(int, int) override {}
+  void SetPID(int, int) override {}
+  int CID(int) const override { return 0; }
+  int PID(int) const override { return 0; }
+  void PrintConf() const override {}
 
 private:
-  int fZSUMode;
-  int fPrescale;
+  int fZSUMode{};
+  int fPrescale{};
   TString fFilename;
 
   ClassDef(STRGConf, 1)
