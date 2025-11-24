@@ -8,6 +8,7 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
+    OPTIONS -Wno-inconsistent-missing-override
 )
 
 add_library ( ${MODULE_NAME} SHARED

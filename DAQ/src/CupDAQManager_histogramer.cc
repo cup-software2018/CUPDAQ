@@ -1,3 +1,5 @@
+#include <memory>
+
 #include "TRandom3.h"
 
 #include "DAQ/CupDAQManager.hh"
@@ -8,17 +10,19 @@
 void CupDAQManager::TF_Histogramer()
 {
   if (!ThreadWait(fRunStatus, fDoExit)) { return; }
-  fLog->Info("CupDAQManager::TF_Histogramer", "histogramer started");
+  INFO("histogramer started");
 
   //
   // Create histogramer
   //
-  AbsHistogramer * histogramer = nullptr;
+  std::unique_ptr<AbsHistogramer> histogramer;
+
   switch (fADCMode) {
-    case ADC::FMODE: histogramer = new FADCHistogramer(); break;
-    case ADC::SMODE: histogramer = new SADCHistogramer(); break;
-    default: break;
+    case ADC::FMODE: histogramer = std::make_unique<FADCHistogramer>(); break;
+    case ADC::SMODE: histogramer = std::make_unique<SADCHistogramer>(); break;
+    default: WARNING("unsupported ADC mode in TF_Histogramer"); return;
   }
+
   histogramer->SetRunNumber(fRunNumber);
   histogramer->SetADCType(fADCType);
   histogramer->SetConfigList(fConfigList);
@@ -29,8 +33,7 @@ void CupDAQManager::TF_Histogramer()
     TString filename;
     TString dirname = gSystem->Getenv("RAWDATA_DIR");
     if (dirname.IsNull()) {
-      fLog->Warning("CupDAQManager::TF_Histogramer",
-                    "variable RAWDATA_DIR is not set");
+      WARNING("variable RAWDATA_DIR is not set");
       filename = Form("hist_%s_%06d.root", GetADCName(fADCType), fRunNumber);
     }
     else {
@@ -38,24 +41,18 @@ void CupDAQManager::TF_Histogramer()
       int isdir = gSystem->Exec(Form("test -d %s", dirname.Data()));
       if (!isdir) {
         gSystem->Exec(Form("mkdir %s", dirname.Data()));
-        fLog->Info("CupDAQManager::TF_Histogramer", "%s created",
-                   dirname.Data());
+        INFO("%s created", dirname.Data());
       }
-      fLog->Info("CupDAQManager::TF_Histogramer", "%s already exist",
-                 dirname.Data());
+      INFO("%s already exist", dirname.Data());
 
-      filename = Form("%s/hist_%s_%06d.root", dirname.Data(),
-                      GetADCName(fADCType), fRunNumber);
+      filename = Form("%s/hist_%s_%06d.root", dirname.Data(), GetADCName(fADCType), fRunNumber);
     }
     histogramer->SetFilename(filename);
     fHistFilename = filename;
   }
 
   if (!histogramer->Open()) {
-    fLog->Warning(
-        "CupDAQManager::TF_Histogramer",
-        "Can\'t open histogramer root file %s, histogramer will be ended",
-        fHistFilename.Data());
+    WARNING("cannot open histogramer root file %s, histogramer will be ended", fHistFilename.Data());
     return;
   }
 
@@ -68,8 +65,8 @@ void CupDAQManager::TF_Histogramer()
 
   double mfrac = 0.3; // monitoring fraction: 30%
 
-  double perror = 0;
-  double integral = 0;
+  double perror = 0.0;
+  double integral = 0.0;
 
   TStopwatch sw;
   sw.Start();
@@ -77,29 +74,32 @@ void CupDAQManager::TF_Histogramer()
   fBenchmark->Start("Histogramer");
   while (true) {
     // for emergent exit
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
     if (fBuildStatus == ENDED) {
-      if (fBuiltEventBuffer2.empty()) break;
+      if (fBuiltEventBuffer2.empty()) { break; }
     }
 
-    BuiltEvent * builtevent = nullptr;
+    std::unique_ptr<BuiltEvent> builtevent;
 
-    int size = fBuiltEventBuffer2.size();
-    if (size > 0) { builtevent = fBuiltEventBuffer2.popfront(); }
+    int size = static_cast<int>(fBuiltEventBuffer2.size());
+    if (size > 0) {
+      auto opt = fBuiltEventBuffer2.pop_front();
+      if (opt) { builtevent = std::move(*opt); }
+    }
 
     if (builtevent) {
       eventnumber = builtevent->GetEventNumber();
       if (gRandom->Rndm() < mfrac) {
-        histogramer->Fill(builtevent);
+        histogramer->Fill(builtevent.get());
         ntotalmonitoredevent += 1;
       }
-      delete builtevent;
+      // unique_ptr goes out of scope and deletes builtevent
     }
 
     // update histogramer every 1s
     double elapsetime = sw.RealTime();
     sw.Continue();
-    if (elapsetime >= 1) {
+    if (elapsetime >= 1.0) {
       sw.Start(true);
       histogramer->Update();
     }
@@ -109,12 +109,16 @@ void CupDAQManager::TF_Histogramer()
   fBenchmark->Stop("Histogramer");
 
   histogramer->Close();
-  delete histogramer;
 
   fHistogramerEnded = true;
 
-  fLog->Info("CupDAQManager::TF_Histogramer",
-             "total monitored event = %d (%.2f%%)", ntotalmonitoredevent,
-             100. * ntotalmonitoredevent / double(eventnumber));
-  fLog->Info("CupDAQManager::TF_Histogramer", "online histogramer ended");
+  if (eventnumber > 0) {
+    INFO("total monitored event = %d (%.2f%%)", ntotalmonitoredevent,
+         100.0 * ntotalmonitoredevent / static_cast<double>(eventnumber));
+  }
+  else {
+    INFO("total monitored event = %d (0.00%%)", ntotalmonitoredevent);
+  }
+
+  INFO("online histogramer ended");
 }

@@ -64,7 +64,7 @@ void CupTCB::TriggerStart()
 
 void CupTCB::TriggerStop()
 {
-  std::lock_guard<std::mutex> lock(*fMutex);
+  std::lock_guard<std::mutex> lock(fMutex);
   TCBstop(fSID);
   Reset();
 }

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <memory>
-
-#include "TSystem.h"
+#include <chrono>
+#include <thread>
 
 #include "DAQConfig/MADCSConf.hh"
 #include "DAQSystem/CupMADCS.hh"
@@ -143,7 +143,7 @@ bool CupMADCS::Configure()
 
   NKFADC125S_ADCALIGN_125(fSID);
   NKFADC125Swrite_DRAMON(fSID, 1);
-  gSystem->Sleep(10);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   unsigned long dramon = NKFADC125Sread_DRAMON(fSID);
   if (dramon) { INFO("MADCS [sid=%d]: DRAM on", fSID); }
@@ -261,7 +261,7 @@ bool CupMADCS::Configure()
 
 bool CupMADCS::Initialize()
 {
-  gSystem->Sleep(4000);
+  std::this_thread::sleep_for(std::chrono::milliseconds(4000));
 
   auto * conf = static_cast<MADCSConf *>(fConfig);
   int nch = conf->NCH();

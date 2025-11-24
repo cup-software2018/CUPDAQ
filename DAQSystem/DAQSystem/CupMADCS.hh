@@ -67,7 +67,7 @@ public:
   void SendTRIG();
 
 private:
-  void UpdateTriggerAndTime(unsigned char * tempdata);
+  void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   ClassDef(CupMADCS, 0)
 };

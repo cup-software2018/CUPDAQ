@@ -28,4 +28,16 @@ protected:
   ClassDef(FADCSConf, 1)
 };
 
+inline void FADCSConf::SetTRGON(int val) { fTRGON = val; }
+
+inline void FADCSConf::SetPTRG(int val) { fPTRG = val; }
+
+inline void FADCSConf::SetPSC(int val) { fPSC = val; }
+
+inline int FADCSConf::TRGON() const { return fTRGON; }
+
+inline int FADCSConf::PTRG() const { return fPTRG; }
+
+inline int FADCSConf::PSC() const { return fPSC; }
+
 #endif

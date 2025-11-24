@@ -2,19 +2,17 @@
 
 ClassImp(EventInfo)
 
-    EventInfo::EventInfo()
-    : TObject()
+EventInfo::EventInfo()
+  : TObject()
 {
 }
 
 EventInfo::EventInfo(const EventInfo & info)
-    : TObject(info)
+  : TObject(info)
 {
   fTrgType = info.GetTriggerType();
+  fNHit = info.GetNHit();
   fTrgNum = info.GetTriggerNumber();
   fEvtNum = info.GetEventNumber();
   fTrgTime = info.GetTriggerTime();
-  fNHit = info.GetNHit();
 }
-
-EventInfo::~EventInfo() {}

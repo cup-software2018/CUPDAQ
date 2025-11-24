@@ -3,29 +3,23 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "DAQUtils/ELogger.hh"
+#include "DAQUtils/ELog.hh"
 #include "Notice/nkusb.hh"
 #include "Notice/usb3com.hh"
 
 #define NBURST (16)
 
 ///////////////////////////////////////////////////////////////////////////////
-int USB3Init(libusb_context** ctx)
-{
-  return nkusb_init(ctx);
-}
+int USB3Init(libusb_context ** ctx) { return nkusb_init(ctx); }
 
 ///////////////////////////////////////////////////////////////////////////////
-int USB3Open(uint16_t vendor_id, uint16_t product_id, int sid, libusb_context* ctx)
+int USB3Open(uint16_t vendor_id, uint16_t product_id, int sid, libusb_context * ctx)
 {
   return nkusb_open_device(vendor_id, product_id, sid, ctx);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void USB3PrintOpenDevices(void)
-{
-  nkusb_print_open_devices();
-}
+void USB3PrintOpenDevices(void) { nkusb_print_open_devices(); }
 
 ///////////////////////////////////////////////////////////////////////////////
 int USB3ClaimInterface(uint16_t vendor_id, uint16_t product_id, int sid, int interface)
@@ -40,16 +34,10 @@ int USB3ReleaseInterface(uint16_t vendor_id, uint16_t product_id, int sid, int i
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void USB3Close(uint16_t vendor_id, uint16_t product_id, int sid)
-{
-  nkusb_close_device(vendor_id, product_id, sid);
-}
+void USB3Close(uint16_t vendor_id, uint16_t product_id, int sid) { nkusb_close_device(vendor_id, product_id, sid); }
 
 ///////////////////////////////////////////////////////////////////////////////
-void USB3Exit(libusb_context* ctx)
-{
-  nkusb_exit(ctx);
-}
+void USB3Exit(libusb_context * ctx) { nkusb_exit(ctx); }
 
 ///////////////////////////////////////////////////////////////////////////////
 int USB3Write(uint16_t vendor_id, uint16_t product_id, int sid, uint32_t addr, uint32_t data)
@@ -67,9 +55,9 @@ int USB3Write(uint16_t vendor_id, uint16_t product_id, int sid, uint32_t addr, u
   buffer[6] = (addr >> 16) & 0xFF;
   buffer[7] = (addr >> 24) & 0x7F;
 
-  libusb_device_handle* devh = nkusb_get_device_handle(vendor_id, product_id, sid);
+  libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
@@ -77,7 +65,7 @@ int USB3Write(uint16_t vendor_id, uint16_t product_id, int sid, uint32_t addr, u
   int transferred = 0;
   const unsigned int timeout = 1000;
   if ((stat = libusb_bulk_transfer(devh, USB3_SF_WRITE, buffer, length, &transferred, timeout)) < 0) {
-    ELogger::Instance(true)->Error(__func__, "write error:%s [sid=%d]", libusb_error_name(stat), sid);
+    ERROR("write error:%s [sid=%d]", libusb_error_name(stat), sid);
     return stat;
   }
 
@@ -87,8 +75,7 @@ int USB3Write(uint16_t vendor_id, uint16_t product_id, int sid, uint32_t addr, u
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-int USB3Read(uint16_t vendor_id, uint16_t product_id, int sid,
-    uint32_t count, uint32_t addr, unsigned char* data)
+int USB3Read(uint16_t vendor_id, uint16_t product_id, int sid, uint32_t count, uint32_t addr, unsigned char * data)
 {
   const int length = 8;
   unsigned char buffer[length];
@@ -104,35 +91,36 @@ int USB3Read(uint16_t vendor_id, uint16_t product_id, int sid,
   buffer[7] = (addr >> 24) & 0x7F;
   buffer[7] = buffer[7] | 0x80;
 
-  libusb_device_handle* devh = nkusb_get_device_handle(vendor_id, product_id, sid);
+  libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
   int stat = 0;
   int transferred = 0;
-  const unsigned int timeout = 1000; // Wait forever
+  const unsigned int timeout = 1000;
 
   if ((stat = libusb_bulk_transfer(devh, USB3_SF_WRITE, buffer, length, &transferred, timeout)) < 0) {
-    ELogger::Instance(true)->Error(__func__, "%s: write error:%s [sid=%d]", libusb_error_name(stat), sid);
+    ERROR("write error:%s [sid=%d]", libusb_error_name(stat), sid);
     return stat;
   }
 
   int nbulk = count / 4096;
   int remains = count % 4096;
-  const int size = 16384; // 16 kB
+  const int size = 16384;
 
   for (int loop = 0; loop < nbulk; loop++) {
     if ((stat = libusb_bulk_transfer(devh, USB3_SF_READ, data + loop * size, size, &transferred, timeout)) < 0) {
-      ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(stat), sid);
+      ERROR("read error:%s [sid=%d]", libusb_error_name(stat), sid);
       return stat;
     }
   }
 
   if (remains > 0) {
-    if ((stat = libusb_bulk_transfer(devh, USB3_SF_READ, data + nbulk * size, remains * 4, &transferred, timeout)) < 0) {
-      ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(stat), sid);
+    if ((stat = libusb_bulk_transfer(devh, USB3_SF_READ, data + nbulk * size, remains * 4, &transferred, timeout)) <
+        0) {
+      ERROR("read error:%s [sid=%d]", libusb_error_name(stat), sid);
       return stat;
     }
   }
@@ -141,8 +129,8 @@ int USB3Read(uint16_t vendor_id, uint16_t product_id, int sid,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-int USB3ReadTimeout(uint16_t vendor_id, uint16_t product_id, int sid,
-    uint32_t count, uint32_t addr, unsigned int timeout, unsigned char* data)
+int USB3ReadTimeout(uint16_t vendor_id, uint16_t product_id, int sid, uint32_t count, uint32_t addr,
+                    unsigned int timeout, unsigned char * data)
 {
   const int length = 8;
   unsigned char buffer[length];
@@ -158,52 +146,35 @@ int USB3ReadTimeout(uint16_t vendor_id, uint16_t product_id, int sid,
   buffer[7] = (addr >> 24) & 0x7F;
   buffer[7] = buffer[7] | 0x80;
 
-  libusb_device_handle* devh = nkusb_get_device_handle(vendor_id, product_id, sid);
+  libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
   int stat = 0;
   int transferred = 0;
 
-  if ((stat = libusb_bulk_transfer(devh,
-           USB3_SF_WRITE,
-           buffer,
-           length,
-           &transferred,
-           timeout))
-      < 0) {
-    ELogger::Instance(true)->Error(__func__, "write error:%s [sid=%d]", libusb_error_name(stat), sid);
+  if ((stat = libusb_bulk_transfer(devh, USB3_SF_WRITE, buffer, length, &transferred, timeout)) < 0) {
+    ERROR("write error:%s [sid=%d]", libusb_error_name(stat), sid);
     return stat;
   }
 
   int nbulk = count / 4096;
   int remains = count % 4096;
-  const int size = 16384; // 16 kB
+  const int size = 16384;
 
   for (int loop = 0; loop < nbulk; loop++) {
-    if ((stat = libusb_bulk_transfer(devh,
-             USB3_SF_READ,
-             data + loop * size,
-             size,
-             &transferred,
-             timeout))
-        < 0) {
-      ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(stat), sid);
+    if ((stat = libusb_bulk_transfer(devh, USB3_SF_READ, data + loop * size, size, &transferred, timeout)) < 0) {
+      ERROR("read error:%s [sid=%d]", libusb_error_name(stat), sid);
       return stat;
     }
   }
 
   if (remains > 0) {
-    if ((stat = libusb_bulk_transfer(devh,
-             USB3_SF_READ,
-             data + nbulk * size,
-             remains * 4,
-             &transferred,
-             timeout))
-        < 0) {
-      ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(stat), sid);
+    if ((stat = libusb_bulk_transfer(devh, USB3_SF_READ, data + nbulk * size, remains * 4, &transferred, timeout)) <
+        0) {
+      ERROR("read error:%s [sid=%d]", libusb_error_name(stat), sid);
       return stat;
     }
   }
@@ -212,35 +183,21 @@ int USB3ReadTimeout(uint16_t vendor_id, uint16_t product_id, int sid,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-int USB3WriteControl(uint16_t vendor_id,
-    uint16_t product_id,
-    int sid,
-    uint8_t bRequest,
-    uint16_t wValue,
-    uint16_t wIndex,
-    unsigned char* data,
-    uint16_t wLength)
+int USB3WriteControl(uint16_t vendor_id, uint16_t product_id, int sid, uint8_t bRequest, uint16_t wValue,
+                     uint16_t wIndex, unsigned char * data, uint16_t wLength)
 {
   const unsigned int timeout = 1000;
   int stat = 0;
 
-  libusb_device_handle* devh = nkusb_get_device_handle(vendor_id, product_id, sid);
+  libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
-  if ((stat = libusb_control_transfer(devh,
-           LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT,
-           bRequest,
-           wValue,
-           wIndex,
-           data,
-           wLength,
-           timeout))
-      < 0) {
-    ELogger::Instance(true)->Error(__func__, "%s: could not make write request:%s [sid=%d]",
-        libusb_error_name(stat), sid);
+  if ((stat = libusb_control_transfer(devh, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_OUT, bRequest, wValue, wIndex,
+                                      data, wLength, timeout)) < 0) {
+    ERROR("could not make write request:%s [sid=%d]", libusb_error_name(stat), sid);
     return stat;
   }
 
@@ -248,35 +205,21 @@ int USB3WriteControl(uint16_t vendor_id,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-int USB3ReadControl(uint16_t vendor_id,
-    uint16_t product_id,
-    int sid,
-    uint8_t bRequest,
-    uint16_t wValue,
-    uint16_t wIndex,
-    unsigned char* data,
-    uint16_t wLength)
+int USB3ReadControl(uint16_t vendor_id, uint16_t product_id, int sid, uint8_t bRequest, uint16_t wValue,
+                    uint16_t wIndex, unsigned char * data, uint16_t wLength)
 {
   const unsigned int timeout = 1000;
   int stat = 0;
 
-  libusb_device_handle* devh = nkusb_get_device_handle(vendor_id, product_id, sid);
+  libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
-  if ((stat = libusb_control_transfer(devh,
-           LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_IN,
-           bRequest,
-           wValue,
-           wIndex,
-           data,
-           wLength,
-           timeout))
-      < 0) {
-    ELogger::Instance(true)->Error(__func__, "could not make write request:%s [sid=%d]",
-        libusb_error_name(stat), sid);
+  if ((stat = libusb_control_transfer(devh, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_IN, bRequest, wValue, wIndex,
+                                      data, wLength, timeout)) < 0) {
+    ERROR("could not make write request:%s [sid=%d]", libusb_error_name(stat), sid);
     return stat;
   }
   return 0;
@@ -291,7 +234,7 @@ unsigned int USB3ReadReg(uint16_t vendor_id, uint16_t product_id, int sid, uint3
 
   int status = USB3Read(vendor_id, product_id, sid, 1, addr, data);
   if (status < 0) {
-    ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(status), sid);
+    ERROR("read error:%s [sid=%d]", libusb_error_name(status), sid);
     return status;
   }
 
@@ -309,26 +252,6 @@ unsigned int USB3ReadReg(uint16_t vendor_id, uint16_t product_id, int sid, uint3
 ///////////////////////////////////////////////////////////////////////////////
 int USB3ReadRegI(uint16_t vendor_id, uint16_t product_id, int sid, uint32_t addr)
 {
-/*
-  unsigned char data[4];
-  unsigned int value;
-  unsigned int tmp;
-
-  int status = USB3Read(vendor_id, product_id, sid, 1, addr, data);
-  if (status < 0) {
-    return status;
-  }
-
-  value = data[0] & 0xFF;
-  tmp = data[1] & 0xFF;
-  value = value + (unsigned int)(tmp << 8);
-  tmp = data[2] & 0xFF;
-  value = value + (unsigned int)(tmp << 16);
-  tmp = data[3] & 0xFF;
-  value = value + (unsigned int)(tmp << 24);
-
-  return (int)value;
-*/
   return (int)USB3ReadReg(vendor_id, product_id, sid, addr);
 }
 
@@ -341,7 +264,7 @@ unsigned long USB3ReadRegL(uint16_t vendor_id, uint16_t product_id, int sid, uin
 
   int status = USB3Read(vendor_id, product_id, sid, 2, addr, data);
   if (status < 0) {
-    ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(status), sid);
+    ERROR("read error:%s [sid=%d]", libusb_error_name(status), sid);
     return status;
   }
 

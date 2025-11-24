@@ -2,13 +2,13 @@
 #include "HDF5Utils/EDM.hh"
 #include "HDF5Utils/H5Event.hh"
 #endif
+#include "TObjString.h"
+
+#include "DAQ/CupDAQManager.hh"
 #include "OnlObjs/ADCHeader.hh"
 #include "OnlObjs/FADCRawChannel.hh"
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
-#include "TObjString.h"
-
-#include "DAQ/CupDAQManager.hh"
 
 void CupDAQManager::WriteFADC_MOD_HDF5()
 {
@@ -16,13 +16,12 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
   fH5Event = new H5Event<FChannel_t>;
   fHDF5File->SetEvent(fH5Event);
   if (!fHDF5File->Open()) {
-    fLog->Error("CupDAQManager::WriteFADC_MOD_HDF5",
-                "can\'t open hdf5 output file");
+    ERROR("can't open hdf5 output file");
     RUNSTATE::SetError(fRunStatus);
     return;
   }
 
-  auto * h5event = (H5Event<FChannel_t> *)fH5Event;
+  auto * h5event = static_cast<H5Event<FChannel_t> *>(fH5Event);
 
   EventInfo_t eventinfo;
   std::vector<FChannel_t> chdata;
@@ -34,7 +33,6 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
 
   fWriteStatus = RUNNING;
   while (true) {
-    // for emergent exit
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
     if (fBuiltEventBuffer1.empty()) {
       if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
@@ -42,16 +40,23 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
     else {
       chdata.clear();
 
-      BuiltEvent * bevent = fBuiltEventBuffer1.popfront();
+      auto bevent_opt = fBuiltEventBuffer1.pop_front();
+      if (!bevent_opt.has_value()) {
+        int size_empty = fBuiltEventBuffer1.size();
+        ThreadSleep(fWriteSleep, perror, integral, size_empty);
+        continue;
+      }
+      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
+      BuiltEvent * ev = bevent.get();
 
       unsigned long fastttime = UINT64_MAX;
       unsigned int tnum = 0;
       unsigned int ttype = 0;
       unsigned short nhit = 0;
 
-      int nadc = bevent->GetEntries();
+      int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
-        auto * adcraw = (FADCRawEvent *)bevent->At(j);
+        auto * adcraw = static_cast<FADCRawEvent *>(ev->At(j));
         auto * header = adcraw->GetADCHeader();
 
         if (header->GetLocalTriggerTime() < fastttime) {
@@ -84,8 +89,6 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
       wlock.lock();
       h5event->WriteEvent(eventinfo, chdata);
       wlock.unlock();
-
-      delete bevent;
     }
 
     int size = fBuiltEventBuffer1.size();
@@ -100,13 +103,12 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
   fH5Event = new H5Event<AChannel_t>;
   fHDF5File->SetEvent(fH5Event);
   if (!fHDF5File->Open()) {
-    fLog->Error("CupDAQManager::WriteFADC_MOD_HDF5",
-                "can\'t open hdf5 output file");
+    ERROR("can't open hdf5 output file");
     RUNSTATE::SetError(fRunStatus);
     return;
   }
 
-  auto * h5event = (H5Event<AChannel_t> *)fH5Event;
+  auto * h5event = static_cast<H5Event<AChannel_t> *>(fH5Event);
 
   EventInfo_t eventinfo;
   std::vector<AChannel_t> chdata;
@@ -126,7 +128,6 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
 
   fWriteStatus = RUNNING;
   while (true) {
-    // for emergent exit
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
     if (fBuiltEventBuffer1.empty()) {
       if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
@@ -134,16 +135,23 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
     else {
       chdata.clear();
 
-      BuiltEvent * bevent = fBuiltEventBuffer1.popfront();
+      auto bevent_opt = fBuiltEventBuffer1.pop_front();
+      if (!bevent_opt.has_value()) {
+        int size_empty = fBuiltEventBuffer1.size();
+        ThreadSleep(fWriteSleep, perror, integral, size_empty);
+        continue;
+      }
+      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
+      BuiltEvent * ev = bevent.get();
 
       unsigned long fastttime = UINT64_MAX;
       unsigned int tnum = 0;
       unsigned int ttype = 0;
       unsigned short nhit = 0;
 
-      int nadc = bevent->GetEntries();
+      int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
-        auto * adcraw = (SADCRawEvent *)bevent->At(j);
+        auto * adcraw = static_cast<SADCRawEvent *>(ev->At(j));
         auto * header = adcraw->GetADCHeader();
 
         if (header->GetLocalTriggerTime() < fastttime) {
@@ -175,8 +183,6 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
       wlock.lock();
       h5event->WriteEvent(eventinfo, chdata);
       wlock.unlock();
-
-      delete bevent;
     }
 
     int size = fBuiltEventBuffer1.size();
@@ -192,9 +198,7 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
 #ifdef ENABLE_HDF5
   TString bname = gSystem->BaseName(filename);
   TObjArray * objs = bname.Tokenize(".");
-  int subnum =
-      TString(((TObjString *)objs->At(objs->GetEntries() - 1))->GetName())
-          .Atoi();
+  int subnum = TString(((TObjString *)objs->At(objs->GetEntries() - 1))->GetName()).Atoi();
 
   if (subnum == 0) {
     fHDF5File = new H5DataWriter(filename, fCompressionLevel);
@@ -208,17 +212,15 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
     fHDF5File->SetSubrun(subnum);
     fHDF5File->SetEvent(fH5Event);
     if (!fHDF5File->Open()) {
-      fLog->Error("CupDAQManager::OpenNewHDF5File",
-                  "can\'t open output file %s", filename);
+      ERROR("can't open output file %s", filename);
       return -1;
     }
   }
 
-  fLog->Info("CupDAQManager::OpenNewHDF5File", "%s opened", filename);
+  INFO("%s opened", filename);
   return retval;
 #else
-  fLog->Error("CupDAQManager::OpenNewHDF5File",
-                  "HDF5 not supported");
+  ERROR("HDF5 not supported");
   return -1;
 #endif
 }

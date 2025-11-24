@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <cstring>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -12,14 +13,12 @@
 #include "OnlHistogramer/FADCHistogramer.hh"
 #include "OnlHistogramer/SADCHistogramer.hh"
 
-using namespace std;
-
 void CupDAQManager::TF_RunManager()
 {
-  fLog->Info("CupDAQManager::TF_RunManager", "run manager started");
+  INFO("run manager started");
 
   if (!WaitState(fRunStatus, RUNSTATE::kCONFIGURED)) {
-    fLog->Warning("CupDAQManager::TF_RunManager", "exited by error state");
+    WARNING("exited by error state");
     return;
   }
 
@@ -38,12 +37,10 @@ void CupDAQManager::TF_RunManager()
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
   while (true) {
-    // for emergent exit
-    if (fDoExit) break;
+    if (fDoExit) { break; }
 
     if (IsForcedEndRunFile()) {
-      fLog->Info("CupDAQManager::TF_RunManager",
-                 "daq will be ended by ENDRUN command");
+      INFO("daq will be ended by ENDRUN command");
       fDoEndRun = true;
       break;
     }
@@ -57,23 +54,20 @@ void CupDAQManager::TF_RunManager()
       if (fSetNEvent > 0 && triggernumber > fSetNEvent) { iendrun = true; }
       if (fSetDAQTime > 0 && triggertime > fSetDAQTime) { iendrun = true; }
       if (iendrun) {
-        fLog->Info("CupDAQManager::TF_RunManager",
-                   "daq will be ended by preset condition");
+        INFO("daq will be ended by preset condition");
         fDoEndRun = true;
         break;
       }
     }
 
     if (RUNSTATE::CheckError(fRunStatus)) {
-      fLog->Warning("CupDAQManager::TF_RunManager",
-                    "daq will be ended by error");
+      WARNING("daq will be ended by error");
       fDoEndRun = true;
       break;
     }
 
     if (fDoEndRun) {
-      fLog->Info("CupDAQManager::TF_RunManager",
-                 "daq will be ended by ENDRUN command");
+      INFO("daq will be ended by ENDRUN command");
       break;
     }
 
@@ -82,7 +76,7 @@ void CupDAQManager::TF_RunManager()
       fDoSplitOutputFile = false;
     }
 
-    gSystem->Sleep(10);
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   if (fDAQType == DAQ::TCBDAQ) {
@@ -97,20 +91,20 @@ void CupDAQManager::TF_RunManager()
   }
 
   WaitState(fRunStatus, RUNSTATE::kPROCENDED, false);
-  fLog->Info("CupDAQManager::TF_RunManager", "all processes ended");
+  INFO("all processes ended");
 
   PrintDAQSummary();
-  fLog->Info("CupDAQManager::TF_RunManager", "run manger ended");
+  INFO("run manager ended");
 }
 
 void CupDAQManager::TF_TriggerMon()
 {
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_TriggerMon", "exited by exit command");
+    WARNING("exited by exit command");
     return;
   }
 
-  fLog->Info("CupDAQManager::TF_TriggerMon", "trigger monitoring started");
+  INFO("trigger monitoring started");
 
   unsigned int dummynevent = 0;
   double dummytime = 0.0;
@@ -135,38 +129,37 @@ void CupDAQManager::TF_TriggerMon()
       double dtime = triggertime - dummytime;
       double dnevent = triggernumber - dummynevent;
 
-      double insrate = dtime > 0 ? dnevent / dtime : 0.;
-      double accrate = triggertime > 0 ? triggernumber / triggertime : 0.;
+      double insrate = dtime > 0.0 ? dnevent / dtime : 0.0;
+      double accrate = triggertime > 0.0 ? triggernumber / triggertime : 0.0;
 
-      fLog->Stats("%4d events triggered [%8d | %8d / %5.1f(%5.1f) Hz / %.1f s]",
-                  int(dnevent), triggernumber, fNBuiltEvent, insrate, accrate,
-                  triggertime);
+      STATS("%4d events triggered [%8d | %8d / %5.1f(%5.1f) Hz / %.1f s]", static_cast<int>(dnevent), triggernumber,
+            fNBuiltEvent, insrate, accrate, triggertime);
 
-      dummynevent = triggernumber;
+      dummynevent = static_cast<unsigned int>(triggernumber);
       dummytime = triggertime;
     }
 
-    bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
-    if (runstate) break;
+    bool runstate =
+        RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+    if (runstate) { break; }
 
-    gSystem->Sleep(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  fLog->Info("CupDAQManager::TF_TriggerMon", "trigger monitoring ended");
+  INFO("trigger monitoring ended");
 }
 
 void CupDAQManager::TF_DebugMon()
 {
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_DebugMon", "exited by exit command");
+    WARNING("exited by exit command");
     return;
   }
 
-  int nadc = GetEntries();
-  double debugmontime = 1;
+  const int nadc_int = GetEntries();
+  const double debugmontime = 1.0;
 
-  fLog->Info("CupDAQManager::TF_DebugMon", "debug monitoring started");
+  INFO("debug monitoring started");
 
   TStopwatch sw;
   sw.Start();
@@ -182,94 +175,94 @@ void CupDAQManager::TF_DebugMon()
       TString adcbufsize;
       TString sortbufsize;
 
-      for (int i = 0; i < nadc; i++) {
+      for (int i = 0; i < nadc_int; ++i) {
         adcbcountsize += Form("%5d ", fRemainingBCount[i]);
-        auto * adc = (AbsADC *)fCont[i];
+
+        auto * adc = static_cast<AbsADC *>(fCont[i]);
         adcbufsize += Form("%5d ", adc->Bsize());
-        ConcurrentDeque<AbsADCRaw *> * modraw = fADCRawBuffers.at(i);
-        sortbufsize += Form("%5d ", modraw->size());
+
+        auto * modraw = fADCRawBuffers.at(static_cast<std::size_t>(i));
+        sortbufsize += Form("%5d ", static_cast<int>(modraw->size()));
       }
 
-      fLog->Debug("DebugMon", "ADC bcount size: %s", adcbcountsize.Data());
-      fLog->Debug("DebugMon", "ADC buffer size: %s", adcbufsize.Data());
-      fLog->Debug("DebugMon", "sorting buffer size: %s", sortbufsize.Data());
-      fLog->Debug("DebugMon", "building buffer size: %5d %5d",
-                  fBuiltEventBuffer1.size(), fBuiltEventBuffer2.size());
-      fLog->Debug("DebugMon", "%.3f(r) %.3f(s) %.3f(b) %.3f(w)",
-                  fReadSleep / 1000., fSortSleep / 1000., fBuildSleep / 1000.,
-                  fWriteSleep / 1000.);
+      DEBUG("ADC bcount size: %s", adcbcountsize.Data());
+      DEBUG("ADC buffer size: %s", adcbufsize.Data());
+      DEBUG("sorting buffer size: %s", sortbufsize.Data());
+      DEBUG("building buffer size: %5zu %5zu", fBuiltEventBuffer1.size(), fBuiltEventBuffer2.size());
+      DEBUG("%.3f(r) %.3f(s) %.3f(b) %.3f(w)", fReadSleep / 1000.0, fSortSleep / 1000.0, fBuildSleep / 1000.0,
+            fWriteSleep / 1000.0);
     }
 
-    bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
-    if (runstate) break;
+    bool runstate =
+        RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+    if (runstate) { break; }
 
-    gSystem->Sleep(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  fLog->Info("CupDAQManager::TF_DebugMon", "debug monitoring ended");
+  INFO("debug monitoring ended");
 }
 
 void CupDAQManager::TF_MsgServer()
 {
   int port = fDAQPort;
   TString name = fDAQName;
-  bool istcb = (fDAQID == 0) ? true : false;
+  bool istcb = (fDAQID == 0);
 
   const int max_clients = 10;
 
   int client_socket[max_clients];
   auto ** root_socket = new TSocket *[max_clients];
-  for (int i = 0; i < max_clients; i++) {
+  for (int i = 0; i < max_clients; ++i) {
     client_socket[i] = -1;
     root_socket[i] = nullptr;
   }
 
-  int master_socket;
-  if ((master_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-    fLog->Error("CupDAQManager::TF_MsgServer", "[%s] socket failed",
-                name.Data());
+  int master_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (master_socket == 0) {
+    ERROR("[%s] socket failed", name.Data());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
+    delete[] root_socket;
     return;
   }
 
-  int opt = true;
-  if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt,
-                 sizeof(opt)) < 0) {
-    fLog->Error("CupDAQManager::TF_MsgServer", "[%s] setsockopt failed",
-                name.Data());
+  int opt = 1;
+  if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), sizeof(opt)) < 0) {
+    ERROR("[%s] setsockopt failed", name.Data());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
+    close(master_socket);
+    delete[] root_socket;
     return;
   }
 
-  struct sockaddr_in address;
+  sockaddr_in address{};
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons(port);
+  address.sin_port = htons(static_cast<uint16_t>(port));
 
-  int addrlen = sizeof(address);
+  socklen_t addrlen = sizeof(address);
 
-  if (bind(master_socket, (struct sockaddr *)&address, addrlen) < 0) {
-    fLog->Error("CupDAQManager::TF_MsgServer",
-                "[%s] socket bind failed on port %d", name.Data(), port);
+  if (bind(master_socket, reinterpret_cast<struct sockaddr *>(&address), addrlen) < 0) {
+    ERROR("[%s] socket bind failed on port %d", name.Data(), port);
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
+    close(master_socket);
+    delete[] root_socket;
     return;
   }
-  fLog->Info("CupDAQManager::TF_MsgServer", "[%s] message server on port %d",
-             name.Data(), port);
+  INFO("[%s] message server on port %d", name.Data(), port);
 
   if (listen(master_socket, 3) < 0) {
-    fLog->Error("CupDAQManager::TF_MsgServer", "[%s] socket listen error",
-                name.Data());
+    ERROR("[%s] socket listen error", name.Data());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
+    close(master_socket);
+    delete[] root_socket;
     return;
   }
 
-  fLog->Info("CupDAQManager::TF_MsgServer", "[%s] message server start",
-             name.Data());
+  INFO("[%s] message server start", name.Data());
 
   char buffer[kMESSLEN];
-  struct timeval tv;
+  timeval tv{};
   fd_set readfds;
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
@@ -277,14 +270,13 @@ void CupDAQManager::TF_MsgServer()
   while (true) {
     if (fDoExit || fDoExitTCB) { break; }
 
-    // select clients
     FD_ZERO(&readfds);
     FD_SET(master_socket, &readfds);
 
     int max_sd = master_socket;
 
     for (int sd : client_socket) {
-      if (sd > 0) FD_SET(sd, &readfds);
+      if (sd > 0) { FD_SET(sd, &readfds); }
       if (sd > max_sd) { max_sd = sd; }
     }
 
@@ -293,52 +285,50 @@ void CupDAQManager::TF_MsgServer()
 
     int activity = select(max_sd + 1, &readfds, nullptr, nullptr, &tv);
     if (activity == 0) { continue; }
-    else if ((activity < 0) && (errno != EINTR)) {
-      // fLog->Warning("%s[%s]: select error occurred", __func__, name.Data());
+    else if (activity < 0 && errno != EINTR) {
+      // DEBUG("select error occurred for [%s]", name.Data());
       continue;
     }
 
     if (FD_ISSET(master_socket, &readfds)) {
-      int new_socket = accept(master_socket, (struct sockaddr *)&address,
-                              (socklen_t *)&addrlen);
+      int new_socket = accept(master_socket, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
 
       if (new_socket < 0) {
-        fLog->Error("CupDAQManager::TF_MsgServer",
-                    "[%s]: accept error occurred", name.Data());
-        istcb ? RUNSTATE::SetError(fRunStatusTCB)
-              : RUNSTATE::SetError(fRunStatus);
+        ERROR("[%s]: accept error occurred", name.Data());
+        istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
+        close(master_socket);
+        for (int i = 0; i < max_clients; ++i) {
+          if (root_socket[i]) { delete root_socket[i]; }
+        }
+        delete[] root_socket;
         return;
       }
 
-      fLog->Info("CupDAQManager::TF_MsgServer",
-                 "[%s]: new client connection, socket fd: %d, ip: %s, port: %d",
-                 name.Data(), new_socket, inet_ntoa(address.sin_addr),
-                 ntohs(address.sin_port));
+      INFO("[%s]: new client connection, socket fd: %d, ip: %s, port: %d", name.Data(), new_socket,
+           inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
-      for (int i = 0; i < max_clients; i++) {
+      for (int i = 0; i < max_clients; ++i) {
         if (client_socket[i] == -1) {
           client_socket[i] = new_socket;
           root_socket[i] = new TSocket(new_socket);
-          fLog->Info("CupDAQManager::TF_MsgServer",
-                     "[%s]: adding to list of sockets at %d", name.Data(), i);
+          INFO("[%s]: adding to list of sockets at %d", name.Data(), i);
           break;
         }
       }
     }
 
-    for (int i = 0; i < max_clients; i++) {
+    for (int i = 0; i < max_clients; ++i) {
       int sd = client_socket[i];
 
-      if (FD_ISSET(sd, &readfds)) {
-        memset(buffer, 0, kMESSLEN);
+      if (sd > 0 && FD_ISSET(sd, &readfds)) {
+        std::memset(buffer, 0, kMESSLEN);
         int valread = read(sd, buffer, kMESSLEN);
 
-        getpeername(sd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
+        getpeername(sd, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
+
         if (valread == 0) {
-          fLog->Info("CupDAQManager::TF_MsgServer",
-                     "[%s]: host disconnected, socket fd: %d, ip: %s, port: %d",
-                     name.Data(), sd, inet_ntoa(address.sin_addr),
-                     ntohs(address.sin_port));
+          INFO("[%s]: host disconnected, socket fd: %d, ip: %s, port: %d", name.Data(), sd, inet_ntoa(address.sin_addr),
+               ntohs(address.sin_port));
 
           close(sd);
           client_socket[i] = -1;
@@ -346,7 +336,8 @@ void CupDAQManager::TF_MsgServer()
           root_socket[i] = nullptr;
         }
         else {
-          unsigned long command, dummy;
+          unsigned long command = 0;
+          unsigned long dummy = 0;
           DecodeMsg(buffer, command, dummy, dummy, dummy);
 
           switch (command) {
@@ -356,16 +347,17 @@ void CupDAQManager::TF_MsgServer()
               break;
             }
             case kQUERYRUNINFO: {
-              EncodeMsg(buffer, fRunNumber, fSubRunNumber, fStartDatime,
-                        fEndDatime);
+              EncodeMsg(buffer, static_cast<unsigned long>(fRunNumber), static_cast<unsigned long>(fSubRunNumber),
+                        static_cast<unsigned long>(fStartDatime), static_cast<unsigned long>(fEndDatime));
               root_socket[i]->SendRaw(buffer, kMESSLEN);
               break;
             }
             case kQUERYTRGINFO: {
-              unsigned long nevent, daqtime;
+              unsigned long nevent = 0;
+              unsigned long daqtime = 0;
 
               mlock.lock();
-              nevent = fTriggerNumber;
+              nevent = static_cast<unsigned long>(fTriggerNumber);
               daqtime = fTriggerTime;
               mlock.unlock();
 
@@ -375,8 +367,7 @@ void CupDAQManager::TF_MsgServer()
             }
             case kREQUESTCONFIG: {
               root_socket[i]->SendObject(fConfigList);
-              fLog->Info("CupDAQManager::TF_MsgServer",
-                         "[%s] sent config list to DAQ", name.Data());
+              INFO("[%s] sent config list to DAQ", name.Data());
               break;
             }
             case kSPLITOUTPUTFILE: {
@@ -384,38 +375,34 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoSplitOutputFile = true;
               }
-              fLog->Info("CupDAQManager::TF_MsgServer",
-                         "[%s] output file split command received",
-                         name.Data());
+              INFO("[%s] output file split command received", name.Data());
               break;
             }
             case kRECVEVENT: {
-              TMessage * mess;
-              if (root_socket[i]->Recv(mess) > 0) {
-                auto * event = (BuiltEvent *)mess->ReadObject(mess->GetClass());
+              TMessage * mess = nullptr;
+              if (root_socket[i]->Recv(mess) > 0 && mess != nullptr) {
+                auto * event = static_cast<BuiltEvent *>(mess->ReadObject(mess->GetClass()));
                 int daqid = event->GetDAQID();
-                for (auto buf : fRecvEventBuffer) {
+                for (auto & buf : fRecvEventBuffer) {
                   if (buf.first == daqid) {
-                    buf.second->push_back(event);
+                    buf.second->push_back(std::unique_ptr<BuiltEvent>(event));
                     break;
                   }
                 }
                 delete mess;
-                break;
               }
               else {
-                fLog->Warning("CupDAQManager::TF_MsgServer",
-                              "[%s] error in event sender [ip=%s, port=%d]",
-                              name.Data(), inet_ntoa(address.sin_addr),
-                              ntohs(address.sin_port));
+                WARNING("[%s] error in event sender [ip=%s, port=%d]", name.Data(), inet_ntoa(address.sin_addr),
+                        ntohs(address.sin_port));
               }
+              break;
             }
             case kSETERROR: {
               RUNSTATE::SetError(fRunStatus);
               break;
             }
             case kQUERYMONITOR: {
-              EncodeMsg(buffer, fMonitorServerOn);
+              EncodeMsg(buffer, static_cast<unsigned long>(fMonitorServerOn));
               root_socket[i]->SendRaw(buffer, kMESSLEN);
               break;
             }
@@ -424,8 +411,7 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoConfigRun = true;
               }
-              fLog->Info("CupDAQManager::TF_MsgServer",
-                         "[%s] CONFIGRUN command received", name.Data());
+              INFO("[%s] CONFIGRUN command received", name.Data());
               break;
             }
             case kSTARTRUN: {
@@ -433,8 +419,7 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoStartRun = true;
               }
-              fLog->Info("CupDAQManager::TF_MsgServer",
-                         "[%s] STARTRUN command received", name.Data());
+              INFO("[%s] STARTRUN command received", name.Data());
               break;
             }
             case kENDRUN: {
@@ -442,8 +427,7 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoEndRun = true;
               }
-              fLog->Info("CupDAQManager::TF_MsgServer",
-                         "[%s] ENDRUN command received", name.Data());
+              INFO("[%s] ENDRUN command received", name.Data());
               break;
             }
             case kEXIT: {
@@ -451,14 +435,11 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoExit = true;
               }
-              fLog->Info("CupDAQManager::TF_MsgServer",
-                         "[%s] EXIT command received", name.Data());
+              INFO("[%s] EXIT command received", name.Data());
               break;
             }
             default: {
-              fLog->Warning("CupDAQManager::TF_MsgServer",
-                            "[%s] Unknown command [%ld] received", name.Data(),
-                            command);
+              WARNING("[%s] unknown command [%lu] received", name.Data(), command);
               break;
             }
           }
@@ -466,68 +447,66 @@ void CupDAQManager::TF_MsgServer()
       }
     }
   }
+
   close(master_socket);
 
-  for (int i = 0; i < max_clients; i++) {
+  for (int i = 0; i < max_clients; ++i) {
     if (root_socket[i]) { delete root_socket[i]; }
   }
   delete[] root_socket;
 
-  fLog->Info("CupDAQManager::TF_MsgServer", "[%s] message server ended",
-             name.Data());
+  INFO("[%s] message server ended", name.Data());
 }
 
 void CupDAQManager::TF_ShrinkToFit()
 {
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_ShrinkToFit", "exited by exit command");
+    WARNING("exited by exit command");
     return;
   }
 
-  fLog->Info("CupDAQManager::TF_ShrinkToFit",
-             "shrink buffer memory to fit started");
+  INFO("shrink buffer memory to fit started");
 
   TStopwatch sw;
   sw.Start();
 
-  int nadc = GetEntries();
+  const int nadc_int = GetEntries();
+
   while (true) {
     double elapsetime = sw.RealTime();
     sw.Continue();
-    if (elapsetime >= 10) {
+
+    if (elapsetime >= 10.0) {
       sw.Start(true);
 
-      for (int i = 0; i < nadc; i++) {
-        auto * adc = (AbsADC *)fCont[i];
+      for (int i = 0; i < nadc_int; ++i) {
+        auto * adc = static_cast<AbsADC *>(fCont[i]);
         adc->Bshrink_to_fit();
 
-        ConcurrentDeque<AbsADCRaw *> * modbuffer = fADCRawBuffers.at(i);
+        auto * modbuffer = fADCRawBuffers.at(static_cast<std::size_t>(i));
         modbuffer->shrink_to_fit();
       }
 
       fBuiltEventBuffer1.shrink_to_fit();
       fBuiltEventBuffer2.shrink_to_fit();
 
-      if (fRecvEventBuffer.size() > 0) {
-        for (auto buf : fRecvEventBuffer) {
+      if (!fRecvEventBuffer.empty()) {
+        for (auto & buf : fRecvEventBuffer) {
           buf.second->shrink_to_fit();
         }
       }
 
-      if (fVerboseLevel > 0) {
-        fLog->Info("ShrinkToFit", "shrink buffer memory to fit");
-      }
+      if (fVerboseLevel > 0) { INFO("shrink buffer memory to fit"); }
     }
 
-    bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
-    if (runstate) break;
+    bool runstate =
+        RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+    if (runstate) { break; }
 
-    gSystem->Sleep(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  fLog->Info("CupDAQManager::TF_ShrinkToFit",
-             "shrink buffer memory to fit ended");
+  INFO("shrink buffer memory to fit ended");
 }
 
 void CupDAQManager::TF_SplitOutput(bool ontcb)
@@ -536,7 +515,7 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
 
   if (ontcb) {
     if (!ThreadWait(fRunStatusTCB, fDoExitTCB)) { return; }
-    fLog->Info("CupDAQManager::TF_SplitOutput", "output splitter started");
+    INFO("output splitter started (TCB)");
 
     sw.Start();
     while (true) {
@@ -547,17 +526,15 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
         SendCommandToDAQ(kSPLITOUTPUTFILE);
         fSubRunNumber += 1;
 
-        if (fVerboseLevel >= 1) {
-          fLog->Info("SplitOutput", "output file will be split");
-        }
+        if (fVerboseLevel >= 1) { INFO("output file will be split"); }
       }
       if (fDoEndRunTCB || RUNSTATE::CheckError(fRunStatusTCB)) { break; }
-      gSystem->Sleep(100);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
   else {
     if (!ThreadWait(fRunStatus, fDoExit)) { return; }
-    fLog->Info("CupDAQManager::TF_SplitOutput", "output splitter started");
+    INFO("output splitter started");
 
     sw.Start();
     while (true) {
@@ -568,17 +545,15 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
         fDoSplitOutputFile = true;
         fSubRunNumber += 1;
 
-        if (fVerboseLevel >= 1) {
-          fLog->Info("SplitOutput", "output file will be split");
-        }
+        if (fVerboseLevel >= 1) { INFO("output file will be split"); }
       }
-      bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                      RUNSTATE::CheckError(fRunStatus) || fDoExit;
-      if (runstate) break;
+      bool runstate =
+          RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+      if (runstate) { break; }
 
-      gSystem->Sleep(100);
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
 
-  fLog->Info("CupDAQManager::TF_SplitOutput", "output splitter ended");
+  INFO("output splitter ended");
 }

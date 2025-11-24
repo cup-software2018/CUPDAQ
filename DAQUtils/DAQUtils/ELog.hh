@@ -20,12 +20,12 @@
 #define LOG_COMPILE_LEVEL 0
 #endif
 
-enum class ELogLevel : int { Info = 0, Warn, Error, Debug, Stats };
+enum class ELOGLEVEL : int { Info = 0, Warn, Error, Debug, Stats };
 
 class ELog {
 public:
   struct Options {
-    ELogLevel runtime_level = ELogLevel::Info;
+    ELOGLEVEL runtime_level = ELOGLEVEL::Info;
     bool use_color = true;
     bool to_stderr = false;
     std::optional<std::string> file_path = std::nullopt;
@@ -46,20 +46,20 @@ public:
     _open_file_unlocked();
   }
 
-  void set_level(ELogLevel lv)
+  void set_level(ELOGLEVEL lv)
   {
     _runtime_level.store(static_cast<int>(lv), std::memory_order_relaxed);
     std::lock_guard<std::mutex> lock(_mutex);
     _opt.runtime_level = lv;
   }
 
-  ELogLevel level() const
+  ELOGLEVEL level() const
   {
-    return static_cast<ELogLevel>(_runtime_level.load(std::memory_order_relaxed));
+    return static_cast<ELOGLEVEL>(_runtime_level.load(std::memory_order_relaxed));
   }
 
   // ---------- printf-style logging ----------
-  void logf(ELogLevel lv, const char * pretty_func, const char * fmt, ...)
+  void logf(ELOGLEVEL lv, const char * pretty_func, const char * fmt, ...)
   {
     if ((int)lv < LOG_COMPILE_LEVEL) return;
     if ((int)lv < _runtime_level.load(std::memory_order_relaxed)) return;
@@ -101,7 +101,7 @@ private:
     return out;
   }
 
-  void _emit_line(ELogLevel lv, const char * pretty_func, const std::string & msg)
+  void _emit_line(ELOGLEVEL lv, const char * pretty_func, const std::string & msg)
   {
     auto now = std::chrono::system_clock::now();
     auto t = std::chrono::system_clock::to_time_t(now);
@@ -119,7 +119,7 @@ private:
     _output_line(lv, line);
   }
 
-  void _output_line(ELogLevel lv, const std::string & line)
+  void _output_line(ELOGLEVEL lv, const std::string & line)
   {
     // console
     if (_opt.use_color && _is_tty) {
@@ -147,26 +147,26 @@ private:
     return pretty;
   }
 
-  const char * _level_tag(ELogLevel lv) const
+  const char * _level_tag(ELOGLEVEL lv) const
   {
     switch (lv) {
-      case ELogLevel::Info: return "INFO";
-      case ELogLevel::Warn: return "WARN";
-      case ELogLevel::Error: return "ERROR";
-      case ELogLevel::Debug: return "DEBUG";
-      case ELogLevel::Stats: return "STATS";
+      case ELOGLEVEL::Info: return "INFO";
+      case ELOGLEVEL::Warn: return "WARN";
+      case ELOGLEVEL::Error: return "ERROR";
+      case ELOGLEVEL::Debug: return "DEBUG";
+      case ELOGLEVEL::Stats: return "STATS";
       default: return "UNKNOWN";
     }
   }
 
-  const char * _color_open(ELogLevel lv) const
+  const char * _color_open(ELOGLEVEL lv) const
   {
     switch (lv) {
-      case ELogLevel::Info: return "\033[32m";
-      case ELogLevel::Warn: return "\033[33m";
-      case ELogLevel::Error: return "\033[31m";
-      case ELogLevel::Debug: return "\033[36m";
-      case ELogLevel::Stats: return "\033[37m";
+      case ELOGLEVEL::Info: return "\033[32m";
+      case ELOGLEVEL::Warn: return "\033[33m";
+      case ELOGLEVEL::Error: return "\033[31m";
+      case ELOGLEVEL::Debug: return "\033[36m";
+      case ELOGLEVEL::Stats: return "\033[37m";
       default: return "";
     }
   }
@@ -184,14 +184,14 @@ private:
   std::optional<std::ofstream> _file;
   bool _is_tty = true;
   mutable std::mutex _mutex;
-  std::atomic<int> _runtime_level{static_cast<int>(ELogLevel::Info)};
+  std::atomic<int> _runtime_level{static_cast<int>(ELOGLEVEL::Info)};
 };
 
 // ---------- printf-style macros ----------
-#define INFO(fmt, ...) ELog::instance().logf(ELogLevel::Info, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define WARNING(fmt, ...) ELog::instance().logf(ELogLevel::Warn, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) ELog::instance().logf(ELogLevel::Error, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define DEBUG(fmt, ...) ELog::instance().logf(ELogLevel::Debug, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define STATS(fmt, ...) ELog::instance().logf(ELogLevel::Stats, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define INFO(fmt, ...) ELog::instance().logf(ELOGLEVEL::Info, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define WARNING(fmt, ...) ELog::instance().logf(ELOGLEVEL::Warn, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define ERROR(fmt, ...) ELog::instance().logf(ELOGLEVEL::Error, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define DEBUG(fmt, ...) ELog::instance().logf(ELOGLEVEL::Debug, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define STATS(fmt, ...) ELog::instance().logf(ELOGLEVEL::Stats, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 
 inline void init_elog(const ELog::Options & opt = {}) { ELog::instance().configure(opt); }

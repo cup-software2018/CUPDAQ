@@ -1,18 +1,16 @@
 #include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/IADCTConf.hh"
 
 void CupDAQManager::TF_WriteEvent()
 {
   fWriteStatus = READY;
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_WriteEvent", "exited by exit command");
+    WARNING("CupDAQManager::TF_WriteEvent: exited by exit command");
     return;
   }
 
   const char * adcmode = (fADCMode == ADC::SMODE) ? "SADC mode" : "FADC mode";
-  fLog->Info("CupDAQManager::TF_WriteEvent", "writing output data started as %s",
-             adcmode);
+  INFO("CupDAQManager::TF_WriteEvent: writing output data started as %s", adcmode);
 
   if (!OpenNewOutputFile()) {
     RUNSTATE::SetError(fRunStatus);
@@ -44,19 +42,19 @@ void CupDAQManager::TF_WriteEvent()
     fTotalWrittenDataSize += fROOTFile->GetEND();
     const char * fname = fROOTFile->GetName();
     fROOTFile->Close();
-    fLog->Info("CupDAQManager::TF_WriteEvent", "output data %s closed", fname);
+    INFO("CupDAQManager::TF_WriteEvent: output data %s closed", fname);
   }
 #ifdef ENABLE_HDF5
   if (fHDF5File && fHDF5File->IsOpen()) {
     fTotalWrittenDataSize += fHDF5File->GetFileSize();
     const char * fname = fHDF5File->GetFilename();
     fHDF5File->Close();
-    fLog->Info("CupDAQManager::TF_WriteEvent", "output data %s closed", fname);
+    INFO("CupDAQManager::TF_WriteEvent: output data %s closed", fname);
   }
 #endif
 
   fWriteStatus = ENDED;
-  fLog->Info("CupDAQManager::TF_WriteEvent", "writing output data ended");
+  INFO("CupDAQManager::TF_WriteEvent: writing output data ended");
 }
 
 bool CupDAQManager::OpenNewOutputFile()
@@ -72,45 +70,36 @@ bool CupDAQManager::OpenNewOutputFile()
         case OUTPUT::GZIP: extension = "gz"; break;
         default: break;
       }
-      //TString adcname = GetADCName(fADCType);
+
       TString adcname = fDAQName;
       adcname.ReplaceAll("DAQ", "");
       adcname.ReplaceAll("MERGER", "");
       TString dirname = gSystem->Getenv("RAWDATA_DIR");
       if (dirname.IsNull()) {
-        fLog->Warning("CupDAQManager::OpenNewOutputFile",
-                      "RAWDATA_DIR is not set");
-        fname =
-            Form("%s_%06d.%s", adcname.Data(), fRunNumber, extension.Data());
+        WARNING("CupDAQManager::OpenNewOutputFile: RAWDATA_DIR is not set");
+        fname = Form("%s_%06d.%s", adcname.Data(), fRunNumber, extension.Data());
       }
       else {
         dirname += Form("/RAW/%06d", fRunNumber);
         int isdir = gSystem->Exec(Form("test -d %s", dirname.Data()));
         if (isdir) {
           gSystem->Exec(Form("mkdir %s", dirname.Data()));
-          fLog->Info("CupDAQManager::OpenNewOutputFile", "%s created",
-                     dirname.Data());
+          INFO("CupDAQManager::OpenNewOutputFile: %s created", dirname.Data());
         }
-        fLog->Info("CupDAQManager::OpenNewOutputFile", "%s already exist",
-                   dirname.Data());
+        INFO("CupDAQManager::OpenNewOutputFile: %s already exist", dirname.Data());
 
-        fname = Form("%s/%s_%06d.%s", dirname.Data(), adcname.Data(),
-                     fRunNumber, extension.Data());
+        fname = Form("%s/%s_%06d.%s", dirname.Data(), adcname.Data(), fRunNumber, extension.Data());
       }
       fOutputFilename = fname;
     }
     else {
       fname = gSystem->BaseName(fOutputFilename);
       if (fname.Contains(".root")) fOutputFileFormat = OUTPUT::ROOT;
-      else if (fname.Contains(".h5") || fname.Contains(".hdf"))
-        fOutputFileFormat = OUTPUT::HDF5;
-      else if (fname.Contains(".gz") || fname.Contains(".dat"))
-        fOutputFileFormat = OUTPUT::GZIP;
+      else if (fname.Contains(".h5") || fname.Contains(".hdf")) fOutputFileFormat = OUTPUT::HDF5;
+      else if (fname.Contains(".gz") || fname.Contains(".dat")) fOutputFileFormat = OUTPUT::GZIP;
       else {
-        fLog->Warning("CupDAQManager::OpenNewOutputFile",
-                      "output file format is unclear");
-        fLog->Info("CupDAQManager::OpenNewOutputFile",
-                   "output file is going to be written by ROOT");
+        WARNING("CupDAQManager::OpenNewOutputFile: output file format is unclear");
+        INFO("CupDAQManager::OpenNewOutputFile: output file is going to be written by ROOT");
         fOutputFileFormat = OUTPUT::ROOT;
       }
     }

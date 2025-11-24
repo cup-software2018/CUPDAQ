@@ -3,9 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "DAQUtils/ELogger.hh"
-#include "Notice/usb3com.hh"
+#include "DAQUtils/ELog.hh"
 #include "Notice/NoticeAMOREADC.hh"
+#include "Notice/usb3com.hh"
 
 // open AMOREADC
 int AMOREADCopen(int sid, libusb_context * ctx)
@@ -16,10 +16,8 @@ int AMOREADCopen(int sid, libusb_context * ctx)
   USB3ClaimInterface(AMOREADC_VENDOR_ID, AMOREADC_PRODUCT_ID, sid, 0);
 
   while (1) {
-    if (!USB3CheckFPGADoneNoAVR(AMOREADC_VENDOR_ID, AMOREADC_PRODUCT_ID, sid))
-      printf(".");
-    else
-      break;
+    if (!USB3CheckFPGADoneNoAVR(AMOREADC_VENDOR_ID, AMOREADC_PRODUCT_ID, sid)) printf(".");
+    else break;
 
     usleep(500000);
   }
@@ -32,7 +30,7 @@ int AMOREADCopen(int sid, libusb_context * ctx)
   AMOREADCread_BCOUNT(sid);
   AMOREADCread_BCOUNT(sid);
 
-  ELogger::Instance(true)->Info(__func__, "now AMOREADC[%d] is ready.", sid);
+  INFO("now AMOREADC[%d] is ready.", sid);
 
   return status;
 }
@@ -45,10 +43,7 @@ void AMOREADCclose(int sid)
 }
 
 // Read data buffer count, 1 buffer count = 1 kbyte data
-int AMOREADCread_BCOUNT(int sid)
-{
-  return USB3ReadRegI(AMOREADC_VENDOR_ID, AMOREADC_PRODUCT_ID, sid, 0x0B);
-}
+int AMOREADCread_BCOUNT(int sid) { return USB3ReadRegI(AMOREADC_VENDOR_ID, AMOREADC_PRODUCT_ID, sid, 0x0B); }
 
 // read data, reads bcount * 1 kbytes data from AMOREADC DRAM
 // returns character raw data, needs sorting after data acquisition
@@ -57,7 +52,7 @@ int AMOREADCread_DATA(int sid, int bcount, unsigned char * data)
   int count;
 
   // maximum data size is 64 Mbyte
-  count = bcount*256;
+  count = bcount * 256;
 
   return USB3Read(AMOREADC_VENDOR_ID, AMOREADC_PRODUCT_ID, sid, count, 0x40000000, data);
 }

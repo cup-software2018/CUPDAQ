@@ -1,6 +1,4 @@
-//
-// Created by cupsoft on 6/30/20.
-//
+// CupSoftTrigger.cc
 #include <fstream>
 #include <sstream>
 
@@ -8,107 +6,124 @@
 
 #include "DAQConfig/STRGConf.hh"
 #include "DAQTrigger/CupSoftTrigger.hh"
+#include "DAQUtils/ELog.hh"
 #include "OnlObjs/FADCRawChannel.hh"
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
 
-using namespace std;
+Qsum::Qsum(int mid, int row, int col)
+  : fMID(mid),
+    fRow(row),
+    fCol(col),
+    fNCH(row * col),
+    fCut(new double[fNCH])
+{
+}
+
+Qsum::~Qsum() { delete[] fCut; }
+
+void Qsum::Print(Option_t * opt) const
+{
+  std::cout << Form("mid %d %d %d", fMID, fRow, fCol) << std::endl;
+  for (int i = 0; i < fRow; i++) {
+    for (int j = 0; j < fCol; j++) {
+      std::cout << fCut[fCol * i + j] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+}
 
 CupSoftTrigger::CupSoftTrigger()
-    : AbsSoftTrigger()
+  : AbsSoftTrigger(),
+    fDoZSUTBit(false),
+    fDoZSUQSum(false),
+    fDoZSUPHeight(false),
+    fDoPrescale(false),
+    fPHeight(0),
+    fPrescale(1),
+    fQsumArray(new TObjArray())
 {
-  fDoZSUTBit = false;
-  fDoZSUQSum = false;
-  fDoPrescale = false;
-  fDoZSUPHeight = false;
-  fPrescale = 1;
-
-  fQsumArray = new TObjArray();
   gRandom->SetSeed(0);
 }
 
 CupSoftTrigger::CupSoftTrigger(AbsConf * config)
-    : AbsSoftTrigger(config)
+  : AbsSoftTrigger(config),
+    fDoZSUTBit(false),
+    fDoZSUQSum(false),
+    fDoZSUPHeight(false),
+    fDoPrescale(false),
+    fPHeight(0),
+    fPrescale(1),
+    fQsumArray(new TObjArray())
 {
-  fDoZSUTBit = false;
-  fDoZSUQSum = false;
-  fDoPrescale = false;
-  fDoZSUPHeight = false;
-  fPrescale = 1;
-
-  fQsumArray = new TObjArray();
   gRandom->SetSeed(0);
 }
 
-CupSoftTrigger::~CupSoftTrigger() {}
+CupSoftTrigger::~CupSoftTrigger() = default;
 
 void CupSoftTrigger::InitTrigger()
 {
-  auto * config = (STRGConf *)fConfig;
+  auto * config = static_cast<STRGConf *>(fConfig);
   int mode = config->GetZSUMode();
 
-  fDoZSUTBit = mode & (1 << 0);    // 1: tbit zero suppression
-  fDoZSUQSum = mode & (1 << 1);    // 2: qsum zero suppression
-  fDoZSUPHeight = mode & (1 << 2); // 4: pulse height
+  fDoZSUTBit = (mode & (1 << 0)) != 0;
+  fDoZSUQSum = (mode & (1 << 1)) != 0;
+  fDoZSUPHeight = (mode & (1 << 2)) != 0;
   fPrescale = config->GetPrescale();
-
   if (fPrescale > 1) fDoPrescale = true;
 
-  string line;
-  ifstream file(config->GetInputCard());
+  std::string line;
+  std::ifstream file(config->GetInputCard());
   if (file.is_open()) {
-    while (file.good()) {
-      getline(file, line);
+    while (std::getline(file, line)) {
       if (line.empty()) continue;
 
-      istringstream iss(line);
-      string key;
-
+      std::istringstream iss(line);
+      std::string key;
       iss >> key;
-      if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
+      if (iss.fail() || key.empty() || key[0] == '#') continue;
 
       if (key == "mid" || key == "MID") {
         int mid, n, m, val;
         iss >> mid >> n >> m;
-        Qsum * qsum = new Qsum(mid, n, m);
+        auto * qsum = new Qsum(mid, n, m);
+
         for (int i = 0; i < n; i++) {
-          getline(file, line);
-          istringstream iss1(line);
+          std::getline(file, line);
+          std::istringstream iss1(line);
           for (int j = 0; j < m; j++) {
             iss1 >> val;
             qsum->fCut[m * i + j] = val;
           }
         }
-        // qsum->Print();
         fQsumArray->Add(qsum);
       }
     }
   }
   else {
-    fLog->Warning("InitTrigger", "no input file %s", config->GetInputCard());
+    WARNING("InitTrigger: no input file %s", config->GetInputCard());
   }
 
-  fLog->Info("InitTrigger", "NADC=%d, TBIT=%d, QSUM=%d, PSC=%d",
-             fQsumArray->GetEntries(), fDoZSUTBit, fDoZSUQSum, fDoPrescale);
+  INFO("InitTrigger: NADC=%d, TBIT=%d, QSUM=%d, PSC=%d", fQsumArray->GetEntries(), fDoZSUTBit, fDoZSUQSum, fDoPrescale);
 }
 
 bool CupSoftTrigger::DoTrigger(BuiltEvent * bevent)
 {
   fTotalInputEvent += 1;
-  bool state = false;
 
   if (fPrescale > 1) {
-    if (gRandom->Rndm() > 1 / (double)fPrescale) { return false; }
+    if (gRandom->Rndm() > 1.0 / static_cast<double>(fPrescale)) return false;
   }
 
+  bool state = false;
   switch (fMode) {
     case ADC::FMODE: state = DoTriggerFADC(bevent); break;
     case ADC::SMODE: state = DoTriggerSADC(bevent); break;
     default: break;
   }
 
-  if (state) { fNTriggeredEvent += 1; }
-
+  if (state) fNTriggeredEvent += 1;
   return state;
 }
 
@@ -116,51 +131,52 @@ bool CupSoftTrigger::DoTriggerFADC(BuiltEvent * bevent)
 {
   int noverqsum = 0;
   int nbit = 0;
-  int zero;
 
-  ADCHeader * header = nullptr;
   int nadc = bevent->GetEntries();
   for (int k = 0; k < nadc; k++) {
-    auto * adcraw = (FADCRawEvent *)bevent->At(k);
+    auto * adcraw = static_cast<FADCRawEvent *>(bevent->At(k));
+    auto * header = adcraw->GetADCHeader();
 
-    header = adcraw->GetADCHeader();
-    if (header->GetTriggerType() == 1) { return true; }
+    if (header->GetTriggerType() == 1) return true;
 
     int mid = header->GetMID();
     Qsum * qsumthr = FindQsum(mid);
 
     for (int i = 0; i < adcraw->GetNCH(); i++) {
-      zero = 0;
-      if (header->GetZero(i)) continue; // unused channel
+      int zero = 0;
+      if (header->GetZero(i)) continue;
 
       if (fDoZSUTBit) {
-        if (header->GetTriggerBit(i) == 0) { zero += 1; }
+        if (header->GetTriggerBit(i) == 0) zero += 1;
         else nbit += 1;
       }
 
       int ped = header->GetPedestal(i);
-      FADCRawChannel * ch = adcraw->GetChannel(i);
+      auto * ch = adcraw->GetChannel(i);
       unsigned short * adc = ch->GetADC();
 
       if (fDoZSUQSum && qsumthr) {
         int qsum = 0;
         for (int j = 0; j < ch->GetNDP(); j++) {
-          qsum += int(adc[j]) - ped;
+          qsum += static_cast<int>(adc[j]) - ped;
         }
 
-        if (qsum < qsumthr->fCut[i]) header->SetZero(i);
-        else noverqsum += 1;
+        if (qsum < qsumthr->fCut[i]) { header->SetZero(i); }
+        else {
+          noverqsum += 1;
+        }
       }
 
-      if (fDoZSUPHeight) {
-        int j;
-        for (j = 0; j < ch->GetNDP(); j++) {
-          if (int(adc[j]) - ped > qsumthr->fCut[i]) {
+      if (fDoZSUPHeight && qsumthr) {
+        bool hit = false;
+        for (int j = 0; j < ch->GetNDP(); j++) {
+          if (static_cast<int>(adc[j]) - ped > qsumthr->fCut[i]) {
             nbit += 1;
+            hit = true;
             break;
           }
         }
-        if (j == ch->GetNDP() - 1) zero += 1;
+        if (!hit) zero += 1;
       }
 
       if (zero > 0) header->SetZero(i);
@@ -169,25 +185,23 @@ bool CupSoftTrigger::DoTriggerFADC(BuiltEvent * bevent)
 
   if (fDoZSUQSum && noverqsum == 0) return false;
   if ((fDoZSUTBit || fDoZSUPHeight) && nbit == 0) return false;
-  //if (fDoZSUPHeight && zero != 0) return false;
   return true;
 }
 
 bool CupSoftTrigger::DoTriggerSADC(BuiltEvent * bevent)
 {
-  ADCHeader * header = nullptr;
   int nadc = bevent->GetEntries();
   for (int k = 0; k < nadc; k++) {
-    auto * adcraw = (SADCRawEvent *)bevent->At(k);
+    auto * adcraw = static_cast<SADCRawEvent *>(bevent->At(k));
+    auto * header = adcraw->GetADCHeader();
 
-    header = adcraw->GetADCHeader();
-    if (header->GetTriggerType() == 1) continue; // pedestal trigger
+    if (header->GetTriggerType() == 1) continue;
 
     for (int i = 0; i < adcraw->GetNCH(); i++) {
-      if (header->GetZero()) continue; // unused channel
+      if (header->GetZero()) continue;
 
       if (fDoZSUTBit) {
-        if (header->GetTriggerBit(i) == 0) { header->SetZero(i); }
+        if (header->GetTriggerBit(i) == 0) header->SetZero(i);
       }
     }
   }
@@ -199,7 +213,7 @@ Qsum * CupSoftTrigger::FindQsum(int mid) const
 {
   int n = fQsumArray->GetEntries();
   for (int i = 0; i < n; i++) {
-    auto * qsum = (Qsum *)fQsumArray->At(i);
+    auto * qsum = static_cast<Qsum *>(fQsumArray->At(i));
     if (qsum->fMID == mid) return qsum;
   }
   return nullptr;

@@ -1,33 +1,33 @@
-//
-// Created by cupsoft on 7/24/19.
-//
+#include <algorithm>
+#include <cstring>
+#include <memory>
+
+#include "DAQ/CupDAQManager.hh"
 #include "DAQConfig/AmoreADCConf.hh"
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/GADCSConf.hh"
 #include "DAQConfig/MADCSConf.hh"
 
-#include "DAQ/CupDAQManager.hh"
-
-using namespace std;
-
 void CupDAQManager::TF_BuildEvent()
 {
   fBuildStatus = READY;
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_BuildEvent", "exited by exit command");
+    WARNING("TF_BuildEvent exited by exit command");
     return;
   }
-  fLog->Info("CupDAQManager::TF_BuildEvent", "event building started");
+  INFO("TF_BuildEvent started");
 
-  // prepare software trigger
-  auto adctype = (ADC::TYPE)(fADCType % 10);
-  auto * conf = fConfigList->GetSTRGConfig(adctype);
-  if (conf) fSoftTrigger->SetConfig(conf);
-  if (fSoftTrigger->IsEnabled()) { 
-    fSoftTrigger->SetMode(fADCMode);
-    fSoftTrigger->InitTrigger(); 
+  auto adctype = static_cast<ADC::TYPE>(fADCType % 10);
+  auto * conf = (fConfigList != nullptr) ? fConfigList->GetSTRGConfig(adctype) : nullptr;
+
+  if (fSoftTrigger != nullptr) {
+    if (conf != nullptr) { fSoftTrigger->SetConfig(conf); }
+    if (fSoftTrigger->IsEnabled()) {
+      fSoftTrigger->SetMode(fADCMode);
+      fSoftTrigger->InitTrigger();
+    }
   }
 
   StartBenchmark("BuildEvent");
@@ -40,113 +40,118 @@ void CupDAQManager::TF_BuildEvent()
   }
   StopBenchmark("BuildEvent");
 
-  if (fBuildStatus != ERROR) fBuildStatus = ENDED;
-  fLog->Info("CupDAQManager::TF_BuildEvent", "event building ended");
+  if (fBuildStatus != ERROR) { fBuildStatus = ENDED; }
+  INFO("TF_BuildEvent ended");
 }
 
 void CupDAQManager::BuildEvent_GLT()
 {
-  int nadc = GetEntries();
+  std::size_t nadc = static_cast<std::size_t>(GetEntries());
 
-  auto ** header = new ADCHeader *[nadc];
-  auto * sanity = new int[nadc];
-  auto * trgnum = new unsigned int[nadc];
-  auto * trgtime = new unsigned long[nadc];
+  std::vector<ADCHeader *> header(nadc);
+  std::vector<int> sanity(nadc);
+  std::vector<unsigned int> trgnum(nadc);
+  std::vector<unsigned long> trgtime(nadc);
 
-  double perror = 0;
-  double integral = 0;
+  double perror = 0.0;
+  double integral = 0.0;
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
+  if (fADCRawBuffers.empty()) {
+    ERROR("BuildEvent_GLT called with empty fADCRawBuffers");
+    fBuildStatus = ERROR;
+    return;
+  }
+  auto ** buffers = fADCRawBuffers.data();
+
   fBuildStatus = RUNNING;
   while (true) {
-    // emergent exit
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
 
-    int nmod = 0;
+    std::size_t nmod = 0;
     if (fSortStatus == ENDED) {
-      for (int i = 0; i < nadc; i++) {
-        ConcurrentDeque<AbsADCRaw *> * adceventbuffer = fADCRawBuffers.at(i);
-        if (adceventbuffer->empty()) continue;
+      for (std::size_t i = 0; i < nadc; i++) {
+        auto * adceventbuffer = buffers[i];
+        if (adceventbuffer == nullptr || adceventbuffer->empty()) { continue; }
         nmod += 1;
       }
-      if (nmod < nadc) break;
+      if (nmod < nadc) { break; }
     }
 
     int totalsize = 0;
 
     nmod = 0;
-    for (int i = 0; i < nadc; i++) {
-      ConcurrentDeque<AbsADCRaw *> * adceventbuffer = fADCRawBuffers.at(i);
-      totalsize += adceventbuffer->size();
+    for (std::size_t i = 0; i < nadc; i++) {
+      auto * adceventbuffer = buffers[i];
+      if (adceventbuffer == nullptr) { continue; }
 
-      AbsADCRaw * adcevent = adceventbuffer->front(false);
-      if (!adcevent) continue;
+      totalsize += static_cast<int>(adceventbuffer->size());
+
+      auto * adcevent = adceventbuffer->front_ptr();
+      if (adcevent == nullptr) { continue; }
 
       header[i] = adcevent->GetADCHeader();
       nmod += 1;
     }
 
     if (nmod == nadc) {
-      totalsize = totalsize / nadc;
+      if (nadc > 0) { totalsize /= static_cast<int>(nadc); }
 
-      CheckEventSanity(header, trgnum, trgtime, sanity);
+      CheckEventSanity(header.data(), trgnum.data(), trgtime.data(), sanity.data());
 
       if (fADCType == ADC::SADCS || fADCType == ADC::SADCT) {
         int temp = 0;
-        for (int i = 0; i < nadc; i++) {
+        for (std::size_t i = 0; i < nadc; i++) {
           temp += sanity[i];
         }
         if (temp < 0) {
-          fLog->Info("CupDAQManager::BuildEvent_GLT",
-                     "SADC null event, will be skipped");
-          for (int i = 0; i < nadc; i++) {
-            while (true) {
-              ConcurrentDeque<AbsADCRaw *> * adceventbuffer =
-                  fADCRawBuffers.at(i);
-              if (!adceventbuffer->empty()) {
-                AbsADCRaw * adcevent = adceventbuffer->popfront();
-                delete adcevent;
-              }
-              else {
-                break;
-              }
+          INFO("SADC null event, will be skipped");
+          for (std::size_t i = 0; i < nadc; i++) {
+            auto * adceventbuffer = buffers[i];
+            if (adceventbuffer == nullptr) { continue; }
+            while (!adceventbuffer->empty()) {
+              adceventbuffer->pop_front();
             }
           }
           continue;
         }
       }
 
-      auto * builtevent = new BuiltEvent();
+      auto builtevent = std::make_unique<BuiltEvent>();
       builtevent->SetDAQID(fDAQID);
 
       int nerror = 0;
-      for (int i = 0; i < nadc; i++) {
-        auto * adc = (AbsADC *)fCont[i];
+      for (std::size_t i = 0; i < nadc; i++) {
+        auto * adc = static_cast<AbsADC *>(fCont[i]);
+        auto * adceventbuffer = buffers[i];
+        if (adceventbuffer == nullptr) { continue; }
 
-        ConcurrentDeque<AbsADCRaw *> * adceventbuffer = fADCRawBuffers.at(i);
-
-        if (sanity[i] == 1) {
-          fLog->Error("CupDAQManager::BuildEvent_GLT",
-                      "ADC header is corrupted [mid=%d]", adc->GetSID());
+        int s = sanity[i];
+        if (s == 1) {
+          ERROR("ADC header is corrupted [mid=%d]", adc->GetSID());
           nerror += 1;
           continue;
         }
-        else if (sanity[i] == 2) {
-          fLog->Warning("CupDAQManager::BuildEvent_GLT",
-                        "event missed in ADC [mid=%d]", adc->GetSID());
+        else if (s == 2) {
+          WARNING("event missed in ADC [mid=%d]", adc->GetSID());
           continue;
         }
-        else if (sanity[i] == 3) {
-          fLog->Error("CupDAQManager::BuildEvent_GLT",
-                      "local trigger time error in ADC [mid=%d]",
-                      adc->GetSID());
+        else if (s == 3) {
+          ERROR("local trigger time error in ADC [mid=%d]", adc->GetSID());
           nerror += 1;
           continue;
         }
 
-        AbsADCRaw * adcevent = adceventbuffer->popfront();
-        builtevent->Add(adcevent);
+        auto adcrawOpt = adceventbuffer->pop_front();
+        if (!adcrawOpt) {
+          ERROR("ADC buffer empty while building event [mid=%d]", adc->GetSID());
+          nerror += 1;
+          continue;
+        }
+
+        AbsADCRaw * adcraw_ptr = adcrawOpt->release();
+        builtevent->Add(adcraw_ptr);
       }
 
       if (nerror > 0) {
@@ -157,9 +162,8 @@ void CupDAQManager::BuildEvent_GLT()
 
       bool istriggered = true;
 
-      // software trigger
-      if (!fDoSendEvent && fSoftTrigger->IsEnabled() &&
-          !fSoftTrigger->DoTrigger(builtevent)) {
+      if (!fDoSendEvent && fSoftTrigger != nullptr && fSoftTrigger->IsEnabled() &&
+          !fSoftTrigger->DoTrigger(builtevent.get())) {
         istriggered = false;
       }
 
@@ -169,46 +173,40 @@ void CupDAQManager::BuildEvent_GLT()
         mlock.unlock();
 
         builtevent->SetEventNumber(fNBuiltEvent);
-        fBuiltEventBuffer1.push_back(builtevent);
-        if (fDoHistograming) {
-          auto * builtevent2 = new BuiltEvent(*builtevent);
-          fBuiltEventBuffer2.push_back(builtevent2);
-        }
+
+        std::unique_ptr<BuiltEvent> hist_clone;
+        if (fDoHistograming) { hist_clone = std::make_unique<BuiltEvent>(*builtevent); }
+
+        fBuiltEventBuffer1.push_back(std::move(builtevent));
+
+        if (fDoHistograming) { fBuiltEventBuffer2.push_back(std::move(hist_clone)); }
       }
-      else {
-        delete builtevent;
-      }
+
       totalsize -= 1;
     }
 
     ThreadSleep(fBuildSleep, perror, integral, totalsize);
   }
-
-  delete[] sanity;
-  delete[] header;
-  delete[] trgnum;
-  delete[] trgtime;
 }
 
 void CupDAQManager::BuildEvent_MOD() {}
 
 void CupDAQManager::BuildEvent_SLF() {}
 
-void CupDAQManager::CheckEventSanity(ADCHeader ** header, unsigned int * tn,
-                                     unsigned long * tt, int * error)
+void CupDAQManager::CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt, int * error)
 {
-  int nadc = GetEntries();
-  memset(error, 0, nadc * sizeof(int));
+  std::size_t nadc = static_cast<std::size_t>(GetEntries());
+  std::memset(error, 0, nadc * sizeof(int));
 
   if (nadc == 1) {
-    if (header[0]->GetError()) error[0] = 1;
+    if (header[0]->GetError()) { error[0] = 1; }
     return;
   }
 
   bool iserror = false;
-  for (int i = 0; i < nadc; i++) {
-    if (header[i]->GetMID() == 0) error[i] = -1;
-    if (header[i]->GetError()) error[0] = 1;
+  for (std::size_t i = 0; i < nadc; i++) {
+    if (header[i]->GetMID() == 0) { error[i] = -1; }
+    if (header[i]->GetError()) { error[0] = 1; }
     tn[i] = header[i]->GetLocalTriggerNumber();
     tt[i] = header[i]->GetLocalTriggerTime();
 
@@ -220,17 +218,13 @@ void CupDAQManager::CheckEventSanity(ADCHeader ** header, unsigned int * tn,
   if (iserror) {
     unsigned int nmin = *std::min_element(tn, tn + nadc);
     unsigned long tmin = *std::min_element(tt, tt + nadc);
-    for (int i = 0; i < nadc; i++) {
+    for (std::size_t i = 0; i < nadc; i++) {
       if (header[i]->GetLocalTriggerNumber() > nmin) {
-        fLog->Debug("CupDAQManager::CheckEventSanity",
-                    "trgnum = %d [mid=%d, %d]", nmin, header[i]->GetMID(),
-                    header[i]->GetLocalTriggerNumber());
+        DEBUG("trgnum = %u [mid=%d, %u]", nmin, header[i]->GetMID(), header[i]->GetLocalTriggerNumber());
         error[i] = 2;
       }
       if (header[i]->GetLocalTriggerTime() > tmin) {
-        fLog->Debug("CupDAQManager::CheckEventSanity",
-                    "trgtime = %ld [mid=%d, %ld]", tmin,
-                    header[i]->GetMID(), header[i]->GetLocalTriggerTime());
+        DEBUG("trgtime = %lu [mid=%d, %lu]", tmin, header[i]->GetMID(), header[i]->GetLocalTriggerTime());
         error[i] = 3;
       }
     }

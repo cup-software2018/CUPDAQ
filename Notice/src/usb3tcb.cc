@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "DAQUtils/ELogger.hh"
+#include "DAQUtils/ELog.hh"
 #include "Notice/nkusb.hh"
 #include "Notice/usb3tcb.hh"
 
@@ -79,7 +79,7 @@ int USB3TCBWrite(uint16_t vendor_id,
 
   libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
@@ -88,7 +88,7 @@ int USB3TCBWrite(uint16_t vendor_id,
   const unsigned int timeout = 1000;
   if ((stat = libusb_bulk_transfer(devh, USB3_SF_WRITE, buffer, length, &transferred, timeout)) <
       0) {
-    ELogger::Instance(true)->Error(__func__, "write error:%s [sid=%d]", libusb_error_name(stat), sid);
+    ERROR("write error:%s [sid=%d]", libusb_error_name(stat), sid);
     return -1;
   }
 
@@ -127,7 +127,7 @@ int USB3TCBRead(uint16_t vendor_id,
 
   libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
@@ -141,7 +141,7 @@ int USB3TCBRead(uint16_t vendor_id,
                                    length,
                                    &transferred,
                                    timeout)) < 0) {
-    ELogger::Instance(true)->Error(__func__, "write error:%s [sid=%d]", libusb_error_name(stat), sid);
+    ERROR("write error:%s [sid=%d]", libusb_error_name(stat), sid);
     return -1;
   }
 
@@ -156,7 +156,7 @@ int USB3TCBRead(uint16_t vendor_id,
                                      size,
                                      &transferred,
                                      timeout)) < 0) {
-      ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(stat), sid);
+      ERROR("read error:%s [sid=%d]", libusb_error_name(stat), sid);
       return -1;
     }
   }
@@ -168,7 +168,7 @@ int USB3TCBRead(uint16_t vendor_id,
                                      remains*4,
                                      &transferred,
                                      timeout)) < 0) {
-      ELogger::Instance(true)->Error(__func__, "read error:%s [sid=%d]", libusb_error_name(stat), sid);
+      ERROR("read error:%s [sid=%d]", libusb_error_name(stat), sid);
       return -1;
     }
   }
@@ -191,7 +191,7 @@ int USB3TCBWriteControl(uint16_t vendor_id,
 
   libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
@@ -203,8 +203,7 @@ int USB3TCBWriteControl(uint16_t vendor_id,
                                       data,
                                       wLength,
                                       timeout)) < 0) {
-    ELogger::Instance(true)->Error(__func__, "could not make write request:%s [sid=%d]",
-                                  libusb_error_name(stat), sid);
+    ERROR("could not make write request:%s [sid=%d]", libusb_error_name(stat), sid);
     return stat;
   }
 
@@ -226,7 +225,7 @@ int USB3TCBReadControl(uint16_t vendor_id,
 
   libusb_device_handle * devh = nkusb_get_device_handle(vendor_id, product_id, sid);
   if (!devh) {
-    ELogger::Instance(true)->Error(__func__, "could not get device handle for the device");
+    ERROR("could not get device handle for the device");
     return -1;
   }
 
@@ -238,8 +237,7 @@ int USB3TCBReadControl(uint16_t vendor_id,
                                       data,
                                       wLength,
                                       timeout)) < 0) {
-    ELogger::Instance(true)->Error(__func__, "could not make write request:%s [sid=%d]",
-                                  libusb_error_name(stat), sid);
+    ERROR("could not make write request:%s [sid=%d]", libusb_error_name(stat), sid);
     return stat;
   }
   //fprintf(stdout, "ADCRead: bytes transferred = %d\n", transferred);

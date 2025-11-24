@@ -1,10 +1,8 @@
-#ifndef CupGeneralTCB_hh
-#define CupGeneralTCB_hh
+#pragma once
 
 #include "TObject.h"
 
 #include "DAQConfig/AbsConfList.hh"
-//#include "DAQConfig/AmoreADCConf.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
@@ -13,7 +11,6 @@
 #include "DAQSystem/AbsTCB.hh"
 #include "DAQSystem/CupMiniTCB.hh"
 #include "DAQSystem/CupTCB.hh"
-#include "DAQUtils/ELogger.hh"
 #include "OnlConsts/onlconsts.hh"
 
 class CupGeneralTCB : public TObject {
@@ -39,11 +36,8 @@ private:
   bool ConfigGADC(GADCTConf * conf);
   bool ConfigSADC(SADCTConf * conf);
   bool ConfigIADC(IADCTConf * conf);
-  //bool ConfigAmoreADC(AmoreADCConf * conf);
 
 private:
-  ELogger * fLog;
-
   AbsTCB * fTCB;
   TCBConf * fTCBConfig;
   AbsConfList * fConfigs;
@@ -55,16 +49,11 @@ private:
   ClassDef(CupGeneralTCB, 0)
 };
 
-inline void CupGeneralTCB::SetConfig(AbsConfList * configs)
-{
-  fConfigs = configs;
-}
+inline void CupGeneralTCB::SetConfig(AbsConfList * configs) { fConfigs = configs; }
 
 inline void CupGeneralTCB::SetIPAddress(const char * ipaddr)
 {
-  if (fTCBType == TCB::MINI) { ((CupMiniTCB *)fTCB)->SetIPAddress(ipaddr); }
+  if (fTCBType == TCB::MINI) { static_cast<CupMiniTCB *>(fTCB)->SetIPAddress(ipaddr); }
 }
 
 inline void CupGeneralTCB::SetADCType(ADC::TYPE type) { fADCType = type; }
-
-#endif

@@ -366,9 +366,8 @@ void CupGADCS::WriteTLT(unsigned long data) { NKFADC125Swrite_TLT(fSID, data); }
 
 unsigned long CupGADCS::ReadTLT() { return NKFADC125Sread_TLT(fSID); }
 
-void CupGADCS::WriteZEROSUP(unsigned long ch, unsigned long data) { NKFADC125Swrite_ZEROSUP(fSID, ch, data); }
-
-unsigned long CupGADCS::ReadZEROSUP(unsigned long ch) { return NKFADC125Sread_ZEROSUP(fSID, ch); }
+//void CupGADCS::WriteZEROSUP(unsigned long ch, unsigned long data) { NKFADC125Swrite_ZEROSUP(fSID, ch, data); }
+//unsigned long CupGADCS::ReadZEROSUP(unsigned long ch) { return NKFADC125Sread_ZEROSUP(fSID, ch); }
 
 void CupGADCS::WriteDSR(unsigned long data) { NKFADC125Swrite_DSR(fSID, data); }
 

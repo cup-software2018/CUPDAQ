@@ -1,31 +1,16 @@
-/*
- *
- *  Module:  FChannelData/RawObjs
- *
- *  Author:  Jaison Lee
- *
- *  Purpose: TClonesArray for FChannels
- *
- *  Last Update:      $Author: cupsoft $
- *  Update Date:      $Date: 2023/03/30 23:35:19 $
- *  CVS/RCS Revision: $Revision: 1.3 $
- *  Status:           $State: Exp $
- *
- */
-
-#ifndef FChannelData_hh
-#define FChannelData_hh
+#pragma once
 
 #include "TClonesArray.h"
 
 class FChannel;
+
 class FChannelData : public TClonesArray {
 public:
   FChannelData();
   FChannelData(const FChannelData & data);
-  virtual ~FChannelData();
+  ~FChannelData() override = default;
 
-  virtual void Clear(const Option_t * opt = "");
+  void Clear(const Option_t * opt = "") override;
 
   FChannel * Add();
   FChannel * Add(unsigned short id, int ndp);
@@ -38,21 +23,13 @@ public:
   void CopyFrom(const FChannelData * data);
 
 private:
-  int fN = 0; //!  just for counter
+  int fN = 0; //! just for counter
 
   ClassDef(FChannelData, 1)
 };
 
-//
 // Inline functions
-//
 
 inline int FChannelData::GetN() const { return GetEntriesFast(); }
 
-inline FChannel * FChannelData::Get(int n) const
-{
-  return (FChannel *)At(n);
-}
-
-#endif
-
+inline FChannel * FChannelData::Get(int n) const { return static_cast<FChannel *>(At(n)); }

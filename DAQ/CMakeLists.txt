@@ -33,7 +33,7 @@ set ( DICT_HEADERS
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${DICT_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
-    OPTIONS ${DICT_I_FLAGS}
+    OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
 # Build shared library (add dictionary source)

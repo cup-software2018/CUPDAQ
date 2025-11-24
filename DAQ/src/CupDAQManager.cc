@@ -1,16 +1,5 @@
-/*
- *  Module:  CupDAQManager
- *
- *  Author:  Jaison Lee
- *
- *  Purpose: DAQ helper class to simplify read data from ADCs
- *
- *  Last Update:      $Author: cupsoft $
- *  Update Date:      $Date: 2023/05/10 22:26:30 $
- *  CVS/RCS Revision: $Revision: 1.19 $
- *  Status:           $State: Exp $
- *
- */
+// CupDAQManager.cc
+#include <cstdint>
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQConfig/FADCSConf.hh"
@@ -30,15 +19,11 @@
 #include "DAQSystem/CupSADCS.hh"
 #include "DAQSystem/CupSADCT.hh"
 
-using namespace std;
-
 ClassImp(CupDAQManager)
 
-    CupDAQManager::CupDAQManager()
-    : TObjArray()
+CupDAQManager::CupDAQManager()
+  : TObjArray()
 {
-  fLog = ELogger::Instance();
-
   fIsOwnADC = false;
   fIsDAQOpen = false;
 
@@ -88,10 +73,10 @@ ClassImp(CupDAQManager)
   fCompressionLevel = 1;
   fROOTFile = nullptr;
   fROOTTree = nullptr;
-  #ifdef ENABLE_HDF5
+#ifdef ENABLE_HDF5
   fHDF5File = nullptr;
   fH5Event = nullptr;
-  #endif
+#endif
   fOutputSplitTime = 60 * 60;
   fDoSplitOutputFile = false;
   fDoSplitOutputFileTCB = false;
@@ -136,47 +121,62 @@ CupDAQManager::~CupDAQManager()
 
   for (int i = 0; i < nadc; i++) {
     if (!fADCRawBuffers.empty()) {
-      ConcurrentDeque<AbsADCRaw *> * buffer = fADCRawBuffers.at(i);
-      while (!buffer->empty()) {
-        AbsADCRaw * adcraw = buffer->popfront();
-        delete adcraw;
+      auto * buffer = fADCRawBuffers.at(static_cast<std::size_t>(i));
+      if (buffer != nullptr) {
+        while (!buffer->empty()) {
+          buffer->pop_front();
+        }
+        delete buffer;
       }
     }
   }
+  fADCRawBuffers.clear();
 
   while (!fBuiltEventBuffer1.empty()) {
-    auto * event = fBuiltEventBuffer1.popfront(false);
-    delete event;
+    fBuiltEventBuffer1.pop_front();
   }
 
   while (!fBuiltEventBuffer2.empty()) {
-    auto * event = fBuiltEventBuffer2.popfront(false);
-    delete event;
+    fBuiltEventBuffer2.pop_front();
   }
 
+  for (auto & pair : fRecvEventBuffer) {
+    auto * buffer = pair.second.get();
+    if (buffer != nullptr) {
+      while (!buffer->empty()) {
+        buffer->pop_front();
+      }
+    }
+  }
+  fRecvEventBuffer.clear();
+
   if (fIsOwnADC) { Clear(); }
-  if (fRemainingBCount) { delete[] fRemainingBCount; }
+  if (fRemainingBCount != nullptr) {
+    delete[] fRemainingBCount;
+    fRemainingBCount = nullptr;
+  }
+  if (fTriggerNumberChannel != nullptr) {
+    delete[] fTriggerNumberChannel;
+    fTriggerNumberChannel = nullptr;
+  }
 
   delete fBenchmark;
-  fLog->DeleteInstance();
 }
 
 void CupDAQManager::AddADC(AbsADC * adc)
 {
   Add(adc);
-  fLog->Info("CupDAQManager::AddADC", "%s[sid=%2d] added to DAQ manager",
-             GetADCName(fADCType), adc->GetSID());
-  if (!fIsOwnADC) fIsOwnADC = true;
+  INFO("%s[sid=%2d] added to DAQ manager", GetADCName(fADCType), adc->GetSID());
+  if (!fIsOwnADC) { fIsOwnADC = true; }
 }
 
 bool CupDAQManager::AddADC(AbsConf * conf)
 {
   AbsADC * adc = nullptr;
 
-  if (!conf->IsEnabled()) return true;
+  if (!conf->IsEnabled()) { return true; }
   if (!conf->IsLinked()) {
-    fLog->Error("CupDAQManager::AddADC", "%s[sid=%2d] enable but not linked",
-                GetADCName(fADCType), conf->SID());
+    ERROR("%s[sid=%2d] enabled but not linked", GetADCName(fADCType), conf->SID());
     return false;
   }
 
@@ -200,15 +200,14 @@ bool CupDAQManager::AddADC(AbsConfList * conflist)
 {
   int nadc = conflist->GetNADC(fADCType);
   if (nadc == 0) {
-    fLog->Error("CupDAQManager::AddADC", "there is no %s",
-                GetADCName(fADCType));
+    ERROR("there is no %s", GetADCName(fADCType));
     return false;
   }
 
   for (int i = 0; i < nadc; i++) {
     AbsConf * conf = conflist->GetConfig(fADCType, i);
     if (conf->GetDAQID() == fDAQID) {
-      if (!AddADC(conf)) return false;
+      if (!AddADC(conf)) { return false; }
     }
   }
 
@@ -217,33 +216,27 @@ bool CupDAQManager::AddADC(AbsConfList * conflist)
 
 AbsADC * CupDAQManager::FindADC(int sid)
 {
-  Int_t nadc = GetAbsLast() + 1;
-  for (Int_t i = 0; i < nadc; ++i) {
-    auto * mod = (AbsADC *)fCont[i];
-
-    if (mod && mod->GetMID() == sid) { return mod; }
+  int nadc = GetAbsLast() + 1;
+  for (int i = 0; i < nadc; ++i) {
+    auto * mod = static_cast<AbsADC *>(fCont[i]);
+    if (mod != nullptr && mod->GetMID() == sid) { return mod; }
   }
 
-  fLog->Warning("CupDAQManager::FindADC", "no ADC [sid=%2d]", sid);
+  WARNING("no ADC [sid=%2d]", sid);
   return nullptr;
 }
 
 int CupDAQManager::FindADCAt(int sid)
 {
-  Int_t nadc = GetAbsLast() + 1;
-  for (Int_t i = 0; i < nadc; ++i) {
-    auto * mod = (AbsADC *)fCont[i];
-
-    if (mod && mod->GetMID() == sid) { return i; }
+  int nadc = GetAbsLast() + 1;
+  for (int i = 0; i < nadc; ++i) {
+    auto * mod = static_cast<AbsADC *>(fCont[i]);
+    if (mod != nullptr && mod->GetMID() == sid) { return i; }
   }
 
-  fLog->Warning("CupDAQManager::FindADC", "no ADC [sid=%2d]", sid);
+  WARNING("no ADC [sid=%2d]", sid);
   return -1;
 }
-
-//
-// For DAQ
-//
 
 bool CupDAQManager::OpenDAQ()
 {
@@ -252,39 +245,40 @@ bool CupDAQManager::OpenDAQ()
 
   int nadc = GetEntries();
   for (int i = 0; i < nadc; i++) {
-    auto * adc = (AbsADC *)fCont[i];
-    if (adc->Open() != 0) return false;
+    auto * adc = static_cast<AbsADC *>(fCont[i]);
+    if (adc->Open() != 0) { return false; }
   }
 
   fIsDAQOpen = true;
 
-  fLog->Info("CupDAQManager::OpenDAQ", "all ADCs are opened");
+  INFO("all ADCs are opened");
   return true;
 }
 
 void CupDAQManager::CloseDAQ()
 {
-  if (!fIsDAQOpen) return;
+  if (!fIsDAQOpen) { return; }
 
   int nadc = GetEntries();
   for (int i = 0; i < nadc; i++) {
-    auto * adc = (AbsADC *)fCont[i];
+    auto * adc = static_cast<AbsADC *>(fCont[i]);
     adc->Close();
   }
 
-  if (fUSB) {
+  if (fUSB != nullptr) {
     fUSB->USB3Exit(nullptr);
     delete fUSB;
+    fUSB = nullptr;
   }
 
-  fLog->Info("CupDAQManager::CloseDAQ", "all ADCs are closed");
+  INFO("all ADCs are closed");
 }
 
 bool CupDAQManager::PrepareDAQ()
 {
   int nadc = GetEntries();
   if (nadc == 0) {
-    fLog->Error("CupDAQManager::PrepareDAQ", "no ADC added");
+    ERROR("no ADC added");
     return false;
   }
 
@@ -300,70 +294,51 @@ bool CupDAQManager::PrepareDAQ()
       break;
     }
     case ADC::FADCS: {
-      AbsConf * conf = ((AbsADC *)fCont[0])->GetConfig();
-      fRecordLength = ((FADCSConf *)conf)->RL();
+      auto * conf = static_cast<FADCSConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
+      fRecordLength = conf->RL();
       int bcount = GetADCEventDataSize() / kKILOBYTES;
-      if (bcount <= kMINIMUMBCOUNT) { fMinimumBCount = kMINIMUMBCOUNT; }
-      else {
-        fMinimumBCount = bcount;
-      }
+      fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;
       fADCMode = ADC::FMODE;
       break;
     }
     case ADC::FADCT: {
-      AbsConf * conf = ((AbsADC *)fCont[0])->GetConfig();
-      fRecordLength = ((FADCTConf *)conf)->RL();
+      auto * conf = static_cast<FADCTConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
+      fRecordLength = conf->RL();
       int bcount = GetADCEventDataSize() / kKILOBYTES;
-      if (bcount <= kMINIMUMBCOUNT) { fMinimumBCount = kMINIMUMBCOUNT; }
-      else {
-        fMinimumBCount = bcount;
-      }
+      fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;
       fADCMode = ADC::FMODE;
       break;
     }
     case ADC::GADCS: {
-      AbsConf * conf = ((AbsADC *)fCont[0])->GetConfig();
-      fRecordLength = ((GADCSConf *)conf)->RL();
+      auto * conf = static_cast<GADCSConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
+      fRecordLength = conf->RL();
       int bcount = GetADCEventDataSize() / kKILOBYTES;
-      if (bcount <= kMINIMUMBCOUNT) { fMinimumBCount = kMINIMUMBCOUNT; }
-      else {
-        fMinimumBCount = bcount;
-      }
+      fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;
       fADCMode = ADC::FMODE;
       break;
     }
     case ADC::GADCT: {
-      AbsConf * conf = ((AbsADC *)fCont[0])->GetConfig();
-      fRecordLength = ((GADCTConf *)conf)->RL();
+      auto * conf = static_cast<GADCTConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
+      fRecordLength = conf->RL();
       int bcount = GetADCEventDataSize() / kKILOBYTES;
-      if (bcount <= kMINIMUMBCOUNT) { fMinimumBCount = kMINIMUMBCOUNT; }
-      else {
-        fMinimumBCount = bcount;
-      }
+      fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;
       fADCMode = ADC::FMODE;
       break;
     }
     case ADC::MADCS: {
-      AbsConf * conf = ((AbsADC *)fCont[0])->GetConfig();
-      fRecordLength = ((MADCSConf *)conf)->RL();
+      auto * conf = static_cast<MADCSConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
+      fRecordLength = conf->RL();
       int bcount = GetADCEventDataSize() / kKILOBYTES;
-      if (bcount <= kMINIMUMBCOUNT) { fMinimumBCount = kMINIMUMBCOUNT; }
-      else {
-        fMinimumBCount = bcount;
-      }
+      fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;
       fADCMode = ADC::FMODE;
       break;
     }
     case ADC::IADCT: {
-      auto * conf = (IADCTConf *)((AbsADC *)fCont[0])->GetConfig();
+      auto * conf = static_cast<IADCTConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
       fRecordLength = conf->RL();
       int bcount = GetADCEventDataSize() / kKILOBYTES;
-      if (bcount <= kMINIMUMBCOUNT) { fMinimumBCount = kMINIMUMBCOUNT; }
-      else {
-        fMinimumBCount = bcount;
-      }
-      if (fRecordLength > 0) fADCMode = ADC::FMODE;
-      else fADCMode = ADC::SMODE;
+      fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;
+      fADCMode = (fRecordLength > 0) ? ADC::FMODE : ADC::SMODE;
       break;
     }
     default: break;
@@ -374,36 +349,32 @@ bool CupDAQManager::PrepareDAQ()
   fNDP = GetNDP();
 
   for (int i = 0; i < nadc; i++) {
-    auto * buffer = new ConcurrentDeque<AbsADCRaw *>();
+    auto * buffer = new ConcurrentDeque<std::unique_ptr<AbsADCRaw>>();
     fADCRawBuffers.push_back(buffer);
   }
 
-  // Sort adcs by sid
-  this->Sort();
+  Sort();
 
   TString report = "\n";
   report += "============ CupDAQManager Prepare Report ==============\n";
-  report +=
-      Form("                            type: %s\n", GetADCName(fADCType));
+  report += Form("                            type: %s\n", GetADCName(fADCType));
   report += Form("                   number of ADC: %d\n", nadc);
   report += Form("           minimum buffer count : %d\n", fMinimumBCount);
   report += Form("                  record length : %d\n", fRecordLength);
   report += Form("           number of data point : %d\n", GetNDP());
-  report +=
-      Form("  minimum data size for reading : %d\n", GetADCEventDataSize());
+  report += Form("  minimum data size for reading : %d\n", GetADCEventDataSize());
   report += Form("         preset number of event : %d\n", fSetNEvent);
   report += Form("            preset daq time [s] : %d\n", fSetDAQTime);
   report += "=======================================================\n";
 
-  fLog->PrintLog(report.Data());
+  INFO("%s", report.Data());
 
   fRemainingBCount = new int[nadc];
   for (int i = 0; i < nadc; i++) {
     fRemainingBCount[i] = 0;
   }
 
-  fLog->Info("CupDAQManager::PrepareDAQ", "prepared to take data from %s",
-             GetADCName(fADCType));
+  INFO("prepared to take data from %s", GetADCName(fADCType));
   return true;
 }
 
@@ -414,13 +385,12 @@ bool CupDAQManager::ConfigureDAQ()
   if (IsStandaloneDAQ()) {
     int nadc = GetEntries();
     for (int i = 0; i < nadc; i++) {
-      auto * adc = (AbsADC *)fCont[i];
+      auto * adc = static_cast<AbsADC *>(fCont[i]);
       status &= adc->Configure();
     }
   }
   else {
-    fLog->Error("CupDAQManager::ConfigureDAQ", "not for %s",
-                GetADCName(fADCType));
+    ERROR("ConfigureDAQ is not for %s", GetADCName(fADCType));
     return false;
   }
 
@@ -434,13 +404,12 @@ bool CupDAQManager::InitializeDAQ()
   if (IsStandaloneDAQ()) {
     int nadc = GetEntries();
     for (int i = 0; i < nadc; i++) {
-      auto * adc = (AbsADC *)fCont[i];
+      auto * adc = static_cast<AbsADC *>(fCont[i]);
       status &= adc->Initialize();
     }
   }
   else {
-    fLog->Error("CupDAQManager::InitializeDAQ", "not for %s",
-                GetADCName(fADCType));
+    ERROR("InitializeDAQ is not for %s", GetADCName(fADCType));
     return false;
   }
 
@@ -452,14 +421,13 @@ void CupDAQManager::StartTrigger()
   if (IsStandaloneDAQ()) {
     int nadc = GetEntries();
     for (int i = 0; i < nadc; i++) {
-      auto * adc = (AbsADC *)fCont[i];
+      auto * adc = static_cast<AbsADC *>(fCont[i]);
       adc->StartTrigger();
     }
     time(&fStartDatime);
   }
   else {
-    fLog->Warning("CupDAQManager::StartTrigger", "not for %s",
-                  GetADCName(fADCType));
+    WARNING("StartTrigger is not for %s", GetADCName(fADCType));
   }
 }
 
@@ -468,24 +436,22 @@ void CupDAQManager::StopTrigger()
   if (IsStandaloneDAQ()) {
     int nadc = GetEntries();
     for (int i = 0; i < nadc; i++) {
-      auto * adc = (AbsADC *)fCont[i];
+      auto * adc = static_cast<AbsADC *>(fCont[i]);
       adc->StopTrigger();
     }
     time(&fEndDatime);
   }
   else {
-    fLog->Warning("CupDAQManager::StopTrigger", "not for %s",
-                  GetADCName(fADCType));
+    WARNING("StopTrigger is not for %s", GetADCName(fADCType));
   }
 }
 
 int CupDAQManager::ReadBCount(int n)
 {
-  auto * adc = (AbsADC *)fCont[n];
+  auto * adc = static_cast<AbsADC *>(fCont[n]);
   int bcount = adc->ReadBCount();
   if (bcount < 0) {
-    fLog->Error("CupDAQManager::ReadBCount",
-                "error in reading buffer count [sid=%d]", adc->GetSID());
+    ERROR("error in reading buffer count [sid=%d]", adc->GetSID());
     return -1;
   }
   return bcount;
@@ -499,7 +465,7 @@ int CupDAQManager::ReadBCountMin(int * bcounts)
   for (int i = 0; i < nadc; i++) {
     int bcount = ReadBCount(i);
     if (bcount < 0) { return -1; }
-    if (bcounts) { bcounts[i] = bcount; }
+    if (bcounts != nullptr) { bcounts[i] = bcount; }
     if (bcount < min) { min = bcount; }
   }
   return min;
@@ -513,7 +479,7 @@ int CupDAQManager::ReadBCountMax(int * bcounts)
   for (int i = 0; i < nadc; i++) {
     int bcount = ReadBCount(i);
     if (bcount < 0) { return -1; }
-    if (bcounts) { bcounts[i] = bcount; }
+    if (bcounts != nullptr) { bcounts[i] = bcount; }
     if (bcount > max) { max = bcount; }
   }
   return max;
@@ -523,16 +489,14 @@ int CupDAQManager::ReadADCData(int n, int bcount, unsigned char * databuffer)
 {
   int stat;
 
-  auto * adc = (AbsADC *)fCont[n];
-  if (databuffer) { stat = adc->ReadData(bcount, databuffer); }
+  auto * adc = static_cast<AbsADC *>(fCont[n]);
+  if (databuffer != nullptr) { stat = adc->ReadData(bcount, databuffer); }
   else {
     stat = adc->ReadData(bcount);
   }
 
   if (stat < 0) {
-    fLog->Error("CupDAQManager::ReadADCData",
-                "error in reading %s data [sid=%d]", GetADCName(fADCType),
-                adc->GetSID());
+    ERROR("error in reading %s data [sid=%d]", GetADCName(fADCType), adc->GetSID());
     return -1;
   }
 

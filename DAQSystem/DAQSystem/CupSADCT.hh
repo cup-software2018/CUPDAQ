@@ -24,7 +24,7 @@ public:
   int ReadData(int count) override;
 
 private:
-  void UpdateTriggerAndTime(unsigned char * tempdata);
+  void UpdateTriggerAndTime(const unsigned char * tempdata);
 
   ClassDef(CupSADCT, 0)
 };

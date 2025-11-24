@@ -12,51 +12,53 @@ void CupDAQManager::TF_SendEvent()
   double perror = 0;
   double integral = 0;
 
-  // char tmpbuf[4];
   char data[kMESSLEN];
   EncodeMsg(data, kRECVEVENT);
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_SendEvent", "exited by exit command");
+    WARNING("TF_SendEvent: exited by exit command");
     return;
   }
-  fLog->Info("CupDAQManager::TF_SendEvent", "sending event to merger started");
+  INFO("TF_SendEvent: sending event to merger started");
 
   auto * socket = new TSocket(fMergeServerIPAddr, fMergeServerPort);
   if (socket->GetErrorCode() < 0) {
     RUNSTATE::SetError(fRunStatus);
     delete socket;
-    fLog->Error("CupDAQManager::TF_SendEvent", "connection to merger failed");
+    ERROR("TF_SendEvent: connection to merger failed");
     return;
   }
-  else
-    fLog->Info("CupDAQManager::TF_SendEvent", "connection to merger succeeded");
+  INFO("TF_SendEvent: connection to merger succeeded");
 
   fSendStatus = RUNNING;
   while (true) {
-    // emergent exit
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
+
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED) break;
+      if (fBuildStatus == ENDED) { break; }
     }
     else {
-      BuiltEvent * bevent = fBuiltEventBuffer1.popfront();
+      auto bevent_opt = fBuiltEventBuffer1.pop_front();
+      if (!bevent_opt.has_value()) { continue; }
+
+      BuiltEvent * bevent = bevent_opt->get();
 
       socket->SendRaw(data, kMESSLEN);
       int state = socket->SendObject(bevent);
       if (state < 0) {
         RUNSTATE::SetError(fRunStatus);
-        fLog->Error("CupDAQManager::TF_SendEvent", "sending event failed (s)");
+        ERROR("TF_SendEvent: sending event failed (s)");
         break;
       }
-      delete bevent;
+      // unique_ptr in bevent_opt is destroyed here
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fSendSleep, perror, integral, size);
   }
+
   fSendStatus = ENDED;
-  fLog->Info("CupDAQManager::TF_SendEvent", "sending event ended");
+  INFO("TF_SendEvent: sending event ended");
 }
 
 void CupDAQManager::TF_MergeEvent()
@@ -70,15 +72,14 @@ void CupDAQManager::TF_MergeEvent()
   fMergeStatus = READY;
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    fLog->Warning("CupDAQManager::TF_MergeEvent", "exited by exit command");
+    WARNING("TF_MergeEvent: exited by exit command");
     return;
   }
-  fLog->Info("CupDAQManager::TF_MergeEvent", "event merger started");
+  INFO("TF_MergeEvent: event merger started");
 
-  // prepare software trigger
-  auto adctype = (ADC::TYPE)(fADCType % 10);
+  auto adctype = static_cast<ADC::TYPE>(static_cast<int>(fADCType) % 10);
   auto * conf = fConfigList->GetSTRGConfig(adctype);
-  if (conf) fSoftTrigger->SetConfig(conf);
+  if (conf) { fSoftTrigger->SetConfig(conf); }
   if (fSoftTrigger->IsEnabled()) {
     fSoftTrigger->SetMode(fADCMode);
     fSoftTrigger->InitTrigger();
@@ -86,21 +87,21 @@ void CupDAQManager::TF_MergeEvent()
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
-  int ndaq = fRecvEventBuffer.size();
-  int * size = new int[ndaq];
-  unsigned int * evtnum = new unsigned int[ndaq];
-  unsigned long * evttime = new unsigned long[ndaq];
+  int ndaq = static_cast<int>(fRecvEventBuffer.size());
+  auto * size = new int[ndaq];
+  auto * evtnum = new unsigned int[ndaq];
+  auto * evttime = new unsigned long[ndaq];
 
   fMergeStatus = RUNNING;
   while (true) {
-    // emergent exit
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
 
     bool dobuild = true;
-    int totalsize = 0, nd = 0;
-    for (auto buf : fRecvEventBuffer) {
-      size[nd] = buf.second->size();
-      if (size[nd] == 0) dobuild = false;
+    int totalsize = 0;
+    int nd = 0;
+    for (auto & buf : fRecvEventBuffer) {
+      size[nd] = static_cast<int>(buf.second->size());
+      if (size[nd] == 0) { dobuild = false; }
       totalsize += size[nd];
       nd += 1;
     }
@@ -108,8 +109,7 @@ void CupDAQManager::TF_MergeEvent()
     if (!dobuild) {
       totalsize = 0;
       if (fDoEndRun) {
-        fLog->Info("CupDAQManager::TF_MergeEvent",
-                   "merger consumed all events");
+        INFO("TF_MergeEvent: merger consumed all events");
         break;
       }
     }
@@ -117,12 +117,19 @@ void CupDAQManager::TF_MergeEvent()
       totalsize /= ndaq;
 
       nmerge += 1;
-      auto * builtevent = new BuiltEvent();
+      auto builtevent = std::make_unique<BuiltEvent>();
 
       nd = 0;
       bool iserror = false;
-      for (auto buf : fRecvEventBuffer) {
-        BuiltEvent * bevent = buf.second->popfront();
+      for (auto & buf : fRecvEventBuffer) {
+        auto bevent_opt = buf.second->pop_front();
+        if (!bevent_opt.has_value()) {
+          iserror = true;
+          break;
+        }
+
+        std::unique_ptr<BuiltEvent> & bevent_ptr = bevent_opt.value();
+        BuiltEvent * bevent = bevent_ptr.get();
 
         evtnum[nd] = bevent->GetEventNumber();
         evttime[nd] = bevent->GetTriggerTime();
@@ -131,14 +138,14 @@ void CupDAQManager::TF_MergeEvent()
         for (int i = 0; i < nadc; i++) {
           switch (fADCMode) {
             case ADC::SMODE: {
-              auto * adc = (SADCRawEvent *)bevent->At(i);
+              auto * adc = static_cast<SADCRawEvent *>(bevent->At(i));
               auto * newadc = new SADCRawEvent(*adc);
               builtevent->Add(newadc);
               fTotalRawDataSize += adc->GetRawDataSize();
               break;
             }
             case ADC::FMODE: {
-              auto * adc = (FADCRawEvent *)bevent->At(i);
+              auto * adc = static_cast<FADCRawEvent *>(bevent->At(i));
               auto * newadc = new FADCRawEvent(*adc);
               builtevent->Add(newadc);
               fTotalRawDataSize += adc->GetRawDataSize();
@@ -147,11 +154,10 @@ void CupDAQManager::TF_MergeEvent()
             default: break;
           }
         }
-        delete bevent;
 
         if (nd > 0) {
-          if (evtnum[nd] != evtnum[0]) iserror = true;
-          if (evttime[nd] != evttime[0]) iserror = true;
+          if (evtnum[nd] != evtnum[0]) { iserror = true; }
+          if (evttime[nd] != evttime[0]) { iserror = true; }
         }
         nd += 1;
       }
@@ -159,8 +165,7 @@ void CupDAQManager::TF_MergeEvent()
       if (iserror) {
         RUNSTATE::SetError(fRunStatus);
         fMergeStatus = ERROR;
-        fLog->Error("CupDAQManager::TF_MergeEvent",
-                    "events from DAQs are different");
+        ERROR("TF_MergeEvent: events from DAQs are different");
         break;
       }
 
@@ -171,10 +176,7 @@ void CupDAQManager::TF_MergeEvent()
 
       bool istriggered = true;
 
-      // software trigger
-      if (fSoftTrigger->IsEnabled() && !fSoftTrigger->DoTrigger(builtevent)) {
-        istriggered = false;
-      }
+      if (fSoftTrigger->IsEnabled() && !fSoftTrigger->DoTrigger(builtevent.get())) { istriggered = false; }
 
       if (istriggered) {
         mlock.lock();
@@ -182,36 +184,33 @@ void CupDAQManager::TF_MergeEvent()
         mlock.unlock();
 
         builtevent->SetEventNumber(fNBuiltEvent);
-        fBuiltEventBuffer1.push_back(builtevent);
-        if (fDoHistograming) {
-          auto * builtevent2 = new BuiltEvent(*builtevent);
-          fBuiltEventBuffer2.push_back(builtevent2);
-        }
-      }
-      else {
-        delete builtevent;
+
+        std::unique_ptr<BuiltEvent> hist_clone;
+        if (fDoHistograming) { hist_clone = std::make_unique<BuiltEvent>(*builtevent); }
+
+        fBuiltEventBuffer1.push_back(std::move(builtevent));
+
+        if (fDoHistograming) { fBuiltEventBuffer2.push_back(std::move(hist_clone)); }
       }
 
       totalsize -= 1;
-      if (totalsize < 0) totalsize = 0;
+      if (totalsize < 0) { totalsize = 0; }
     }
 
-    ThreadSleep(fMergeSleep, perror, integral, totalsize, 1, 10);
-    //std::cout << Form("size=%5d, sleep=%8d, int=%f", totalsize, fMergeSleep,
-    //                  integral)
-    //          << std::endl;
+    ThreadSleep(fMergeSleep, perror, integral, totalsize, 1, 10.0);
   }
+
   fMergeStatus = ENDED;
 
-  for (auto buf : fRecvEventBuffer) {
+  for (auto & buf : fRecvEventBuffer) {
     while (!buf.second->empty()) {
-      auto * event = buf.second->popfront(false);
-      delete event;
+      auto ev = buf.second->pop_front();
     }
   }
 
+  delete[] size;
   delete[] evtnum;
   delete[] evttime;
 
-  fLog->Info("CupDAQManager::TF_MergeEvent", "event merger ended");
+  INFO("TF_MergeEvent: event merger ended");
 }
