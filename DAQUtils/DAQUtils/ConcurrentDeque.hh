@@ -32,7 +32,7 @@ public:
     _stop = other._stop;
     return *this;
   }
-  
+
   // ------------------------------------------------------------
   // Push operations
   // ------------------------------------------------------------
@@ -187,8 +187,7 @@ public:
   // Only enabled when T has element_type (e.g. std::unique_ptr<U>)
   // ------------------------------------------------------------
   template <class U = T, class = std::void_t<typename U::element_type>>
-  auto front_ptr(std::chrono::milliseconds timeout = std::chrono::milliseconds{0}) const
-      -> typename U::element_type *
+  auto front_ptr(std::chrono::milliseconds timeout = std::chrono::milliseconds{0}) const -> typename U::element_type *
   {
     if (timeout == std::chrono::milliseconds{0}) {
       std::lock_guard<std::mutex> lock(_mutex);
@@ -200,6 +199,22 @@ public:
       if (!_cv.wait_for(lock, timeout, [&] { return _stop || !_queue.empty(); })) return nullptr;
       if (_stop && _queue.empty()) return nullptr;
       return _queue.front().get();
+    }
+  }
+
+  template <class U = T, class = std::void_t<typename U::element_type>>
+  auto back_ptr(std::chrono::milliseconds timeout = std::chrono::milliseconds{0}) const -> typename U::element_type *
+  {
+    if (timeout == std::chrono::milliseconds{0}) {
+      std::lock_guard<std::mutex> lock(_mutex);
+      if (_queue.empty()) return nullptr;
+      return _queue.back().get();
+    }
+    else {
+      std::unique_lock<std::mutex> lock(_mutex);
+      if (!_cv.wait_for(lock, timeout, [&] { return _stop || !_queue.empty(); })) return nullptr;
+      if (_stop && _queue.empty()) return nullptr;
+      return _queue.back().get();
     }
   }
 

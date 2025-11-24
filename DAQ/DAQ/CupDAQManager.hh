@@ -248,7 +248,6 @@ protected:
   unsigned long fCurrentTime;
   unsigned long fTriggerTime;
   unsigned int fTriggerNumber;
-  unsigned int * fTriggerNumberChannel;
   unsigned int fNBuiltEvent;
   double fTotalReadDataSize;
   double fTotalWrittenDataSize;

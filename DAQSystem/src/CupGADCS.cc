@@ -61,8 +61,10 @@ int CupGADCS::ReadData(int bcount, unsigned char * data)
 
   if (fEventDataSize > 0) {
     int n = kKILOBYTES * bcount / fEventDataSize;
-    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
-    UpdateTriggerAndTime(tempdata);
+    if (n > 0) {
+      unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+      UpdateTriggerAndTime(tempdata);
+    }
   }
 
   return state;
@@ -74,15 +76,16 @@ int CupGADCS::ReadData(int bcount)
   int state = NKFADC125Sread_DATA(fSID, bcount, chunk->data);
   if (state != 0) { return state; }
 
-  fTotalBCount += bcount;
-
   if (fEventDataSize > 0) {
     unsigned char * data = chunk->data;
     int n = kKILOBYTES * bcount / fEventDataSize;
-    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
-    UpdateTriggerAndTime(tempdata);
+    if (n > 0) {
+      unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+      UpdateTriggerAndTime(tempdata);
+    }
   }
 
+  fTotalBCount += static_cast<unsigned long>(bcount);
   fChunkDataBuffer.push_back(std::move(chunk));
 
   return state;
@@ -366,8 +369,8 @@ void CupGADCS::WriteTLT(unsigned long data) { NKFADC125Swrite_TLT(fSID, data); }
 
 unsigned long CupGADCS::ReadTLT() { return NKFADC125Sread_TLT(fSID); }
 
-//void CupGADCS::WriteZEROSUP(unsigned long ch, unsigned long data) { NKFADC125Swrite_ZEROSUP(fSID, ch, data); }
-//unsigned long CupGADCS::ReadZEROSUP(unsigned long ch) { return NKFADC125Sread_ZEROSUP(fSID, ch); }
+// void CupGADCS::WriteZEROSUP(unsigned long ch, unsigned long data) { NKFADC125Swrite_ZEROSUP(fSID, ch, data); }
+// unsigned long CupGADCS::ReadZEROSUP(unsigned long ch) { return NKFADC125Sread_ZEROSUP(fSID, ch); }
 
 void CupGADCS::WriteDSR(unsigned long data) { NKFADC125Swrite_DSR(fSID, data); }
 

@@ -44,14 +44,16 @@ int CupSADCT::ReadData(int bcount, unsigned char * data)
   int state = M64ADCread_DATA(fSID, bcount, data);
   if (state != 0) { return state; }
 
-  fTotalBCount += static_cast<unsigned long>(bcount);
+  fTotalBCount += bcount;
 
   if (fEventDataSize > 0) {
-    int n = kKILOBYTES * bcount / kBYTESPEREVENTSADC;
-    unsigned char * tempdata = &(data[kBYTESPEREVENTSADC * (n - 1)]);
-
-    UpdateTriggerAndTime(tempdata);
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    if (n > 0) {
+      unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+      UpdateTriggerAndTime(tempdata);
+    }
   }
+
   return state;
 }
 
@@ -61,16 +63,17 @@ int CupSADCT::ReadData(int bcount)
   int state = M64ADCread_DATA(fSID, bcount, chunk->data);
   if (state != 0) { return state; }
 
-  fTotalBCount += static_cast<unsigned long>(bcount);
-  fChunkDataBuffer.push_back(std::move(chunk));
-
   if (fEventDataSize > 0) {
     unsigned char * data = chunk->data;
-    int n = kKILOBYTES * bcount / kBYTESPEREVENTSADC;
-    unsigned char * tempdata = &(data[kBYTESPEREVENTSADC * (n - 1)]);
-
-    UpdateTriggerAndTime(tempdata);
+    int n = kKILOBYTES * bcount / fEventDataSize;
+    if (n > 0) {
+      unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+      UpdateTriggerAndTime(tempdata);
+    }
   }
+
+  fTotalBCount += static_cast<unsigned long>(bcount);
+  fChunkDataBuffer.push_back(std::move(chunk));
 
   return state;
 }

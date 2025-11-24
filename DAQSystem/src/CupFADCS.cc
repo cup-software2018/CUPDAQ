@@ -64,8 +64,10 @@ int CupFADCS::ReadData(int bcount, unsigned char * data)
 
   if (fEventDataSize > 0) {
     int n = kKILOBYTES * bcount / fEventDataSize;
-    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
-    UpdateTriggerAndTime(tempdata);
+    if (n > 0) {
+      unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+      UpdateTriggerAndTime(tempdata);
+    }
   }
 
   return state;
@@ -77,16 +79,17 @@ int CupFADCS::ReadData(int bcount)
   int state = NKFADC500Sread_DATA(fSID, bcount, chunk->data);
   if (state != 0) { return state; }
 
-  fTotalBCount += bcount;
-
-  fChunkDataBuffer.push_back(std::move(chunk));
-
   if (fEventDataSize > 0) {
     unsigned char * data = chunk->data;
     int n = kKILOBYTES * bcount / fEventDataSize;
-    unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
-    UpdateTriggerAndTime(tempdata);
+    if (n > 0) {
+      unsigned char * tempdata = &(data[fEventDataSize * (n - 1)]);
+      UpdateTriggerAndTime(tempdata);
+    }
   }
+
+  fTotalBCount += static_cast<unsigned long>(bcount);
+  fChunkDataBuffer.push_back(std::move(chunk));
 
   return state;
 }

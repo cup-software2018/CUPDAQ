@@ -406,7 +406,7 @@ void FADCRawEvent::Unpack_MADC(AbsConf * config, int verbose)
       itmp = (unsigned short)(fData[4 * (32 + j * 2 + 1) + i] & 0xFF);
       adc += itmp << 8;
       if (pol == 0) { adc = 16384 - adc; }
-      fChannel[j]->SetADC(j, adc);
+      fChannel[i]->SetADC(j, adc);
     }
   }
 }

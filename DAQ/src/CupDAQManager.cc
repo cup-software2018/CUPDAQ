@@ -117,50 +117,29 @@ CupDAQManager::CupDAQManager()
 
 CupDAQManager::~CupDAQManager()
 {
-  int nadc = GetEntries();
-
-  for (int i = 0; i < nadc; i++) {
-    if (!fADCRawBuffers.empty()) {
-      auto * buffer = fADCRawBuffers.at(static_cast<std::size_t>(i));
-      if (buffer != nullptr) {
-        while (!buffer->empty()) {
-          buffer->pop_front();
-        }
-        delete buffer;
-      }
-    }
+  for (auto * buffer : fADCRawBuffers) {
+    delete buffer;
   }
   fADCRawBuffers.clear();
 
   while (!fBuiltEventBuffer1.empty()) {
     fBuiltEventBuffer1.pop_front();
   }
-
   while (!fBuiltEventBuffer2.empty()) {
     fBuiltEventBuffer2.pop_front();
   }
 
-  for (auto & pair : fRecvEventBuffer) {
-    auto * buffer = pair.second.get();
-    if (buffer != nullptr) {
-      while (!buffer->empty()) {
-        buffer->pop_front();
-      }
-    }
-  }
   fRecvEventBuffer.clear();
 
   if (fIsOwnADC) { Clear(); }
-  if (fRemainingBCount != nullptr) {
+
+  if (fRemainingBCount) {
     delete[] fRemainingBCount;
     fRemainingBCount = nullptr;
   }
-  if (fTriggerNumberChannel != nullptr) {
-    delete[] fTriggerNumberChannel;
-    fTriggerNumberChannel = nullptr;
-  }
 
   delete fBenchmark;
+  fBenchmark = nullptr;
 }
 
 void CupDAQManager::AddADC(AbsADC * adc)
