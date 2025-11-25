@@ -1,6 +1,10 @@
+// HDF5Utils/H5DataReader.cc
+#include <string>
+
 #include "TList.h"
 #include "TObjString.h"
 #include "TRegexp.h"
+#include "TString.h"
 #include "TSystem.h"
 
 #include "HDF5Utils/AbsH5Event.hh"
@@ -9,8 +13,9 @@
 ClassImp(H5ChainFile)
 
 H5ChainFile::H5ChainFile()
+  : fCurrentFile(H5I_INVALID_HID),
+    fFiles()
 {
-  fCurrentFile = -1;
 }
 
 H5ChainFile::~H5ChainFile()
@@ -25,22 +30,25 @@ void H5ChainFile::AddFile(DataFile_t * file) { fFiles.push_back(file); }
 void H5ChainFile::Close()
 {
   for (auto * file : fFiles) {
-    hid_t fid = file->fid;
-    H5Fclose(fid);
+    if (file->fid >= 0) {
+      H5Fclose(file->fid);
+      file->fid = -1;
+    }
   }
 }
 
-int H5ChainFile::GetNFile() const { return fFiles.size(); }
+int H5ChainFile::GetNFile() const { return static_cast<int>(fFiles.size()); }
 
 hid_t H5ChainFile::GetFileId(int entno, int & evtno)
 {
-  hid_t fid = -1;
+  hid_t fid = H5I_INVALID_HID;
+
   for (auto * file : fFiles) {
     auto search = file->entries.find(entno);
     if (search != file->entries.end()) {
       if (file->fid < 0) {
-        if (fCurrentFile > 0) H5Fclose(fCurrentFile);
-        fid = H5Fopen(file->filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+        if (fCurrentFile >= 0) { H5Fclose(fCurrentFile); }
+        fid = H5Fopen(file->filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
         file->fid = fid;
         fCurrentFile = fid;
       }
@@ -55,30 +63,28 @@ hid_t H5ChainFile::GetFileId(int entno, int & evtno)
   return fid;
 }
 
-
-ClassImp(H5DataReader) 
+ClassImp(H5DataReader)
 
 H5DataReader::H5DataReader()
+  : fFiles(new H5ChainFile()),
+    fEvent(nullptr),
+    fNEvent(0),
+    fSubType(SubRun_t::BuildType())
 {
-  SubRun_t sub;
-  fSubType = sub.BuildType();
-
-  fFiles = new H5ChainFile();
-  fNEvent = 0;
 }
 
 H5DataReader::H5DataReader(const char * fname)
+  : fFiles(new H5ChainFile()),
+    fEvent(nullptr),
+    fNEvent(0),
+    fSubType(SubRun_t::BuildType())
 {
-  SubRun_t sub;
-  fSubType = sub.BuildType();
-
-  fFiles = new H5ChainFile();
-  fNEvent = 0;
+  SetFilename(fname);
 }
 
 H5DataReader::~H5DataReader()
 {
-  H5Tclose(fSubType);
+  if (fSubType >= 0) { H5Tclose(fSubType); }
   delete fFiles;
 }
 
@@ -88,15 +94,13 @@ bool H5DataReader::Add(const char * fname)
 {
   TString basename = fname;
 
-  // case with one single file
   if (!basename.MaybeWildcard()) { return AddFile(fname); }
 
-  // wildcarding used in name
   Int_t slashpos = basename.Last('/');
   TString directory;
   if (slashpos >= 0) {
-    directory = basename(0, slashpos); // Copy the directory name
-    basename.Remove(0, slashpos + 1);  // and remove it from basename
+    directory = basename(0, slashpos);
+    basename.Remove(0, slashpos + 1);
   }
   else {
     directory = gSystem->UnixPathName(gSystem->WorkingDirectory());
@@ -108,23 +112,22 @@ bool H5DataReader::Add(const char * fname)
   delete[] epath;
 
   if (dir) {
-    // create a TList to store the file names (not yet sorted)
     TList l;
     TRegexp re(basename, kTRUE);
     while ((file = gSystem->GetDirEntry(dir))) {
-      if (!strcmp(file, ".") || !strcmp(file, "..")) continue;
+      if (!std::strcmp(file, ".") || !std::strcmp(file, "..")) { continue; }
       TString s = file;
-      if ((basename != file) && s.Index(re) == kNPOS) continue;
+      if ((basename != file) && s.Index(re) == kNPOS) { continue; }
       l.Add(new TObjString(file));
     }
     gSystem->FreeDirectory(dir);
-    // sort the files in alphanumeric order
     l.Sort();
     TIter next(&l);
     TObjString * obj;
-    while ((obj = (TObjString *)next())) {
+    while ((obj = static_cast<TObjString *>(next()))) {
       file = obj->GetName();
-      AddFile(TString::Format("%s/%s", directory.Data(), file).Data());
+      TString full = TString::Format("%s/%s", directory.Data(), file);
+      AddFile(full.Data());
     }
     l.Delete();
   }
@@ -145,34 +148,39 @@ bool H5DataReader::AddFile(const char * fname)
     return false;
   }
 
-  DataFile_t * file = new DataFile_t;
-  file->filename = fname;
+  auto * file = new DataFile_t;
+  file->filename = std::string(fname);
 
-  hsize_t fsize;
+  hsize_t fsize = 0;
   H5Fget_filesize(fid, &fsize);
   file->filesize = fsize;
 
-  SubRun_t subrun;
+  SubRun_t subrun{};
   hid_t did = H5Dopen2(fid, "subrun", H5P_DEFAULT);
   herr_t err = H5Dread(did, fSubType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &subrun);
-  if (err < 0) {
-    Error("AddFile", "fail to read dataset[subrun]");
-    return false;
-  }
   H5Dclose(did);
 
-  int nevt = subrun.nevent;
-  int ient = fNEvent;
-  int ievt = subrun.first;
+  if (err < 0) {
+    Error("AddFile", "fail to read dataset[subrun]");
+    H5Fclose(fid);
+    delete file;
+    return false;
+  }
 
-  for (int i = 0; i < nevt; i++) {
+  const int nevt = static_cast<int>(subrun.nevent);
+  int ient = fNEvent;
+  int ievt = static_cast<int>(subrun.first);
+
+  for (int i = 0; i < nevt; ++i) {
     file->entries.insert(std::pair{ient + i, ievt + i});
   }
 
   file->fid = -1;
   fFiles->AddFile(file);
 
-  fNEvent += subrun.nevent;
+  fNEvent += nevt;
+
+  H5Fclose(fid);
 
   return true;
 }
@@ -197,6 +205,5 @@ bool H5DataReader::Open()
 
 void H5DataReader::Close()
 {
-  fEvent->Close();
-  // fFiles->Close();
+  if (fEvent) { fEvent->Close(); }
 }

@@ -1,64 +1,68 @@
-#ifndef H5Event_hh
-#define H5Event_hh
+#pragma once
 
-#include <iostream>
+#include <string>
 #include <vector>
-
-#include "TString.h"
-#include "hdf5.h"
 
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/EDM.hh"
+
+#include "hdf5.h"
 
 template <typename T>
 class H5Event : public AbsH5Event {
 public:
   H5Event();
-  virtual ~H5Event();
+  ~H5Event() override;
 
-  virtual void Open();
-  virtual void Close();
+  void Open() override;
+  void Close() override;
 
-  herr_t WriteEvent(EventInfo_t info, std::vector<T> data);
+  void SetNDP(int ndp);
+
+  herr_t WriteEvent(const EventInfo_t & info, const std::vector<T> & data);
   herr_t ReadEvent(int n);
 
   EventInfo_t GetEventInfo() const;
   T * GetData() const;
 
 private:
+  int fNDP; // for FADC and AMOREADC
   T * fData;
 
   ClassDef(H5Event, 0)
 };
 
-ClassImp(H5Event<FChannel_t>) 
+ClassImp(H5Event<FChannel_t>)
 ClassImp(H5Event<AChannel_t>)
 ClassImp(H5Event<Crystal_t>)
 
 template <typename T>
 H5Event<T>::H5Event()
-    : AbsH5Event()
+  : AbsH5Event(),
+    fData(nullptr)
 {
-  fData = nullptr;
 }
 
 template <typename T>
 H5Event<T>::~H5Event()
 {
-  if (fData) delete[] fData;
+  if (fData) {
+    delete[] fData;
+    fData = nullptr;
+  }
 }
 
 template <typename T>
 void H5Event<T>::Open()
 {
   // build type
-  fEvtType = fEvtInfo.BuildType();
+  fEvtType = EventInfo_t::BuildType();
   T temp;
-  fChType = temp.BuildType();
+  fChType = T::BuildType();
 
   if (fWriteTag) {
     hsize_t onedim[1] = {1};
-    fSpace = H5Screate_simple(1, onedim, NULL);
+    fSpace = H5Screate_simple(1, onedim, nullptr);
 
     fProp = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_deflate(fProp, fCompressionLevel);
@@ -67,8 +71,7 @@ void H5Event<T>::Open()
     fDProp = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_deflate(fDProp, fCompressionLevel);
 
-    H5Tcommit2(fFile, "evttype", fEvtType, H5P_DEFAULT, H5P_DEFAULT,
-               H5P_DEFAULT);
+    H5Tcommit2(fFile, "evttype", fEvtType, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Tcommit2(fFile, "chtype", fChType, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     fSubRun.nevent = 0;
@@ -92,32 +95,30 @@ void H5Event<T>::Close()
 }
 
 template <typename T>
-herr_t H5Event<T>::WriteEvent(EventInfo_t info, std::vector<T> data)
+herr_t H5Event<T>::WriteEvent(const EventInfo_t & info, const std::vector<T> & data)
 {
-  hid_t groupid = H5Gcreate2(fFile, Form("event%d", info.tnum), H5P_DEFAULT,
-                             H5P_DEFAULT, H5P_DEFAULT);
+  const std::string groupName = "event" + std::to_string(info.tnum);
+  hid_t groupid = H5Gcreate2(fFile, groupName.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   herr_t status = 0;
 
-  hid_t dset = H5Dcreate2(groupid, "eventinfo", fEvtType, fSpace, H5P_DEFAULT,
-                          H5P_DEFAULT, H5P_DEFAULT);
+  hid_t dset = H5Dcreate2(groupid, "eventinfo", fEvtType, fSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   status = H5Dwrite(dset, fEvtType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &info);
   H5Dclose(dset);
 
   fMemSize += info.GetSize();
 
-  hsize_t onedim[1] = {data.size()};
-  hid_t space = H5Screate_simple(1, onedim, NULL);
+  hsize_t onedim[1] = {static_cast<hsize_t>(data.size())};
+  hid_t space = H5Screate_simple(1, onedim, nullptr);
 
   H5Pset_chunk(fDProp, 1, onedim);
 
-  dset = H5Dcreate2(groupid, "chs", fChType, space, H5P_DEFAULT, fDProp,
-                    H5P_DEFAULT);
+  dset = H5Dcreate2(groupid, "chs", fChType, space, H5P_DEFAULT, fDProp, H5P_DEFAULT);
   status = H5Dwrite(dset, fChType, H5S_ALL, H5S_ALL, H5P_DEFAULT, data.data());
   H5Dclose(dset);
 
   H5Sclose(space);
 
-  fMemSize += data.size() * data[0].GetSize();
+  if (!data.empty()) { fMemSize += static_cast<hsize_t>(data.size()) * data[0].GetSize(); }
 
   if (fSubRun.nevent == 0) { fSubRun.first = info.tnum; }
   fSubRun.last = info.tnum;
@@ -131,28 +132,39 @@ template <typename T>
 herr_t H5Event<T>::ReadEvent(int n)
 {
   int evtno;
-  hid_t fid = fChain->GetNFile() > 0 ? fChain->GetFileId(n, evtno) : fFile;
-  hid_t group = H5Gopen2(fid, Form("/event%d", evtno), H5P_DEFAULT);
+  hid_t fid = fChain && fChain->GetNFile() > 0 ? fChain->GetFileId(n, evtno) : fFile;
+
+  const std::string groupName = "/event" + std::to_string(evtno);
+  hid_t group = H5Gopen2(fid, groupName.c_str(), H5P_DEFAULT);
 
   // read event info
   hid_t dset = H5Dopen2(group, "eventinfo", H5P_DEFAULT);
-  herr_t status =
-      H5Dread(dset, fEvtType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &fEvtInfo);
+  herr_t status = H5Dread(dset, fEvtType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &fEvtInfo);
   H5Dclose(dset);
 
   // prepare read channel data
-  int nhit = fEvtInfo.nhit;
+  const int nhit = static_cast<int>(fEvtInfo.nhit);
   if (fData) { delete[] fData; }
-  fData = new T[nhit];
+  fData = (nhit > 0) ? new T[nhit] : nullptr;
 
   // read channel data
-  dset = H5Dopen2(group, "chs", H5P_DEFAULT);
-  status = H5Dread(dset, fChType, H5S_ALL, H5S_ALL, H5P_DEFAULT, fData);
-  H5Dclose(dset);
+  if (nhit > 0) {
+    dset = H5Dopen2(group, "chs", H5P_DEFAULT);
+    status = H5Dread(dset, fChType, H5S_ALL, H5S_ALL, H5P_DEFAULT, fData);
+    H5Dclose(dset);
+  }
 
   H5Gclose(group);
   return status;
 }
+
+
+template <typename T>
+void H5Event<T>::SetNDP(int ndp)
+{
+  fNDP = ndp;
+}
+
 
 template <typename T>
 EventInfo_t H5Event<T>::GetEventInfo() const
@@ -165,5 +177,3 @@ T * H5Event<T>::GetData() const
 {
   return fData;
 }
-
-#endif

@@ -1,18 +1,18 @@
-#ifndef H5DataReader_hh
-#define H5DataReader_hh
+// HDF5Utils/H5DataReader.hh
+#pragma once
 
 #include <vector>
 
 #include "TObject.h"
-#include "TString.h"
-#include "hdf5.h"
 
-#include "EDM.hh"
+#include "HDF5Utils/EDM.hh"
+
+#include "hdf5.h"
 
 class H5ChainFile : public TObject {
 public:
   H5ChainFile();
-  ~H5ChainFile();
+  ~H5ChainFile() override;
 
   void AddFile(DataFile_t * file);
   void Close();
@@ -28,11 +28,12 @@ private:
 };
 
 class AbsH5Event;
+
 class H5DataReader : public TObject {
 public:
   H5DataReader();
-  H5DataReader(const char * fname);
-  virtual ~H5DataReader();
+  explicit H5DataReader(const char * fname);
+  ~H5DataReader() override;
 
   void SetFilename(const char * fname);
   bool Add(const char * fname);
@@ -59,4 +60,3 @@ inline void H5DataReader::SetEvent(AbsH5Event * event) { fEvent = event; }
 inline int H5DataReader::GetNEvent() const { return fNEvent; }
 
 inline int H5DataReader::GetEntries() const { return fNEvent; }
-#endif
