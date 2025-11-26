@@ -1,4 +1,3 @@
-// HDF5Utils/H5DataWriter.cc
 #include "TSystem.h"
 
 #include "HDF5Utils/H5DataWriter.hh"
@@ -29,7 +28,7 @@ H5DataWriter::H5DataWriter(const char * fname, int compress)
 {
 }
 
-H5DataWriter::~H5DataWriter() = default;
+H5DataWriter::~H5DataWriter() { Close(); }
 
 bool H5DataWriter::Open()
 {
@@ -37,6 +36,13 @@ bool H5DataWriter::Open()
     Error("Open", "no H5Event connected");
     return false;
   }
+
+  if (fFilename.empty()) {
+    Error("Open", "filename is empty");
+    return false;
+  }
+
+  if (fFileId >= 0) { Close(); }
 
   fFileId = H5Fcreate(fFilename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
   if (fFileId < 0) {
@@ -48,6 +54,7 @@ bool H5DataWriter::Open()
   fEvent->SetCompressionLevel(fCompressionLevel);
   fEvent->SetFileId(fFileId);
   fEvent->Open();
+  
   return true;
 }
 

@@ -1,4 +1,3 @@
-// HDF5Utils/H5DataWriter.hh
 #pragma once
 
 #include <string>
@@ -35,9 +34,12 @@ public:
 
 private:
   std::string fFilename;
+
   hid_t fFileId;
   int fCompressionLevel;
+
   AbsH5Event * fEvent;
+
   hsize_t fFileSize;
   hsize_t fMemorySize;
   int fSubrun;

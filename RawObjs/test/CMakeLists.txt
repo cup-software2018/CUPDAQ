@@ -1,8 +1,5 @@
 set ( TEST_SOURCES
-    write_amore.cc
-    write_fadc.cc
-    write_fadc_random_ch.cc
-    write_sadc.cc
+    write_fadc_root.cc
 )
 
 foreach ( src ${TEST_SOURCES} )
@@ -12,14 +9,13 @@ foreach ( src ${TEST_SOURCES} )
 
     target_include_directories ( ${test_name}
         PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/HDF5Utils>
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/RawObjs>
     )
 
     target_link_libraries ( ${test_name}
         PRIVATE
             ${ROOT_LIBRARIES}
-            ${HDF5_LIBRARIES}
-            HDF5Utils
+            RawObjs
     )
 
     install ( TARGETS ${test_name}

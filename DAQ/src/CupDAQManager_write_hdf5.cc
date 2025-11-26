@@ -75,7 +75,7 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
           channel.tbit = header->GetTriggerBit(i);
           channel.ped = header->GetPedestal(i);
           auto * rawchannel = adcraw->GetChannel(i);
-          channel.SetWaveform(rawchannel->GetADC());
+          channel.SetWaveform(rawchannel->GetADC(), fNDP);
 
           chdata.push_back(channel);
           nhit += 1;

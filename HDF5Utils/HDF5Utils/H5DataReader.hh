@@ -1,4 +1,3 @@
-// HDF5Utils/H5DataReader.hh
 #pragma once
 
 #include <vector>

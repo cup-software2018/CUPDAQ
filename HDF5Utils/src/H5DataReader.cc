@@ -1,4 +1,3 @@
-// HDF5Utils/H5DataReader.cc
 #include <string>
 
 #include "TList.h"
