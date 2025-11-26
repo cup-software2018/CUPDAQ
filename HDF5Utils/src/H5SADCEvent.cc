@@ -9,6 +9,7 @@ H5SADCEvent::H5SADCEvent()
 
 H5SADCEvent::~H5SADCEvent()
 {
+  // free per-event read buffer
   if (fData) {
     delete[] fData;
     fData = nullptr;
@@ -17,17 +18,41 @@ H5SADCEvent::~H5SADCEvent()
 
 void H5SADCEvent::Open()
 {
+  // build HDF5 types for event header and SADC channel
   fEvtType = EventInfo_t::BuildType();
   fChType = AChannel_t::BuildType();
 
+  // read mode: only build types, no dataset creation
   if (!fWriteTag) { return; }
 
-  hid_t grp_events = H5Gcreate2(fFile, "/events", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  if (grp_events >= 0) { H5Gclose(grp_events); }
+  // safety: file id must be valid in write mode
+  if (fFile < 0) {
+    Error("Open", "invalid file id (fFile = %d). SetFileId must be called before Open().", static_cast<int>(fFile));
+    return;
+  }
 
+  // create /events group only if it does not exist
+  {
+    htri_t gexists = H5Lexists(fFile, "/events", H5P_DEFAULT);
+    if (gexists < 0) {
+      Error("Open", "H5Lexists(/events) failed");
+      return;
+    }
+    if (gexists == 0) {
+      hid_t grp_events = H5Gcreate2(fFile, "/events", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+      if (grp_events < 0) {
+        Error("Open", "Failed to create group /events");
+        return;
+      }
+      H5Gclose(grp_events);
+    }
+  }
+
+  // (optional) commit types in this file for inspection / reuse
   H5Tcommit2(fFile, "evttype", fEvtType, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   H5Tcommit2(fFile, "sadctype", fChType, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
+  // create extendable dataset: /events/info  (per–event metadata)
   {
     hsize_t dims[1] = {0};
     hsize_t maxdims[1] = {H5S_UNLIMITED};
@@ -42,8 +67,14 @@ void H5SADCEvent::Open()
 
     H5Pclose(dcpl);
     H5Sclose(space);
+
+    if (fDsetInfo < 0) {
+      Error("Open", "Failed to create dataset /events/info");
+      return;
+    }
   }
 
+  // create extendable dataset: /events/index  (event → first channel index)
   {
     hsize_t dims[1] = {0};
     hsize_t maxdims[1] = {H5S_UNLIMITED};
@@ -58,8 +89,14 @@ void H5SADCEvent::Open()
 
     H5Pclose(dcpl);
     H5Sclose(space);
+
+    if (fDsetIndex < 0) {
+      Error("Open", "Failed to create dataset /events/index");
+      return;
+    }
   }
 
+  // create extendable dataset: /events/chs  (flattened AChannel_t array)
   {
     hsize_t dims[1] = {0};
     hsize_t maxdims[1] = {H5S_UNLIMITED};
@@ -74,8 +111,14 @@ void H5SADCEvent::Open()
 
     H5Pclose(dcpl);
     H5Sclose(space);
+
+    if (fDsetChs < 0) {
+      Error("Open", "Failed to create dataset /events/chs");
+      return;
+    }
   }
 
+  // initialize subrun and internal counters
   fSubRun.nevent = 0;
   fSubRun.first = 0;
   fSubRun.last = 0;
@@ -92,6 +135,7 @@ void H5SADCEvent::Open()
 
 herr_t H5SADCEvent::FlushBuffer()
 {
+  // nothing to flush
   const std::size_t nEvtBuf = fEvtBuf.size();
   if (nEvtBuf == 0) {
     fBufEventCount = 0;
@@ -103,6 +147,7 @@ herr_t H5SADCEvent::FlushBuffer()
 
   herr_t status = 0;
 
+  // append event headers to /events/info
   {
     hsize_t old_dim[1] = {fTotalEvents};
     hsize_t new_dim[1] = {fTotalEvents + nEvtBuf};
@@ -125,6 +170,7 @@ herr_t H5SADCEvent::FlushBuffer()
     if (status < 0) { return status; }
   }
 
+  // build and append event → first-channel index map
   {
     std::vector<std::uint64_t> indexBuf(nEvtBuf);
     std::uint64_t base = fTotalChannels;
@@ -155,6 +201,7 @@ herr_t H5SADCEvent::FlushBuffer()
     if (status < 0) { return status; }
   }
 
+  // append flattened AChannel_t array to /events/chs
   if (nChBuf > 0) {
     hsize_t old_dim[1] = {fTotalChannels};
     hsize_t new_dim[1] = {fTotalChannels + nChBuf};
@@ -177,6 +224,7 @@ herr_t H5SADCEvent::FlushBuffer()
     if (status < 0) { return status; }
   }
 
+  // update global counters and reset buffers
   fTotalEvents += static_cast<std::uint64_t>(nEvtBuf);
   fTotalChannels += static_cast<std::uint64_t>(nChBuf);
 
@@ -191,6 +239,7 @@ herr_t H5SADCEvent::FlushBuffer()
 void H5SADCEvent::Close()
 {
   if (fWriteTag) {
+    // flush remaining buffered events before closing datasets
     FlushBuffer();
 
     if (fDsetInfo >= 0) {
@@ -207,6 +256,7 @@ void H5SADCEvent::Close()
     }
   }
 
+  // close committed types
   if (fEvtType >= 0) {
     H5Tclose(fEvtType);
     fEvtType = H5I_INVALID_HID;
@@ -221,28 +271,36 @@ herr_t H5SADCEvent::AppendEvent(const EventInfo_t & info, const std::vector<ACha
 {
   if (!fWriteTag) { return -1; }
 
+  // number of hit channels in this event
   const std::uint16_t nhit = static_cast<std::uint16_t>(data.size());
 
+  // store event header in buffer (with nhit filled)
   EventInfo_t info_local = info;
   info_local.nhit = nhit;
   fEvtBuf.push_back(info_local);
 
+  // approximate memory usage for this event (metadata + all channels)
   std::size_t addBytes = sizeof(EventInfo_t);
   addBytes += static_cast<std::size_t>(nhit) * sizeof(AChannel_t);
 
+  // copy all AChannel_t objects to flat channel buffer
   for (std::size_t i = 0; i < nhit; ++i) {
     fChBuf.push_back(data[i]);
   }
 
+  // update subrun information
   if (fSubRun.nevent == 0) { fSubRun.first = info.tnum; }
   fSubRun.last = info.tnum;
   fSubRun.nevent += 1;
 
+  // accumulate estimated in–memory size
   fMemSize += static_cast<hsize_t>(addBytes);
 
+  // buffer accounting for flush thresholds
   fBufEventCount += 1;
   fBufBytesUsed += addBytes;
 
+  // flush if event-count or byte-size thresholds are exceeded
   if ((fBufEventCap > 0 && fBufEventCount >= fBufEventCap) || (fBufMaxBytes > 0 && fBufBytesUsed >= fBufMaxBytes)) {
     return FlushBuffer();
   }
@@ -252,9 +310,11 @@ herr_t H5SADCEvent::AppendEvent(const EventInfo_t & info, const std::vector<ACha
 
 herr_t H5SADCEvent::ReadEvent(int n)
 {
+  // resolve (file, local event index) from chain if needed
   int evtno;
   hid_t fid = fChain && fChain->GetNFile() > 0 ? fChain->GetFileId(n, evtno) : fFile;
 
+  // open all datasets needed for this event
   hid_t dset_info = H5Dopen2(fid, "/events/info", H5P_DEFAULT);
   hid_t dset_index = H5Dopen2(fid, "/events/index", H5P_DEFAULT);
   hid_t dset_chs = H5Dopen2(fid, "/events/chs", H5P_DEFAULT);
@@ -268,6 +328,7 @@ herr_t H5SADCEvent::ReadEvent(int n)
 
   herr_t status = 0;
 
+  // read one event header from /events/info
   hsize_t offset_evt[1] = {static_cast<hsize_t>(evtno)};
   hsize_t count_evt[1] = {1};
 
@@ -288,6 +349,7 @@ herr_t H5SADCEvent::ReadEvent(int n)
     return status;
   }
 
+  // read channel start index for this event from /events/index
   std::uint64_t offset_value = 0;
 
   hid_t file_space_idx = H5Dget_space(dset_index);
@@ -309,6 +371,7 @@ herr_t H5SADCEvent::ReadEvent(int n)
 
   const std::uint16_t nhit = fEvtInfo.nhit;
 
+  // (re)allocate per-event channel buffer
   if (fData) {
     delete[] fData;
     fData = nullptr;
@@ -316,6 +379,7 @@ herr_t H5SADCEvent::ReadEvent(int n)
   fData = (nhit > 0) ? new AChannel_t[nhit] : nullptr;
 
   if (nhit > 0) {
+    // read AChannel_t slice for this event
     hsize_t offset_ch[1] = {static_cast<hsize_t>(offset_value)};
     hsize_t count_ch[1] = {static_cast<hsize_t>(nhit)};
 
@@ -330,6 +394,7 @@ herr_t H5SADCEvent::ReadEvent(int n)
     H5Sclose(file_space_chs);
   }
 
+  // close datasets used for this read
   H5Dclose(dset_info);
   H5Dclose(dset_index);
   H5Dclose(dset_chs);

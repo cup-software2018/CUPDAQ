@@ -1,4 +1,4 @@
-#include "TSystem.h"
+#include <filesystem>
 
 #include "HDF5Utils/H5DataWriter.hh"
 
@@ -54,7 +54,7 @@ bool H5DataWriter::Open()
   fEvent->SetCompressionLevel(fCompressionLevel);
   fEvent->SetFileId(fFileId);
   fEvent->Open();
-  
+
   return true;
 }
 
@@ -87,10 +87,18 @@ void H5DataWriter::PrintStats() const
 {
   const double memsize = GetMemorySize() / 1024.0 / 1024.0;
   const double filesize = GetFileSize() / 1024.0 / 1024.0;
-  const double ratio = (memsize > 0.0) ? (filesize / memsize) : 0.0;
+  const double ratio = (memsize > 0.0) ? (filesize / memsize * 100.0) : 0.0;
 
-  const char * fname = gSystem->BaseName(fFilename.c_str());
+  std::string base;
+  try {
+    base = std::filesystem::path(fFilename).filename().string();
+  }
+  catch (...) {
+    base = fFilename;
+  }
+
   const int nevent = fEvent ? fEvent->GetNEvent() : 0;
 
-  Info("PrintStats", "%d events written in %s (%.2f | %.2f [MB], %.2f%%)", nevent, fname, memsize, filesize, ratio);
+  Info("PrintStats", "%d events written in %s (%.2f | %.2f [MB], %.2f)", nevent, base.c_str(), memsize, filesize,
+       ratio);
 }

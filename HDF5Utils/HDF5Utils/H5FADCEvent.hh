@@ -30,7 +30,7 @@ public:
 
 private:
   int fNDP{0};
-  int fBufEventCap{1000};
+  int fBufEventCap{100};
   std::size_t fBufMaxBytes{32 * 1024 * 1024};
   int fBufEventCount{0};
   std::size_t fBufBytesUsed{0};

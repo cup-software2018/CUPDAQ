@@ -1,3 +1,4 @@
+#include <cstring> // for std::strcmp
 #include <string>
 
 #include "TList.h"
@@ -8,6 +9,10 @@
 
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/H5DataReader.hh"
+
+//------------------------------------------------------------------------------
+// H5ChainFile
+//------------------------------------------------------------------------------
 
 ClassImp(H5ChainFile)
 
@@ -28,6 +33,7 @@ void H5ChainFile::AddFile(DataFile_t * file) { fFiles.push_back(file); }
 
 void H5ChainFile::Close()
 {
+  // Close all open HDF5 file handles
   for (auto * file : fFiles) {
     if (file->fid >= 0) {
       H5Fclose(file->fid);
@@ -40,11 +46,13 @@ int H5ChainFile::GetNFile() const { return static_cast<int>(fFiles.size()); }
 
 hid_t H5ChainFile::GetFileId(int entno, int & evtno)
 {
+  // Find which file contains the given global entry number (entno)
   hid_t fid = H5I_INVALID_HID;
 
   for (auto * file : fFiles) {
     auto search = file->entries.find(entno);
     if (search != file->entries.end()) {
+      // Open the file if not already open
       if (file->fid < 0) {
         if (fCurrentFile >= 0) { H5Fclose(fCurrentFile); }
         fid = H5Fopen(file->filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -61,6 +69,10 @@ hid_t H5ChainFile::GetFileId(int entno, int & evtno)
 
   return fid;
 }
+
+//------------------------------------------------------------------------------
+// H5DataReader
+//------------------------------------------------------------------------------
 
 ClassImp(H5DataReader)
 
@@ -91,6 +103,7 @@ void H5DataReader::SetFilename(const char * fname) { AddFile(fname); }
 
 bool H5DataReader::Add(const char * fname)
 {
+  // Support wildcard patterns using ROOT's TString/TRegexp/TSystem
   TString basename = fname;
 
   if (!basename.MaybeWildcard()) { return AddFile(fname); }
@@ -136,6 +149,7 @@ bool H5DataReader::Add(const char * fname)
 
 bool H5DataReader::AddFile(const char * fname)
 {
+  // Open HDF5 file and register its subrun/event mapping
   if (!fname || fname[0] == '\0') {
     Error("AddFile", "no file name; no files connected");
     return false;
@@ -156,6 +170,13 @@ bool H5DataReader::AddFile(const char * fname)
 
   SubRun_t subrun{};
   hid_t did = H5Dopen2(fid, "subrun", H5P_DEFAULT);
+  if (did < 0) {
+    Error("AddFile", "fail to open dataset[subrun]");
+    H5Fclose(fid);
+    delete file;
+    return false;
+  }
+
   herr_t err = H5Dread(did, fSubType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &subrun);
   H5Dclose(did);
 
@@ -170,11 +191,12 @@ bool H5DataReader::AddFile(const char * fname)
   int ient = fNEvent;
   int ievt = static_cast<int>(subrun.first);
 
+  // Build mapping from global entry index -> local event index
   for (int i = 0; i < nevt; ++i) {
     file->entries.insert(std::pair{ient + i, ievt + i});
   }
 
-  file->fid = -1;
+  file->fid = -1; // will be opened lazily in H5ChainFile::GetFileId
   fFiles->AddFile(file);
 
   fNEvent += nevt;
@@ -196,6 +218,7 @@ bool H5DataReader::Open()
     return false;
   }
 
+  // Connect chain information to the AbsH5Event instance
   fEvent->SetChainFile(fFiles);
   fEvent->Open();
 
