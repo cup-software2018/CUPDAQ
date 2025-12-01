@@ -1,4 +1,5 @@
 #pragma once
+
 #include <atomic>
 #include <chrono>
 #include <cstdarg>
@@ -58,7 +59,20 @@ public:
     return static_cast<ELOGLEVEL>(_runtime_level.load(std::memory_order_relaxed));
   }
 
-  // ---------- printf-style logging ----------
+  void Flush()
+  {
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (_opt.to_stderr) {
+      std::cerr << std::flush;
+    }
+    else {
+      std::cout << std::flush;
+    }
+    if (_file) {
+      _file->flush();
+    }
+  }
+
   void logf(ELOGLEVEL lv, const char * pretty_func, const char * fmt, ...)
   {
     if ((int)lv < LOG_COMPILE_LEVEL) return;
@@ -70,6 +84,52 @@ public:
     va_end(ap);
 
     _emit_line(lv, pretty_func, msg);
+  }
+
+  void logf_flush(const char *, const char * base, const char * token)
+  {
+    if ((int)ELOGLEVEL::Info < LOG_COMPILE_LEVEL) return;
+    if ((int)ELOGLEVEL::Info < _runtime_level.load(std::memory_order_relaxed)) return;
+
+    std::lock_guard<std::mutex> lock(_mutex);
+
+    if (!_streaming_active) {
+      _streaming_active = true;
+
+      auto now = std::chrono::system_clock::now();
+      auto t = std::chrono::system_clock::to_time_t(now);
+      std::tm tm_buf{};
+      localtime_r(&t, &tm_buf);
+
+      std::ostringstream header;
+      header << std::put_time(&tm_buf, _opt.time_fmt.c_str()) << "::[" << _level_tag(ELOGLEVEL::Info) << "] "
+             << base << " ";
+
+      _output_no_newline(header.str());
+    }
+
+    _output_no_newline(token);
+    _flush_outputs();
+  }
+
+  void end_stream(const char * msg)
+  {
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (!_streaming_active) return;
+
+    if (_opt.use_color && _is_tty) {
+      (_opt.to_stderr ? std::cerr : std::cout) << _color_open(ELOGLEVEL::Info) << msg << _color_close() << '\n';
+    }
+    else {
+      (_opt.to_stderr ? std::cerr : std::cout) << msg << '\n';
+    }
+
+    if (_file) {
+      (*_file) << msg << '\n';
+    }
+
+    _flush_outputs();
+    _streaming_active = false;
   }
 
 private:
@@ -121,7 +181,6 @@ private:
 
   void _output_line(ELOGLEVEL lv, const std::string & line)
   {
-    // console
     if (_opt.use_color && _is_tty) {
       (_opt.to_stderr ? std::cerr : std::cout) << _color_open(lv) << line << _color_close() << '\n';
     }
@@ -129,9 +188,35 @@ private:
       (_opt.to_stderr ? std::cerr : std::cout) << line << '\n';
     }
 
-    // file (no rotation)
     if (_file) {
       (*_file) << line << '\n';
+      _file->flush();
+    }
+  }
+
+  void _output_no_newline(const std::string & s)
+  {
+    if (_opt.use_color && _is_tty) {
+      (_opt.to_stderr ? std::cerr : std::cout) << _color_open(ELOGLEVEL::Info) << s << _color_close();
+    }
+    else {
+      (_opt.to_stderr ? std::cerr : std::cout) << s;
+    }
+
+    if (_file) {
+      (*_file) << s;
+    }
+  }
+
+  void _flush_outputs()
+  {
+    if (_opt.to_stderr) {
+      std::cerr << std::flush;
+    }
+    else {
+      std::cout << std::flush;
+    }
+    if (_file) {
       _file->flush();
     }
   }
@@ -185,13 +270,15 @@ private:
   bool _is_tty = true;
   mutable std::mutex _mutex;
   std::atomic<int> _runtime_level{static_cast<int>(ELOGLEVEL::Info)};
+  bool _streaming_active = false;
 };
 
-// ---------- printf-style macros ----------
 #define INFO(fmt, ...) ELog::instance().logf(ELOGLEVEL::Info, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define WARNING(fmt, ...) ELog::instance().logf(ELOGLEVEL::Warn, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define ERROR(fmt, ...) ELog::instance().logf(ELOGLEVEL::Error, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define DEBUG(fmt, ...) ELog::instance().logf(ELOGLEVEL::Debug, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define STATS(fmt, ...) ELog::instance().logf(ELOGLEVEL::Stats, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define INFO_PROGRESS(base, token) ELog::instance().logf_flush(__PRETTY_FUNCTION__, base, token)
+#define INFO_PROGRESS_END(msg) ELog::instance().end_stream(msg)
 
 inline void init_elog(const ELog::Options & opt = {}) { ELog::instance().configure(opt); }
