@@ -88,35 +88,6 @@ void AbsTCB::WriteRegisterFADC(FADCTConf * conf)
   AlignFADC(mid);
 }
 
-void AbsTCB::WriteRegisterGADC(GADCTConf * conf)
-{
-  unsigned long mid = conf->MID();
-
-  WriteRL(mid, conf->RL());
-  WriteDSR(mid, conf->DSR());
-  WriteTLT(mid, conf->TLT());
-
-  int nch = conf->NCH();
-  for (int i = 0; i < nch; i++) {
-    ULong_t cid = conf->CID(i);
-
-    WriteAMODE(mid, cid, conf->AMD(i));
-    WritePOL(mid, cid, conf->POL(i));
-    WriteCW(mid, cid, conf->CW(i));
-    WriteTHR(mid, cid, conf->THR(i));
-    WriteDLY(mid, cid, conf->DLY(i));
-    WriteDT(mid, cid, conf->DT(i));
-    WriteTM(mid, cid, conf->TM(i));
-    WritePCT(mid, cid, conf->PCT(i));
-    WritePCI(mid, cid, conf->PCI(i));
-    WritePWT(mid, cid, conf->PWT(i));
-    WritePSW(mid, cid, conf->PSW(i));
-    WriteDACOFF(mid, cid, conf->DACOFF(i));
-  }
-
-  AlignGADC(mid);
-}
-
 void AbsTCB::WriteRegisterSADC(SADCTConf * conf)
 {
   unsigned long mid = conf->MID();
@@ -308,90 +279,6 @@ void AbsTCB::PrintRegisterFADC(FADCTConf * conf)
   cout << endl;
 }
 
-void AbsTCB::PrintRegisterGADC(GADCTConf * conf)
-{
-  int sid = conf->SID();
-  int mid = conf->MID();
-  int nch = conf->NCH();
-
-  unsigned long rRL = ReadRL(mid);
-  unsigned long rTLT = ReadTLT(mid);
-  unsigned long rDSR = ReadDSR(mid);
-
-  cout << Form(" ++ GADC register: SID(%d) MID(%d) NCH(%1d) RL(%lu) TLT(%lX) "
-               "DSR(%lu)",
-               sid, mid, nch, rRL, rTLT, rDSR)
-       << endl;
-
-  cout << " -----------------------------------------------" << endl;
-  cout << "        CID : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8d", conf->CID(i));
-  }
-  cout << endl;
-  cout << "        POL : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPOL(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "     DACOFF : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadDACOFF(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "      AMODE : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadAMODE(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "        DLY : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadDLY(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "      DTIME : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadDT(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "         CW : ";
-  for (int i = 0; i < nch; i++)
-    cout << Form("%8lu", ReadCW(mid, conf->CID(i)));
-  cout << endl;
-  cout << "         TM : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadTM(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "        THR : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadTHR(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "        PCT : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPCT(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "        PCI : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPCI(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "        PWT : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPWT(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << "        PSW : ";
-  for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPSW(mid, conf->CID(i)));
-  }
-  cout << endl;
-  cout << " -----------------------------------------------" << endl;
-  cout << endl;
-}
-
 void AbsTCB::PrintRegisterSADC(SADCTConf * conf)
 {
   int sid = conf->SID();
@@ -499,20 +386,6 @@ void AbsTCB::MeasurePedestalFADC(FADCTConf * conf)
     cout << Form("%4lu  ", ReadPED(mid, cid)) << flush;
   }
   cout << endl;
-}
-
-void AbsTCB::MeasurePedestalGADC(GADCTConf * conf)
-{
-  int mid = conf->MID();
-  int nch = conf->NCH();
-
-  cout << Form("  [mid=%d]  ", mid) << flush;
-  for (int i = 0; i < nch; i++) {
-    ULong_t cid = conf->CID(i);
-    MeasurePED(mid, cid);
-    cout << Form("%5lu  ", ReadPED(mid, cid)) << flush;
-  }
-  // cout << endl;
 }
 
 void AbsTCB::MeasurePedestalSADC(SADCTConf * conf)

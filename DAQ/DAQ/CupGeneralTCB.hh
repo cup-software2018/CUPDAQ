@@ -4,7 +4,6 @@
 
 #include "DAQConfig/AbsConfList.hh"
 #include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQConfig/TCBConf.hh"
@@ -33,7 +32,6 @@ private:
   int CheckLinkStatus();
   bool ConfigTCB(TCBConf * conf);
   bool ConfigFADC(FADCTConf * conf);
-  bool ConfigGADC(GADCTConf * conf);
   bool ConfigSADC(SADCTConf * conf);
   bool ConfigIADC(IADCTConf * conf);
 

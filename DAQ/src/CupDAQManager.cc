@@ -5,18 +5,14 @@
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/GADCSConf.hh"
-#include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/MADCSConf.hh"
-#include "DAQConfig/SADCSConf.hh"
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQSystem/CupFADCS.hh"
 #include "DAQSystem/CupFADCT.hh"
 #include "DAQSystem/CupGADCS.hh"
-#include "DAQSystem/CupGADCT.hh"
 #include "DAQSystem/CupIADCT.hh"
 #include "DAQSystem/CupMADCS.hh"
-#include "DAQSystem/CupSADCS.hh"
 #include "DAQSystem/CupSADCT.hh"
 
 ClassImp(CupDAQManager)
@@ -160,12 +156,10 @@ bool CupDAQManager::AddADC(AbsConf * conf)
   }
 
   switch (fADCType) {
-    case ADC::SADCS: adc = new CupSADCS(conf); break;
     case ADC::SADCT: adc = new CupSADCT(conf); break;
     case ADC::FADCS: adc = new CupFADCS(conf); break;
     case ADC::FADCT: adc = new CupFADCT(conf); break;
     case ADC::GADCS: adc = new CupGADCS(conf); break;
-    case ADC::GADCT: adc = new CupGADCT(conf); break;
     case ADC::MADCS: adc = new CupMADCS(conf); break;
     case ADC::IADCT: adc = new CupIADCT(conf); break;
     default: break;
@@ -262,11 +256,6 @@ bool CupDAQManager::PrepareDAQ()
   }
 
   switch (fADCType) {
-    case ADC::SADCS: {
-      fMinimumBCount = kMINIMUMBCOUNT;
-      fADCMode = ADC::SMODE;
-      break;
-    }
     case ADC::SADCT: {
       fMinimumBCount = kMINIMUMBCOUNT;
       fADCMode = ADC::SMODE;
@@ -290,14 +279,6 @@ bool CupDAQManager::PrepareDAQ()
     }
     case ADC::GADCS: {
       auto * conf = static_cast<GADCSConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
-      fRecordLength = conf->RL();
-      int bcount = GetADCEventDataSize() / kKILOBYTES;
-      fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;
-      fADCMode = ADC::FMODE;
-      break;
-    }
-    case ADC::GADCT: {
-      auto * conf = static_cast<GADCTConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
       fRecordLength = conf->RL();
       int bcount = GetADCEventDataSize() / kKILOBYTES;
       fMinimumBCount = (bcount <= kMINIMUMBCOUNT) ? kMINIMUMBCOUNT : bcount;

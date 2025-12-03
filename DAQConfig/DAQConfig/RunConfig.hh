@@ -13,10 +13,8 @@
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQConfig/GADCSConf.hh"
-#include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/MADCSConf.hh"
-#include "DAQConfig/SADCSConf.hh"
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQConfig/STRGConf.hh"
 #include "DAQConfig/TCBConf.hh"
@@ -123,27 +121,6 @@ public:
     PSC_FADCS = 20
   };
 
-  static const int kNGADCTMENU = 17;
-  enum GADCTCONFIG {
-    ENABLED_GADCT = 1,
-    CID_GADCT = 2,
-    PID_GADCT = 3,
-    POL_GADCT = 4,
-    DACOFF_GADCT = 5,
-    DLY_GADCT = 6,
-    DTIME_GADCT = 7,
-    CW_GADCT = 8,
-    TM_GADCT = 9,
-    THR_GADCT = 10,
-    PCT_GADCT = 11,
-    PCI_GADCT = 12,
-    PWT_GADCT = 13,
-    PSW_GADCT = 14,
-    RL_GADCT = 15,
-    TLT_GADCT = 16,
-    DSR_GADCT = 17,
-  };
-
   static const int kNGADCSMENU = 20;
   enum GADCSCONFIG {
     ENABLED_GADCS = 1,
@@ -211,30 +188,6 @@ public:
     TLT6_SADCT = 15,
     TLT7_SADCT = 16,
     TLT8_SADCT = 17
-  };
-
-  static const int kNSADCSMENU = 20;
-  enum SADCSCONFIG {
-    ENABLED_SADCS = 1,
-    CID_SADCS = 2,
-    PID_SADCS = 3,
-    CW_SADCS = 4,
-    GW_SADCS = 5,
-    PSW_SADCS = 6,
-    THR_SADCS = 7,
-    DLY_SADCS = 8,
-    SUBPED_SADCS = 9,
-    TLT1_SADCS = 10,
-    TLT2_SADCS = 11,
-    TLT3_SADCS = 12,
-    TLT4_SADCS = 13,
-    TLT5_SADCS = 14,
-    TLT6_SADCS = 15,
-    TLT7_SADCS = 16,
-    TLT8_SADCS = 17,
-    PTRG_SADCS = 18,
-    MTHR_SADCS = 19,
-    PSC_SADCS = 20
   };
 
   static const int kNIADCTMENU = 30;
@@ -313,11 +266,9 @@ private:
   bool ConfigTCB(std::ifstream & ticket, TCBConf * conf);
   bool ConfigFADCT(std::ifstream & ticket, FADCTConf * conf);
   bool ConfigFADCS(std::ifstream & ticket, FADCSConf * conf);
-  bool ConfigGADCT(std::ifstream & ticket, GADCTConf * conf);
   bool ConfigGADCS(std::ifstream & ticket, GADCSConf * conf);
   bool ConfigMADCS(std::ifstream & ticket, MADCSConf * conf);
   bool ConfigSADCT(std::ifstream & ticket, SADCTConf * conf);
-  bool ConfigSADCS(std::ifstream & ticket, SADCSConf * conf);
   bool ConfigIADCT(std::ifstream & ticket, IADCTConf * conf);
   bool ConfigAmoreADC(std::ifstream & ticket, AmoreADCConf * conf);
   bool ConfigSTRG(std::ifstream & ticket, STRGConf * conf);
@@ -331,11 +282,9 @@ private:
   std::string TCBCONFIGMENU[kNTCBMENU];           //!
   std::string FADCTCONFIGMENU[kNFADCTMENU];       //!
   std::string FADCSCONFIGMENU[kNFADCSMENU];       //!
-  std::string GADCTCONFIGMENU[kNGADCTMENU];       //!
   std::string GADCSCONFIGMENU[kNGADCSMENU];       //!
   std::string MADCSCONFIGMENU[kNMADCSMENU];       //!
   std::string SADCTCONFIGMENU[kNSADCTMENU];       //!
-  std::string SADCSCONFIGMENU[kNSADCSMENU];       //!
   std::string IADCTCONFIGMENU[kNIADCTMENU];       //!
   std::string AMOREADCCONFIGMENU[kNAMOREADCMENU]; //!
   std::string STRGCONFIGMENU[kNSTRGMENU];         //!
@@ -346,11 +295,9 @@ private:
   std::map<std::string, int> fTCBItem;       //!
   std::map<std::string, int> fFADCTItem;     //!
   std::map<std::string, int> fFADCSItem;     //!
-  std::map<std::string, int> fGADCTItem;     //!
   std::map<std::string, int> fGADCSItem;     //!
   std::map<std::string, int> fMADCSItem;     //!
   std::map<std::string, int> fSADCTItem;     //!
-  std::map<std::string, int> fSADCSItem;     //!
   std::map<std::string, int> fIADCTItem;     //!
   std::map<std::string, int> fAMOREADCItem;  //!
   std::map<std::string, int> fSTRGItem;      //!

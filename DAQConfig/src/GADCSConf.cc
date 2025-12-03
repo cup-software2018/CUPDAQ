@@ -5,14 +5,43 @@
 ClassImp(GADCSConf)
 
 GADCSConf::GADCSConf()
-  : GADCTConf()
+  : AbsConf()
 {
 }
 
 GADCSConf::GADCSConf(int sid)
-  : GADCTConf(sid)
+  : AbsConf(sid)
 {
   SetNameTitle("GADCS", "Standalone GADC 125MHz");
+
+  fNCH = kNCHGADC;
+  fRL = 8;
+  fTLT = 1;
+  fDSR = 1;
+
+  unsigned long pct = 1;
+  unsigned long pwt = 0;
+  unsigned long pst = 0;
+  unsigned long pstor = 0;
+  unsigned long tm = (pstor << 3) | (pst << 2) | (pwt << 1) | pct;
+
+  for (int i = 0; i < kNCHGADC; i++) {
+    fCID[i] = i + 1;
+    fPID[i] = 0;
+    fPOL[i] = 0;
+    fDACOFF[i] = 4000;
+    fAMD[i] = 1;
+    fDLY[i] = 0;
+    fDT[i] = 0;
+    fCW[i] = 1000;
+    fTM[i] = tm;
+    fTHR[i] = 10;
+    fPCT[i] = 1;
+    fPCI[i] = 1000;
+    fPWT[i] = 0;
+    fPSW[i] = 0;
+  }
+
   fIsLinked = true;
   fTRGON = 1;
   fPTRG = 0;

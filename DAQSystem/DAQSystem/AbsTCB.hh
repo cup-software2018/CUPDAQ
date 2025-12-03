@@ -3,7 +3,6 @@
 #include "TObject.h"
 
 #include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQConfig/TCBConf.hh"
@@ -121,19 +120,16 @@ public:
   // write register
   virtual void WriteRegisterTCB(TCBConf * conf);
   virtual void WriteRegisterFADC(FADCTConf * conf);
-  virtual void WriteRegisterGADC(GADCTConf * conf);
   virtual void WriteRegisterSADC(SADCTConf * conf);
   virtual void WriteRegisterIADC(IADCTConf * conf);
 
   // print register
   virtual void PrintRegisterTCB(TCBConf * conf);
   virtual void PrintRegisterFADC(FADCTConf * conf);
-  virtual void PrintRegisterGADC(GADCTConf * conf);
   virtual void PrintRegisterSADC(SADCTConf * conf);
   virtual void PrintRegisterIADC(IADCTConf * conf);
 
   virtual void MeasurePedestalFADC(FADCTConf * conf);
-  virtual void MeasurePedestalGADC(GADCTConf * conf);
   virtual void MeasurePedestalSADC(SADCTConf * conf);
   virtual void MeasurePedestalIADC(IADCTConf * conf);
 

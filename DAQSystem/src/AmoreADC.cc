@@ -52,25 +52,17 @@ int AmoreADC::ReadData(int bcount)
 
 void AmoreADC::UpdateCurrentTime(const unsigned char * data, int bcount)
 {
-  unsigned long ltmp;
+  unsigned long coarsetime = 0;
   int j = kKILOBYTES * bcount - 64;
 
   std::unique_lock<std::mutex> lock(fMutex);
-  ltmp = data[j + 48] & 0xFF;
-  fCurrentTime = ltmp * 1000;
-  ltmp = data[j + 49] & 0xFF;
-  ltmp = ltmp << 8;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 50] & 0xFF;
-  ltmp = ltmp << 16;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 51] & 0xFF;
-  ltmp = ltmp << 24;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 52] & 0xFF;
-  ltmp = ltmp << 32;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 53] & 0xFF;
-  ltmp = ltmp << 40;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
+
+  coarsetime = static_cast<unsigned long>(data[j + 48] & 0xFFu);
+  coarsetime |= static_cast<unsigned long>(data[j + 49] & 0xFFu) << 8;
+  coarsetime |= static_cast<unsigned long>(data[j + 50] & 0xFFu) << 16;
+  coarsetime |= static_cast<unsigned long>(data[j + 51] & 0xFFu) << 24;
+  coarsetime |= static_cast<unsigned long>(data[j + 52] & 0xFFu) << 32;
+  coarsetime |= static_cast<unsigned long>(data[j + 53] & 0xFFu) << 40;
+
+  fCurrentTime = coarsetime * 1000ul;
 }

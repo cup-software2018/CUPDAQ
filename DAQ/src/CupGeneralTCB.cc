@@ -124,9 +124,6 @@ bool CupGeneralTCB::Config()
     else if (name.EqualTo("FADCT")) {
       retval &= ConfigFADC(static_cast<FADCTConf *>(conf));
     }
-    else if (name.EqualTo("GADCT")) {
-      retval &= ConfigGADC(static_cast<GADCTConf *>(conf));
-    }
     else if (name.EqualTo("SADCT")) {
       retval &= ConfigSADC(static_cast<SADCTConf *>(conf));
     }
@@ -158,19 +155,6 @@ bool CupGeneralTCB::StartTrigger()
       if (conf->IsLinked() && conf->IsEnabled()) { fTCB->MeasurePedestalFADC(conf); }
     }
     cout << "+++++++++++ FADC PEDESTALS ++++++++++++" << endl;
-    cout << endl;
-  }
-
-  nadc = fConfigs->GetNADC(ADC::GADCT, true);
-  if (nadc > 0) {
-    INFO("Measuring GADC pedestals");
-    cout << endl;
-    cout << "+++++++++++ GADC PEDESTALS ++++++++++++" << endl;
-    for (int i = 0; i < nadc; i++) {
-      auto * conf = static_cast<GADCTConf *>(fConfigs->GetConfig(ADC::GADCT, i));
-      if (conf->IsLinked() && conf->IsEnabled()) { fTCB->MeasurePedestalGADC(conf); }
-    }
-    cout << "+++++++++++ GADC PEDESTALS ++++++++++++" << endl;
     cout << endl;
   }
 
@@ -233,28 +217,6 @@ bool CupGeneralTCB::ConfigFADC(FADCTConf * conf)
   conf->PrintConf();
   fTCB->WriteRegisterFADC(conf);
   fTCB->PrintRegisterFADC(conf);
-
-  INFO("%s[mid=%2lu] was configured", conf->GetName(), mid);
-  return true;
-}
-
-bool CupGeneralTCB::ConfigGADC(GADCTConf * conf)
-{
-  unsigned long mid = conf->MID();
-
-  if (!conf->IsEnabled()) {
-    INFO("%s[mid=%2lu] is disabled, passed", conf->GetName(), mid);
-    return true;
-  }
-
-  if (!conf->IsLinked()) {
-    ERROR("%s[mid=%2lu] is enabled but not linked", conf->GetName(), mid);
-    return false;
-  }
-
-  conf->PrintConf();
-  fTCB->WriteRegisterGADC(conf);
-  fTCB->PrintRegisterGADC(conf);
 
   INFO("%s[mid=%2lu] was configured", conf->GetName(), mid);
   return true;

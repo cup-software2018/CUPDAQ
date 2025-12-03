@@ -1,7 +1,7 @@
 #include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/GADCTConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/MADCSConf.hh"
+#include "DAQConfig/GADCSConf.hh"
 #include "OnlObjs/FADCRawChannel.hh"
 #include "OnlObjs/FADCRawEvent.hh"
 
@@ -224,7 +224,7 @@ void FADCRawEvent::UnpackHeader_FADC(int n, ADCHeader * header)
 
 void FADCRawEvent::Unpack_GADC(AbsConf * config, int verbose)
 {
-  auto * conf = (GADCTConf *)config;
+  auto * conf = (GADCSConf *)config;
 
   // record length is the same for all modules
   unsigned int dlength = 512 * conf->RL();

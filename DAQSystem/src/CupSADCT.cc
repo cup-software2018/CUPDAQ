@@ -77,35 +77,29 @@ int CupSADCT::ReadData(int bcount)
 
 void CupSADCT::UpdateTriggerAndTime(const unsigned char * tempdata)
 {
-  unsigned int itmp;
-  unsigned long ltmp, finetime, coarsetime;
+  unsigned long finetime = 0;
+  unsigned long coarsetime = 0;
 
   std::unique_lock<std::mutex> lock(fMutex);
 
-  fCurrentTrgNumber = tempdata[17] & 0xFF;
-  itmp = tempdata[18] & 0xFF;
-  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 8);
-  itmp = tempdata[19] & 0xFF;
-  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 16);
-  itmp = tempdata[20] & 0xFF;
-  fCurrentTrgNumber += static_cast<unsigned int>(itmp << 24);
+  // trigger number
+  fCurrentTrgNumber = static_cast<unsigned int>(tempdata[17] & 0xFFu);
+  fCurrentTrgNumber |= static_cast<unsigned int>(tempdata[18] & 0xFFu) << 8;
+  fCurrentTrgNumber |= static_cast<unsigned int>(tempdata[19] & 0xFFu) << 16;
+  fCurrentTrgNumber |= static_cast<unsigned int>(tempdata[20] & 0xFFu) << 24;
   fCurrentTrgNumber += 1;
 
-  finetime = tempdata[25] & 0xFF;
-  finetime *= 8;
+  // fine time
+  finetime = static_cast<unsigned long>(tempdata[25] & 0xFFu) * 8ul;
 
-  ltmp = tempdata[26] & 0xFF;
-  coarsetime = ltmp * 1000;
-  ltmp = static_cast<unsigned long>(tempdata[27] & 0xFF) << 8;
-  coarsetime += ltmp * 1000;
-  ltmp = static_cast<unsigned long>(tempdata[28] & 0xFF) << 16;
-  coarsetime += ltmp * 1000;
-  ltmp = static_cast<unsigned long>(tempdata[29] & 0xFF) << 24;
-  coarsetime += ltmp * 1000;
-  ltmp = static_cast<unsigned long>(tempdata[30] & 0xFF) << 32;
-  coarsetime += ltmp * 1000;
-  ltmp = static_cast<unsigned long>(tempdata[31] & 0xFF) << 40;
-  coarsetime += ltmp * 1000;
+  // coarse time
+  coarsetime = static_cast<unsigned long>(tempdata[26] & 0xFFu);
+  coarsetime |= static_cast<unsigned long>(tempdata[27] & 0xFFu) << 8;
+  coarsetime |= static_cast<unsigned long>(tempdata[28] & 0xFFu) << 16;
+  coarsetime |= static_cast<unsigned long>(tempdata[29] & 0xFFu) << 24;
+  coarsetime |= static_cast<unsigned long>(tempdata[30] & 0xFFu) << 32;
+  coarsetime |= static_cast<unsigned long>(tempdata[31] & 0xFFu) << 40;
+  coarsetime *= 1000ul;
 
   fCurrentTime = coarsetime + finetime;
 }
