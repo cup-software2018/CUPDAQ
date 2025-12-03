@@ -18,12 +18,10 @@ void CupDAQManager::TF_SortEvent()
   }
   INFO("sorting data started");
 
-  StartBenchmark("SortEvent");
   if (fTriggerMode == TRIGGER::SELF) { SortEvent_CHA(); }
   else {
     SortEvent_MOD();
   }
-  StopBenchmark("SortEvent");
 
   fSortStatus = ENDED;
   INFO("sorting data ended");
@@ -54,6 +52,7 @@ void CupDAQManager::SortEvent_MOD()
       if (remain == 0) { break; }
     }
 
+    StartBenchmark("SortEvent");
     int totalsize = 0;
     for (int i = 0; i < nadc_int; ++i) {
       auto * adc = static_cast<AbsADC *>(fCont[i]);
@@ -98,6 +97,7 @@ void CupDAQManager::SortEvent_MOD()
         buffer->push_back(std::move(adcevent));
       }
     }
+    StopBenchmark("SortEvent");
 
     const int denom = (nadc_int > 0) ? nadc_int : 1;
     totalsize /= denom;

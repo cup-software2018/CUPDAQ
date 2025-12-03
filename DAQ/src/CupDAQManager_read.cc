@@ -10,12 +10,10 @@ void CupDAQManager::TF_ReadData()
   }
   INFO("reading data from ADCs started");
 
-  StartBenchmark("ReadData");
   if (fTriggerMode == TRIGGER::GLOBAL) { ReadData_GLT(); }
   else {
     ReadData_MOD();
   }
-  StopBenchmark("ReadData");
 
   if (fReadStatus != ERROR) { fReadStatus = ENDED; }
   INFO("reading data from ADCs ended");
@@ -70,6 +68,7 @@ void CupDAQManager::ReadData_GLT()
     bcount = n * fMinimumBCount;
 
     if (bcount > 0) {
+      StartBenchmark("ReadData");
       for (int i = 0; i < nadc_int; ++i) {
         if (ReadADCData(i, bcount) < 0) {
           RUNSTATE::SetError(fRunStatus);
@@ -77,6 +76,7 @@ void CupDAQManager::ReadData_GLT()
           break;
         }
       }
+      StopBenchmark("ReadData");
 
       if (RUNSTATE::CheckError(fRunStatus)) { break; }
 

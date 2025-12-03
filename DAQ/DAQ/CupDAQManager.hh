@@ -13,6 +13,7 @@
 #include "TFile.h"
 #include "TObjArray.h"
 #include "TSocket.h"
+#include "TStopwatch.h"
 #include "TString.h"
 #include "TTree.h"
 
@@ -261,6 +262,10 @@ protected:
   unsigned long fMonitorServerOn;
 
   TBenchmark * fBenchmark;
+  //TStopwatch fReadSW;
+  //TStopwatch fSortSW;
+  //TStopwatch fBuildSW;
+  //TStopwatch fWriteSW;
 
   AbsSoftTrigger * fSoftTrigger;
 

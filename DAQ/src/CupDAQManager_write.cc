@@ -17,7 +17,6 @@ void CupDAQManager::TF_WriteEvent()
     return;
   }
 
-  StartBenchmark("WriteEvent");
   if (fADCMode == ADC::SMODE) {
     switch (fOutputFileFormat) {
       case OUTPUT::ROOT: WriteSADC_MOD_ROOT(); break;
@@ -34,7 +33,6 @@ void CupDAQManager::TF_WriteEvent()
       default: break;
     }
   }
-  StopBenchmark("WriteEvent");
 
   if (fROOTFile && fROOTFile->IsOpen()) {
     fROOTFile->cd();

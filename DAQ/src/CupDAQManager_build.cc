@@ -30,7 +30,6 @@ void CupDAQManager::TF_BuildEvent()
     }
   }
 
-  StartBenchmark("BuildEvent");
   if (fTriggerMode == TRIGGER::GLOBAL) { BuildEvent_GLT(); }
   else if (fTriggerMode == TRIGGER::MODULE) {
     BuildEvent_MOD();
@@ -38,7 +37,6 @@ void CupDAQManager::TF_BuildEvent()
   else {
     BuildEvent_SLF();
   }
-  StopBenchmark("BuildEvent");
 
   if (fBuildStatus != ERROR) { fBuildStatus = ENDED; }
   INFO("TF_BuildEvent ended");
@@ -95,6 +93,7 @@ void CupDAQManager::BuildEvent_GLT()
       nmod += 1;
     }
 
+    StartBenchmark("BuildEvent");
     if (nmod == nadc) {
       if (nadc > 0) { totalsize /= static_cast<int>(nadc); }
 
@@ -184,6 +183,7 @@ void CupDAQManager::BuildEvent_GLT()
 
       totalsize -= 1;
     }
+    StopBenchmark("BuildEvent");
 
     ThreadSleep(fBuildSleep, perror, integral, totalsize);
   }

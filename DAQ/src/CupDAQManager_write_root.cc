@@ -42,6 +42,7 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
       if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
     }
     else {
+      StartBenchmark("WriteEvent");
       chdata->Clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
@@ -84,6 +85,8 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
       wlock.lock();
       fROOTTree->Fill();
       wlock.unlock();
+
+      StopBenchmark("WriteEvent");
     }
 
     int size = fBuiltEventBuffer1.size();
