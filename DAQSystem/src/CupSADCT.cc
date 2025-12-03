@@ -4,24 +4,21 @@
 
 ClassImp(CupSADCT)
 
-CupSADCT::CupSADCT()
-  : AbsADC()
-{
-}
-
 CupSADCT::CupSADCT(int sid)
   : AbsADC(sid)
 {
+  fFADC.SetSID(sid);
 }
 
 CupSADCT::CupSADCT(AbsConf * conf)
   : AbsADC(conf)
 {
+  fFADC.SetSID(conf->SID());
 }
 
 int CupSADCT::Open()
 {
-  int stat = M64ADCopen(fSID, nullptr);
+  int stat = fFADC.Open();
   if (stat != 0) {
     ERROR("SADCT [sid=%d]: open failed, check connection and power", fSID);
     return stat;
@@ -33,15 +30,15 @@ int CupSADCT::Open()
 
 void CupSADCT::Close()
 {
-  M64ADCclose(fSID);
+  fFADC.Close();
   INFO("SADCT [sid=%d]: closed", fSID);
 }
 
-int CupSADCT::ReadBCount() { return M64ADCread_BCOUNT(fSID); }
+int CupSADCT::ReadBCount() { return fFADC.ReadBCount(); }
 
 int CupSADCT::ReadData(int bcount, unsigned char * data)
 {
-  int state = M64ADCread_DATA(fSID, bcount, data);
+  int state = fFADC.ReadData(bcount, data);
   if (state != 0) { return state; }
 
   fTotalBCount += bcount;
@@ -60,7 +57,7 @@ int CupSADCT::ReadData(int bcount, unsigned char * data)
 int CupSADCT::ReadData(int bcount)
 {
   auto chunk = std::make_unique<ChunkData>(bcount);
-  int state = M64ADCread_DATA(fSID, bcount, chunk->data);
+  int state = fFADC.ReadData(bcount, chunk->data);
   if (state != 0) { return state; }
 
   if (fEventDataSize > 0) {

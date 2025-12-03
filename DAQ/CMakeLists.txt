@@ -6,8 +6,10 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 
 # --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
 set ( DICT_I_FLAGS
+    -I${LIBUSB_INCLUDE_DIRS}
     -I${CMAKE_SOURCE_DIR}/OnlConsts
     -I${CMAKE_SOURCE_DIR}/Notice
+    -I${CMAKE_SOURCE_DIR}/NewNotice
     -I${CMAKE_SOURCE_DIR}/DAQUtils
     -I${CMAKE_SOURCE_DIR}/DAQSystem
     -I${CMAKE_SOURCE_DIR}/DAQConfig
@@ -59,6 +61,7 @@ target_link_libraries ( ${MODULE_NAME}
     PUBLIC
     ${ROOT_LIBRARIES}
     OnlConsts
+    NewNotice
     Notice
     DAQUtils
     DAQSystem

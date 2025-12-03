@@ -9,11 +9,6 @@ using namespace std;
 
 ClassImp(AbsTCB)
 
-AbsTCB::AbsTCB()
-  : TObject()
-{
-}
-
 void AbsTCB::WriteRegisterTCB(TCBConf * conf)
 {
   WriteTRIGENABLE(0, conf->TM());

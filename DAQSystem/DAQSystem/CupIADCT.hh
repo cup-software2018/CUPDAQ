@@ -3,10 +3,11 @@
 
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
+#include "NewNotice/NKIADC64.hh"
 
 class CupIADCT : public AbsADC {
 public:
-  CupIADCT();
+  CupIADCT() = default;
   CupIADCT(int sid);
   CupIADCT(AbsConf * conf);
   ~CupIADCT() override = default;
@@ -24,9 +25,10 @@ public:
   int ReadData(int bcount) override;
 
 private:
-  int fMode{0};
-
   void UpdateTriggerAndTime(const unsigned char * tempdata);
+
+  int fMode{0};
+  NKIADC64 fFADC{};
 
   ClassDef(CupIADCT, 0)
 };

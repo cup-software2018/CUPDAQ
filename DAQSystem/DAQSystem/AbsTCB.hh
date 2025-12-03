@@ -10,19 +10,19 @@
 
 class AbsTCB : public TObject {
 public:
-  AbsTCB();
+  AbsTCB() = default;
   ~AbsTCB() override = default;
 
   virtual int Open() = 0;
   virtual void Close() = 0;
 
   virtual void Reset() = 0;
-  virtual void ResetTIMER() = 0;
+  virtual void ResetTimer() = 0;
   virtual void TriggerStart() = 0;
   virtual void TriggerStop() = 0;
 
-  virtual unsigned long ReadBCOUNT(unsigned long mid) = 0;
-  virtual int ReadDATA(unsigned long mid, unsigned long bcount, unsigned char * data) = 0;
+  virtual unsigned long ReadBCount(unsigned long mid) = 0;
+  virtual int ReadData(unsigned long mid, unsigned long bcount, unsigned char * data) = 0;
 
   virtual void WriteCW(unsigned long mid, unsigned long ch, unsigned long data) = 0;
   virtual unsigned long ReadCW(unsigned long mid, unsigned long ch) = 0;

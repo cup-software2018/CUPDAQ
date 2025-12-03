@@ -23,11 +23,11 @@ AmoreADC::AmoreADC(AbsConf * conf)
 {
 }
 
-int AmoreADC::ReadBCount() { return fTCB->ReadBCOUNT(fMID); }
+int AmoreADC::ReadBCount() { return fTCB->ReadBCount(fMID); }
 
 int AmoreADC::ReadData(int bcount, unsigned char * data)
 {
-  int state = fTCB->ReadDATA(fMID, bcount, data);
+  int state = fTCB->ReadData(fMID, bcount, data);
 
   fTotalBCount += bcount;
 
@@ -39,7 +39,7 @@ int AmoreADC::ReadData(int bcount, unsigned char * data)
 int AmoreADC::ReadData(int bcount)
 {
   auto chunk = std::make_unique<ChunkData>(bcount);
-  int state = fTCB->ReadDATA(fMID, bcount, chunk->data);
+  int state = fTCB->ReadData(fMID, bcount, chunk->data);
 
   fTotalBCount += bcount;
 

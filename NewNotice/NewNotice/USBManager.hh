@@ -6,8 +6,6 @@
 #include <mutex>
 #include <vector>
 
-#include "NewNotice/nkusbconst.hh"
-
 class USBManager {
 public:
   static USBManager & Instance();

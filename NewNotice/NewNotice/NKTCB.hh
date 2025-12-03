@@ -12,13 +12,11 @@
 
 class NKTCB {
 public:
-  explicit NKTCB(int sid);
+  NKTCB();
   ~NKTCB();
 
   int Open();
   void Close();
-
-  int Sid() const;
 
   void WriteLT(unsigned long mid, const char * data, int len);
 
@@ -173,7 +171,7 @@ public:
   unsigned long ReadEXTOUTWIDTH() const;
 
   unsigned long ReadBCount(unsigned long mid) const;
-  int ReadDATA(unsigned long mid, unsigned long bcount, unsigned char * data) const;
+  int ReadData(unsigned long mid, unsigned long bcount, unsigned char * data) const;
 
   void WriteGAIN(unsigned long mid, unsigned long ch, unsigned long data) const;
   unsigned long ReadGAIN(unsigned long mid, unsigned long ch) const;
@@ -235,8 +233,5 @@ public:
   unsigned long ReadDT(unsigned long mid, unsigned long ch) const;
 
 private:
-  int _sid;
   USB3Tcb _usb;
 };
-
-inline int NKTCB::Sid() const { return _sid; }

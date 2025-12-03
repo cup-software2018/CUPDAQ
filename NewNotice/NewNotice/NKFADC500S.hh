@@ -4,11 +4,11 @@
 
 #include "NewNotice/USB3Com.hh"
 
-class NKFADC125S {
+class NKFADC500S {
 public:
-  NKFADC125S() = default;
-  explicit NKFADC125S(int sid);
-  ~NKFADC125S();
+  NKFADC500S() = default;
+  explicit NKFADC500S(int sid);
+  ~NKFADC500S();
 
   void SetSID(int sid);
 
@@ -49,6 +49,9 @@ public:
   void WritePSW(unsigned long ch, unsigned long data) const;
   unsigned long ReadPSW(unsigned long ch) const;
 
+  void WriteAMODE(unsigned long ch, unsigned long data) const;
+  unsigned long ReadAMODE(unsigned long ch) const;
+
   void WritePCT(unsigned long ch, unsigned long data) const;
   unsigned long ReadPCT(unsigned long ch) const;
 
@@ -61,11 +64,12 @@ public:
   void WriteDT(unsigned long ch, unsigned long data) const;
   unsigned long ReadDT(unsigned long ch) const;
 
+  int ReadBCount() const;
+
   void WritePTRIG(unsigned long data) const;
   unsigned long ReadPTRIG() const;
 
   void SendTRIG() const;
-  unsigned long ReadCHNUM() const;
 
   void WriteTRIGENABLE(unsigned long data) const;
   unsigned long ReadTRIGENABLE() const;
@@ -76,11 +80,14 @@ public:
   void WriteTLT(unsigned long data) const;
   unsigned long ReadTLT() const;
 
+  void WriteZEROSUP(unsigned long ch, unsigned long data) const;
+  unsigned long ReadZEROSUP(unsigned long ch) const;
+
   void SendADCRST() const;
   void SendADCCAL() const;
 
   void WriteADCDLY(unsigned long ch, unsigned long data) const;
-  void WriteADCSETUP(unsigned long addr, unsigned long data) const;
+  void WriteADCALIGN(unsigned long data) const;
   unsigned long ReadADCSTAT() const;
 
   void WriteDRAMDLY(unsigned long ch, unsigned long data) const;
@@ -89,20 +96,17 @@ public:
   void WriteDRAMTEST(unsigned long data) const;
   unsigned long ReadDRAMTEST(unsigned long ch) const;
 
-  void WriteADCBITSLIP(unsigned long ch, unsigned long data) const;
-
   void WritePSCALE(unsigned long data) const;
   unsigned long ReadPSCALE() const;
 
   void WriteDSR(unsigned long data) const;
   unsigned long ReadDSR() const;
 
-  int ReadBCount() const;
   int ReadData(int bcount, unsigned char * data, unsigned int timeout = 0) const;
   void FlushData() const;
 
-  void AlignADC() const;
-  void AlignDRAM() const;
+  void AlignADC() const;  // NKFADC500S_ADCALIGN_500
+  void AlignDRAM() const; // NKFADC500S_ADCALIGN_DRAM
 
   int Sid() const;
 

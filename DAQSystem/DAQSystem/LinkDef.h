@@ -6,7 +6,7 @@
 
 #pragma link C++ class  AbsADC;
 #pragma link C++ class  AbsTCB;
-#pragma link C++ class  AmoreADC;
+#pragma link C++ class  AmoreADC!;
 #pragma link C++ class  CupFADCS;
 #pragma link C++ class  CupFADCT;
 #pragma link C++ class  CupGADCS;

@@ -6,8 +6,11 @@
 
 class NKAMOREADC {
 public:
+  NKAMOREADC();
   explicit NKAMOREADC(int sid);
   ~NKAMOREADC();
+
+  void SetSID(int sid);
 
   int Open();
   void Close();
@@ -20,8 +23,8 @@ public:
 private:
   void WaitFPGAAndInit();
 
-  int _sid;
-  USB3Com _usb;
+  int _sid{0};
+  USB3Com _usb{};
 };
 
 inline int NKAMOREADC::Sid() const { return _sid; }

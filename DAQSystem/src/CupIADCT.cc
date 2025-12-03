@@ -1,24 +1,21 @@
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQSystem/CupIADCT.hh"
 #include "DAQUtils/ELog.hh"
-#include "Notice/NoticeMUONDAQ.hh"
 
 ClassImp(CupIADCT)
-
-CupIADCT::CupIADCT()
-  : AbsADC()
-{
-}
 
 CupIADCT::CupIADCT(int sid)
   : AbsADC(sid)
 {
+  fFADC.SetSID(sid);
 }
 
 CupIADCT::CupIADCT(AbsConf * config)
   : AbsADC(config)
 {
   if (config) {
+    fFADC.SetSID(config->SID());
+
     auto * conf = static_cast<IADCTConf *>(config);
     fMode = conf->MODE();
     if (fMode > 0) { fEventDataSize = 512 * conf->RL(); }
@@ -30,7 +27,7 @@ CupIADCT::CupIADCT(AbsConf * config)
 
 int CupIADCT::Open()
 {
-  int stat = MUONDAQopen(fSID, nullptr);
+  int stat = fFADC.Open();
   if (stat != 0) {
     ERROR("IADCT [sid=%d]: open failed, check connection and power", fSID);
     return stat;
@@ -42,15 +39,15 @@ int CupIADCT::Open()
 
 void CupIADCT::Close()
 {
-  MUONDAQclose(fSID);
+  fFADC.Close();
   INFO("IADCT [sid=%d]: closed", fSID);
 }
 
-int CupIADCT::ReadBCount() { return MUONDAQread_BCOUNT(fSID); }
+int CupIADCT::ReadBCount() { return fFADC.ReadBCount(); }
 
 int CupIADCT::ReadData(int bcount, unsigned char * data)
 {
-  int state = MUONDAQread_DATA(fSID, bcount, data);
+  int state = fFADC.ReadData(bcount, data);
   if (state != 0) { return state; }
 
   fTotalBCount += bcount;
@@ -69,7 +66,7 @@ int CupIADCT::ReadData(int bcount, unsigned char * data)
 int CupIADCT::ReadData(int bcount)
 {
   auto chunk = std::make_unique<ChunkData>(bcount);
-  int state = MUONDAQread_DATA(fSID, bcount, chunk->data);
+  int state = fFADC.ReadData(bcount, chunk->data);
   if (state != 0) { return state; }
 
   if (fEventDataSize > 0) {

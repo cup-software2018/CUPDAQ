@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -9,46 +10,10 @@
 
 namespace {
 
-constexpr uint16_t kNKFADC125S_VENDOR_ID = 0x0547;
-constexpr uint16_t kNKFADC125S_PRODUCT_ID = 0x1903;
-
-constexpr std::uint32_t kREG_RUN = 0x20000000u;
-constexpr std::uint32_t kREG_CW_BASE = 0x20000001u;
-constexpr std::uint32_t kREG_RL = 0x20000002u;
-constexpr std::uint32_t kREG_DRAMON = 0x20000003u;
-constexpr std::uint32_t kREG_DACOFF_BASE = 0x20000004u;
-constexpr std::uint32_t kREG_PED_MEASURE_BASE = 0x20000005u;
-constexpr std::uint32_t kREG_PED_READ_BASE = 0x20000006u;
-constexpr std::uint32_t kREG_DLY = 0x20000007u;
-constexpr std::uint32_t kREG_THR_BASE = 0x20000008u;
-constexpr std::uint32_t kREG_POL_BASE = 0x20000009u;
-constexpr std::uint32_t kREG_PSW_BASE = 0x2000000Au;
-constexpr std::uint32_t kREG_PCT_BASE = 0x2000000Cu;
-constexpr std::uint32_t kREG_PCI_BASE = 0x2000000Du;
-constexpr std::uint32_t kREG_PWT_BASE = 0x2000000Eu;
-constexpr std::uint32_t kREG_DT_BASE = 0x2000000Fu;
-constexpr std::uint32_t kREG_BCOUNT = 0x20000010u;
-constexpr std::uint32_t kREG_PTRIG = 0x20000011u;
-constexpr std::uint32_t kREG_TRIG_CHNUM = 0x20000012u;
-constexpr std::uint32_t kREG_TRIGENABLE = 0x20000013u;
-constexpr std::uint32_t kREG_TM_BASE = 0x20000014u;
-constexpr std::uint32_t kREG_TLT = 0x20000015u;
-constexpr std::uint32_t kREG_ADCRST = 0x20000017u;
-constexpr std::uint32_t kREG_ADCCAL = 0x20000018u;
-constexpr std::uint32_t kREG_ADCDLY_BASE = 0x20000019u;
-constexpr std::uint32_t kREG_ADCSETUP = 0x2000001Au;
-constexpr std::uint32_t kREG_DRAMDLY_BASE = 0x2000001Bu;
-constexpr std::uint32_t kREG_DRAMBITSLIP_BASE = 0x2000001Cu;
-constexpr std::uint32_t kREG_DRAMTEST_BASE = 0x2000001Du;
-constexpr std::uint32_t kREG_ADCBITSLIP_BASE = 0x2000001Eu;
-constexpr std::uint32_t kREG_PSCALE_WRITE = 0x20000006u;
-constexpr std::uint32_t kREG_PSCALE_READ = 0x2000001Eu;
-constexpr std::uint32_t kREG_DSR = 0x2000001Fu;
-
-constexpr std::uint32_t kADDR_DATA = 0x40000000u;
+constexpr std::uint16_t kNKFADC125S_VENDOR_ID = 0x0547;
+constexpr std::uint16_t kNKFADC125S_PRODUCT_ID = 0x1903;
 
 inline std::uint32_t RegChOffset(std::uint32_t base, unsigned long ch) { return base + (((ch - 1UL) & 0xFFUL) << 16); }
-
 inline std::uint32_t RegChOffsetZeroBase(std::uint32_t base, unsigned long ch) { return base + ((ch & 0xFFUL) << 16); }
 
 } // namespace
@@ -60,6 +25,12 @@ NKFADC125S::NKFADC125S(int sid)
 }
 
 NKFADC125S::~NKFADC125S() { Close(); }
+
+void NKFADC125S::SetSID(int sid)
+{
+  _sid = sid;
+  _usb.Set(kNKFADC125S_VENDOR_ID, kNKFADC125S_PRODUCT_ID, _sid);
+}
 
 int NKFADC125S::Open()
 {
@@ -85,62 +56,62 @@ void NKFADC125S::Close()
   _usb.Close();
 }
 
-void NKFADC125S::Reset() const { _usb.Write(kREG_RUN, 1u << 2); }
+void NKFADC125S::Reset() const { _usb.Write(0x20000000u, 1u << 2); }
 
-void NKFADC125S::ResetTimer() const { _usb.Write(kREG_RUN, 1u); }
+void NKFADC125S::ResetTimer() const { _usb.Write(0x20000000u, 1u); }
 
-void NKFADC125S::Start() const { _usb.Write(kREG_RUN, 1u << 3); }
+void NKFADC125S::Start() const { _usb.Write(0x20000000u, 1u << 3); }
 
-void NKFADC125S::Stop() const { _usb.Write(kREG_RUN, 0u << 3); }
+void NKFADC125S::Stop() const { _usb.Write(0x20000000u, 0u << 3); }
 
-unsigned long NKFADC125S::ReadRun() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_RUN)); }
+unsigned long NKFADC125S::ReadRun() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000000u)); }
 
 void NKFADC125S::WriteCW(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_CW_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000001u, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadCW(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_CW_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000001u, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
-void NKFADC125S::WriteRL(unsigned long data) const { _usb.Write(kREG_RL, static_cast<std::uint32_t>(data)); }
+void NKFADC125S::WriteRL(unsigned long data) const { _usb.Write(0x20000002u, static_cast<std::uint32_t>(data)); }
 
-unsigned long NKFADC125S::ReadRL() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_RL)); }
+unsigned long NKFADC125S::ReadRL() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000002u)); }
 
-void NKFADC125S::WriteDRAMOn(unsigned long data) const
+void NKFADC125S::WriteDRAMON(unsigned long data) const
 {
   if (data) {
-    unsigned int status = _usb.ReadReg(kREG_DRAMON);
-    if (status) { _usb.Write(kREG_DRAMON, 0u); }
+    unsigned int status = _usb.ReadReg(0x20000003u);
+    if (status) { _usb.Write(0x20000003u, 0u); }
 
-    _usb.Write(kREG_DRAMON, 1u);
+    _usb.Write(0x20000003u, 1u);
 
     status = 0;
     while (!status) {
-      status = _usb.ReadReg(kREG_DRAMON);
+      status = _usb.ReadReg(0x20000003u);
     }
   }
   else {
-    _usb.Write(kREG_DRAMON, 0u);
+    _usb.Write(0x20000003u, 0u);
   }
 }
 
-unsigned long NKFADC125S::ReadDRAMOn() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_DRAMON)); }
+unsigned long NKFADC125S::ReadDRAMON() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000003u)); }
 
 void NKFADC125S::WriteDACOFF(unsigned long ch, unsigned long data) const
 {
   if (ch) {
-    const std::uint32_t addr = RegChOffset(kREG_DACOFF_BASE, ch);
+    const std::uint32_t addr = RegChOffset(0x20000004u, ch);
     _usb.Write(addr, static_cast<std::uint32_t>(data));
   }
   else {
     const unsigned long nch = ReadCHNUM();
     for (unsigned long chan = 1; chan <= nch; ++chan) {
-      const std::uint32_t addr = RegChOffset(kREG_DACOFF_BASE, chan);
+      const std::uint32_t addr = RegChOffset(0x20000004u, chan);
       _usb.Write(addr, static_cast<std::uint32_t>(data));
     }
   }
@@ -148,220 +119,213 @@ void NKFADC125S::WriteDACOFF(unsigned long ch, unsigned long data) const
 
 unsigned long NKFADC125S::ReadDACOFF(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_DACOFF_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000004u, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::MeasurePED(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PED_MEASURE_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000005u, ch);
   _usb.Write(addr, 0u);
 }
 
 unsigned long NKFADC125S::ReadPED(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PED_READ_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000006u, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WriteDLY(unsigned long, unsigned long data) const
 {
   const unsigned long value = ((data / 1000UL) << 10) | (data % 1000UL);
-  _usb.Write(kREG_DLY, static_cast<std::uint32_t>(value));
+  _usb.Write(0x20000007u, static_cast<std::uint32_t>(value));
 }
 
 unsigned long NKFADC125S::ReadDLY(unsigned long) const
 {
-  const unsigned long value = static_cast<unsigned long>(_usb.ReadReg(kREG_DLY));
+  const unsigned long value = static_cast<unsigned long>(_usb.ReadReg(0x20000007u));
   const unsigned long data = (value >> 10) * 1000UL + (value & 0x3FFUL);
   return data;
 }
 
 void NKFADC125S::WriteTHR(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_THR_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000008u, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadTHR(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_THR_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000008u, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WritePOL(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_POL_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000009u, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadPOL(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_POL_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000009u, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WritePSW(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PSW_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Au, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadPSW(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PSW_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Au, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WritePCT(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PCT_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Cu, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadPCT(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PCT_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Cu, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WritePCI(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PCI_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Du, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadPCI(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PCI_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Du, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WritePWT(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PWT_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Eu, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadPWT(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_PWT_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Eu, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WriteDT(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_DT_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Fu, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadDT(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_DT_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000000Fu, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
-void NKFADC125S::WritePTRIG(unsigned long data) const { _usb.Write(kREG_PTRIG, static_cast<std::uint32_t>(data)); }
+void NKFADC125S::WritePTRIG(unsigned long data) const { _usb.Write(0x20000011u, static_cast<std::uint32_t>(data)); }
 
-unsigned long NKFADC125S::ReadPTRIG() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_PTRIG)); }
+unsigned long NKFADC125S::ReadPTRIG() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000011u)); }
 
-void NKFADC125S::SendTRIG() const { _usb.Write(kREG_TRIG_CHNUM, 0u); }
+void NKFADC125S::SendTRIG() const { _usb.Write(0x20000012u, 0u); }
 
-unsigned long NKFADC125S::ReadCHNUM() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_TRIG_CHNUM)); }
+unsigned long NKFADC125S::ReadCHNUM() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000012u)); }
 
 void NKFADC125S::WriteTRIGENABLE(unsigned long data) const
 {
-  _usb.Write(kREG_TRIGENABLE, static_cast<std::uint32_t>(data));
+  _usb.Write(0x20000013u, static_cast<std::uint32_t>(data));
 }
 
-unsigned long NKFADC125S::ReadTRIGENABLE() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_TRIGENABLE)); }
+unsigned long NKFADC125S::ReadTRIGENABLE() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000013u)); }
 
 void NKFADC125S::WriteTM(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_TM_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000014u, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 unsigned long NKFADC125S::ReadTM(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_TM_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000014u, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
-void NKFADC125S::WriteTLT(unsigned long data) const { _usb.Write(kREG_TLT, static_cast<std::uint32_t>(data)); }
+void NKFADC125S::WriteTLT(unsigned long data) const { _usb.Write(0x20000015u, static_cast<std::uint32_t>(data)); }
 
-unsigned long NKFADC125S::ReadTLT() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_TLT)); }
+unsigned long NKFADC125S::ReadTLT() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000015u)); }
 
-void NKFADC125S::SendADCRST() const { _usb.Write(kREG_ADCRST, 0u); }
+void NKFADC125S::SendADCRST() const { _usb.Write(0x20000017u, 0u); }
 
-void NKFADC125S::SendADCCAL() const { _usb.Write(kREG_ADCCAL, 0u); }
+void NKFADC125S::SendADCCAL() const { _usb.Write(0x20000018u, 0u); }
 
 void NKFADC125S::WriteADCDLY(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_ADCDLY_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x20000019u, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 void NKFADC125S::WriteADCSETUP(unsigned long addr, unsigned long data) const
 {
   const unsigned long value = (addr << 8) | (data & 0xFFUL);
-  _usb.Write(kREG_ADCSETUP, static_cast<std::uint32_t>(value));
+  _usb.Write(0x2000001Au, static_cast<std::uint32_t>(value));
 }
 
-unsigned long NKFADC125S::ReadADCSTAT() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_ADCSETUP)); }
+unsigned long NKFADC125S::ReadADCSTAT() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Au)); }
 
 void NKFADC125S::WriteDRAMDLY(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffsetZeroBase(kREG_DRAMDLY_BASE, ch);
+  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Bu, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
 void NKFADC125S::WriteDRAMBITSLIP(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffsetZeroBase(kREG_DRAMBITSLIP_BASE, ch);
+  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Cu, ch);
   _usb.Write(addr, 0u);
 }
 
-void NKFADC125S::WriteDRAMTEST(unsigned long data) const
-{
-  _usb.Write(kREG_DRAMTEST_BASE, static_cast<std::uint32_t>(data));
-}
+void NKFADC125S::WriteDRAMTEST(unsigned long data) const { _usb.Write(0x2000001Du, static_cast<std::uint32_t>(data)); }
 
 unsigned long NKFADC125S::ReadDRAMTEST(unsigned long ch) const
 {
-  const std::uint32_t addr = RegChOffsetZeroBase(kREG_DRAMTEST_BASE, ch);
+  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Du, ch);
   return static_cast<unsigned long>(_usb.ReadReg(addr));
 }
 
 void NKFADC125S::WriteADCBITSLIP(unsigned long ch, unsigned long data) const
 {
-  const std::uint32_t addr = RegChOffset(kREG_ADCBITSLIP_BASE, ch);
+  const std::uint32_t addr = RegChOffset(0x2000001Eu, ch);
   _usb.Write(addr, static_cast<std::uint32_t>(data));
 }
 
-void NKFADC125S::WritePSCALE(unsigned long data) const
-{
-  _usb.Write(kREG_PSCALE_WRITE, static_cast<std::uint32_t>(data));
-}
+void NKFADC125S::WritePSCALE(unsigned long data) const { _usb.Write(0x20000006u, static_cast<std::uint32_t>(data)); }
 
-unsigned long NKFADC125S::ReadPSCALE() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_PSCALE_READ)); }
+unsigned long NKFADC125S::ReadPSCALE() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Eu)); }
 
-void NKFADC125S::WriteDSR(unsigned long data) const { _usb.Write(kREG_DSR, static_cast<std::uint32_t>(data)); }
+void NKFADC125S::WriteDSR(unsigned long data) const { _usb.Write(0x2000001Fu, static_cast<std::uint32_t>(data)); }
 
-unsigned long NKFADC125S::ReadDSR() const { return static_cast<unsigned long>(_usb.ReadReg(kREG_DSR)); }
+unsigned long NKFADC125S::ReadDSR() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Fu)); }
 
-int NKFADC125S::ReadBCount() const { return static_cast<int>(_usb.ReadReg(kREG_BCOUNT)); }
+int NKFADC125S::ReadBCount() const { return static_cast<int>(_usb.ReadReg(0x20000010u)); }
 
 int NKFADC125S::ReadData(int bcount, unsigned char * data, unsigned int timeout) const
 {
   if (bcount <= 0 || data == nullptr) {
-    ERROR("invalid arguments (bcount=%d, data=%p, sid=%d)", bcount, static_cast<void *>(data),
-          _sid);
+    ERROR("invalid arguments (bcount=%d, data=%p, sid=%d)", bcount, static_cast<void *>(data), _sid);
     return -1;
   }
 
   const int count = bcount * 256;
-  return _usb.Read(static_cast<std::uint32_t>(count), kADDR_DATA, data, timeout);
+  return _usb.Read(static_cast<std::uint32_t>(count), 0x40000000u, data, timeout);
 }
 
 void NKFADC125S::FlushData() const
@@ -507,7 +471,7 @@ void NKFADC125S::AlignDRAM() const
     mini = 1;
   }
 
-  WriteDRAMOn(1);
+  WriteDRAMON(1);
 
   if (mini) { INFO("DRAM is aligned"); }
   else {

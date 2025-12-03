@@ -9,6 +9,8 @@ constexpr uint32_t kNKFADC500_REG_BCOUNT = 0x30000000u;
 constexpr uint32_t kNKFADC500_ADDR_DATA = 0x40000000u;
 } // namespace
 
+NKFADC500::NKFADC500() {}
+
 NKFADC500::NKFADC500(int sid)
   : _sid(sid),
     _usb(kNKFADC500_VENDOR_ID, kNKFADC500_PRODUCT_ID, sid)
@@ -16,6 +18,13 @@ NKFADC500::NKFADC500(int sid)
 }
 
 NKFADC500::~NKFADC500() { Close(); }
+
+
+void NKFADC500::SetSID(int sid)
+{
+  _sid = sid;
+  _usb.Set(kNKFADC500_VENDOR_ID, kNKFADC500_PRODUCT_ID, _sid);
+}
 
 int NKFADC500::Open()
 {

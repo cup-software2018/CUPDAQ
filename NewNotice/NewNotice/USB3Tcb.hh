@@ -7,8 +7,11 @@
 
 class USB3Tcb {
 public:
+  USB3Tcb();
   USB3Tcb(uint16_t vendorId, uint16_t productId, int sid);
   ~USB3Tcb();
+
+  void Set(uint16_t vendorId, uint16_t productId, int sid);
 
   int Open();
   void Close();
@@ -42,6 +45,14 @@ private:
   uint16_t _productId;
   int _sid;
 };
+
+inline void USB3Tcb::Set(uint16_t vendorId, uint16_t productId, int sid) 
+{
+  _vendorId = vendorId;
+  _productId = productId;
+  _sid = sid;
+}
+
 
 inline uint16_t USB3Tcb::VendorId() const { return _vendorId; }
 inline uint16_t USB3Tcb::ProductId() const { return _productId; }

@@ -7,7 +7,9 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 # --- Collect include dirs for dictionary
 set ( DICT_I_FLAGS
     -I${LIBUSB_INCLUDE_DIRS}
+    -I${CMAKE_SOURCE_DIR}/OnlConsts
     -I${CMAKE_SOURCE_DIR}/DAQUtils
+    -I${CMAKE_SOURCE_DIR}/DAQConfig
 )
 
 # Generate ROOT dictionary (pass -I for OnlConsts)
@@ -24,7 +26,7 @@ add_library ( ${MODULE_NAME} SHARED
 )
 
 # Ensure build order
-add_dependencies ( ${MODULE_NAME} DAQUtils )
+add_dependencies ( ${MODULE_NAME} DAQUtils DAQConfig)
 
 # Include paths
 target_include_directories ( ${MODULE_NAME}
@@ -41,6 +43,7 @@ target_link_libraries ( ${MODULE_NAME}
     ${ROOT_LIBRARIES}
     PkgConfig::LIBUSB
     DAQUtils
+    DAQConfig
 )
 
 target_compile_definitions ( ${MODULE_NAME} PUBLIC ${ROOT_DEFINITIONS} )

@@ -1,5 +1,3 @@
-#include "TSystem.h"
-
 #include "DAQSystem/AbsADC.hh"
 
 ClassImp(AbsADC)
@@ -45,8 +43,6 @@ AbsADC::AbsADC(AbsConf * config)
     fEventDataSize(0)
 {
 }
-
-AbsADC::~AbsADC() = default;
 
 int AbsADC::Compare(const TObject * object) const
 {

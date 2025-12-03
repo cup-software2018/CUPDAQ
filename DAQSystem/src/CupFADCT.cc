@@ -1,28 +1,24 @@
 #include "DAQConfig/FADCTConf.hh"
 #include "DAQSystem/CupFADCT.hh"
 #include "DAQUtils/ELog.hh"
-#include "Notice/NoticeNKFADC500.hh"
 
 ClassImp(CupFADCT)
-
-CupFADCT::CupFADCT()
-  : AbsADC()
-{
-}
 
 CupFADCT::CupFADCT(int sid)
   : AbsADC(sid)
 {
+  fFADC.SetSID(sid);
 }
 
 CupFADCT::CupFADCT(AbsConf * config)
   : AbsADC(config)
 {
+  fFADC.SetSID(config->SID());
 }
 
 int CupFADCT::Open()
 {
-  int stat = NKFADC500open(fSID, nullptr);
+  int stat = fFADC.Open();
   if (stat != 0) {
     ERROR("FADCT [sid=%d]: open failed, check connection and power", fSID);
     return stat;
@@ -39,15 +35,15 @@ int CupFADCT::Open()
 
 void CupFADCT::Close()
 {
-  NKFADC500close(fSID);
+  fFADC.Close();
   INFO("FADCT [sid=%d]: closed", fSID);
 }
 
-int CupFADCT::ReadBCount() { return NKFADC500read_BCOUNT(fSID); }
+int CupFADCT::ReadBCount() { return fFADC.ReadBCount(); }
 
 int CupFADCT::ReadData(int bcount, unsigned char * data)
 {
-  int state = NKFADC500read_DATA(fSID, bcount, data);
+  int state = fFADC.ReadData(bcount, data);
   if (state != 0) { return state; }
 
   fTotalBCount += bcount;
@@ -66,7 +62,7 @@ int CupFADCT::ReadData(int bcount, unsigned char * data)
 int CupFADCT::ReadData(int bcount)
 {
   auto chunk = std::make_unique<ChunkData>(bcount);
-  int state = NKFADC500read_DATA(fSID, bcount, chunk->data);
+  int state = fFADC.ReadData(bcount, chunk->data);
   if (state != 0) { return state; }
 
   if (fEventDataSize > 0) {

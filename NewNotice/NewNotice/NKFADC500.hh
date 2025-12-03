@@ -6,8 +6,11 @@
 
 class NKFADC500 {
 public:
+  NKFADC500();
   explicit NKFADC500(int sid);
   ~NKFADC500();
+
+  void SetSID(int sid);  
 
   int Open();
   void Close();
@@ -18,8 +21,8 @@ public:
   int Sid() const;
 
 private:
-  int _sid;
-  USB3Com _usb;
+  int _sid{0};
+  USB3Com _usb{};
 };
 
 inline int NKFADC500::Sid() const { return _sid; }

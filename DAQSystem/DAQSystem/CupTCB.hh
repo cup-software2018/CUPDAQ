@@ -3,11 +3,11 @@
 #include <mutex>
 
 #include "DAQSystem/AbsTCB.hh"
-#include "Notice/usb3tcbroot.hh"
+#include "NewNotice/NKTCB.hh"
 
 class CupTCB : public AbsTCB {
 public:
-  CupTCB();
+  CupTCB() = default;
   ~CupTCB() override = default;
 
   static CupTCB * Instance();
@@ -18,12 +18,12 @@ public:
 
   // tcb
   void Reset() override;
-  void ResetTIMER() override;
+  void ResetTimer() override;
   void TriggerStart() override;
   void TriggerStop() override;
 
-  unsigned long ReadBCOUNT(unsigned long mid) override;
-  int ReadDATA(unsigned long mid, unsigned long bcount, unsigned char * data) override;
+  unsigned long ReadBCount(unsigned long mid) override;
+  int ReadData(unsigned long mid, unsigned long bcount, unsigned char * data) override;
 
   void WriteCW(unsigned long mid, unsigned long ch, unsigned long data) override;
   unsigned long ReadCW(unsigned long mid, unsigned long ch) override;
@@ -123,10 +123,8 @@ public:
 protected:
   static CupTCB * fTCB;
 
-  int fSID;
-  usb3tcbroot * fUSB;
-
   std::mutex fMutex;
+  NKTCB fNKTCB{};
 
   ClassDef(CupTCB, 0)
 };

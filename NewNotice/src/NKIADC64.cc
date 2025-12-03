@@ -14,6 +14,8 @@ constexpr unsigned long kNKIADC64_FLUSH_MAX_BYTES = 10485760ul;
 constexpr unsigned long kNKIADC64_FLUSH_CHUNK_BCOUNT = 10240ul;
 } // namespace
 
+NKIADC64::NKIADC64() {}
+
 NKIADC64::NKIADC64(int sid)
   : _sid(sid),
     _usb(kNKIADC64_VENDOR_ID, kNKIADC64_PRODUCT_ID, sid)
@@ -21,6 +23,12 @@ NKIADC64::NKIADC64(int sid)
 }
 
 NKIADC64::~NKIADC64() { Close(); }
+
+void NKIADC64::SetSID(int sid)
+{
+  _sid = sid;
+  _usb.Set(kNKIADC64_VENDOR_ID, kNKIADC64_PRODUCT_ID, _sid);
+}
 
 int NKIADC64::Open()
 {

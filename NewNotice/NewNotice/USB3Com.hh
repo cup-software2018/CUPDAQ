@@ -8,8 +8,11 @@
 
 class USB3Com {
 public:
+  USB3Com();
   USB3Com(uint16_t vendorId, uint16_t productId, int sid);
   ~USB3Com();
+
+  void Set(uint16_t vendorId, uint16_t productId, int sid);
 
   int Open();
   void Close();
@@ -45,6 +48,13 @@ private:
   uint16_t _productId;
   int _sid;
 };
+
+inline void USB3Com::Set(uint16_t vendorId, uint16_t productId, int sid) 
+{
+  _vendorId = vendorId;
+  _productId = productId;
+  _sid = sid;
+}
 
 inline uint16_t USB3Com::VendorId() const { return _vendorId; }
 inline uint16_t USB3Com::ProductId() const { return _productId; }

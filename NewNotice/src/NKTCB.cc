@@ -11,9 +11,8 @@ constexpr std::uint16_t kTCB_VENDOR_ID = 0x0547;
 constexpr std::uint16_t kTCB_PRODUCT_ID = 0x1501;
 } // namespace
 
-NKTCB::NKTCB(int sid)
-  : _sid(sid),
-    _usb(kTCB_VENDOR_ID, kTCB_PRODUCT_ID, sid)
+NKTCB::NKTCB()
+  : _usb(kTCB_VENDOR_ID, kTCB_PRODUCT_ID, 0)
 {
 }
 
@@ -23,13 +22,13 @@ int NKTCB::Open()
 {
   int status = _usb.Open();
   if (status < 0) {
-    ERROR("failed to open device (sid=%d)", _sid);
+    ERROR("failed to open device (sid=%d)", 0);
     return status;
   }
 
   status = _usb.ClaimInterface(0);
   if (status < 0) {
-    ERROR("failed to claim interface 0 (sid=%d)", _sid);
+    ERROR("failed to claim interface 0 (sid=%d)", 0);
     _usb.Close();
     return status;
   }
@@ -1020,7 +1019,7 @@ unsigned long NKTCB::ReadBCount(unsigned long mid) const
   return static_cast<unsigned long>(_usb.ReadReg(mid, 0x30000000u));
 }
 
-int NKTCB::ReadDATA(unsigned long mid, unsigned long bcount, unsigned char * data) const
+int NKTCB::ReadData(unsigned long mid, unsigned long bcount, unsigned char * data) const
 {
   unsigned long count = bcount * 256UL;
   return _usb.Read(mid, count, 0x40000000u, data);

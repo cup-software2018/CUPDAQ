@@ -101,10 +101,10 @@ bool CupGeneralTCB::Config()
     }
 
     if (name.Contains("AMOREADC")) {
-      int bcount = fTCB->ReadBCOUNT(mid);
+      int bcount = fTCB->ReadBCount(mid);
       if (bcount) {
         auto * data = new unsigned char[bcount * kKILOBYTES];
-        fTCB->ReadDATA(mid, bcount, data);
+        fTCB->ReadData(mid, bcount, data);
         delete[] data;
       }
     }

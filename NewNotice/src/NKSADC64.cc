@@ -9,6 +9,8 @@ constexpr uint32_t kNKSADC64_REG_BCOUNT = 0x30000000u;
 constexpr uint32_t kNKSADC64_ADDR_DATA = 0x40000000u;
 } // namespace
 
+NKSADC64::NKSADC64() {}
+
 NKSADC64::NKSADC64(int sid)
   : _sid(sid),
     _usb(kNKSADC64_VENDOR_ID, kNKSADC64_PRODUCT_ID, sid)
@@ -16,6 +18,13 @@ NKSADC64::NKSADC64(int sid)
 }
 
 NKSADC64::~NKSADC64() { Close(); }
+
+void NKSADC64::SetSID(int sid)
+{
+  _sid = sid;
+  _usb.Set(kNKSADC64_VENDOR_ID, kNKSADC64_PRODUCT_ID, _sid);
+}
+
 
 int NKSADC64::Open()
 {
@@ -45,7 +54,7 @@ int NKSADC64::ReadBCount() const { return _usb.ReadRegI(kNKSADC64_REG_BCOUNT); }
 
 int NKSADC64::ReadData(int bcount, unsigned char * data, unsigned int timeout) const
 {
-  if (bcount <= 0  || data == nullptr) {
+  if (bcount <= 0 || data == nullptr) {
     ERROR("invalid arguments (bcount=%d, data=%p)", bcount, static_cast<void *>(data));
     return -1;
   }

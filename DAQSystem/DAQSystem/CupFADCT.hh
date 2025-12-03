@@ -2,10 +2,11 @@
 
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
+#include "NewNotice/NKFADC500.hh"
 
 class CupFADCT : public AbsADC {
 public:
-  CupFADCT();
+  CupFADCT() = default;
   CupFADCT(int sid);
   CupFADCT(AbsConf * conf);
   ~CupFADCT() override = default;
@@ -24,6 +25,8 @@ public:
 
 private:
   void UpdateTriggerAndTime(const unsigned char * tempdata);
-  
+
+  NKFADC500 fFADC{};
+
   ClassDef(CupFADCT, 0)
 };

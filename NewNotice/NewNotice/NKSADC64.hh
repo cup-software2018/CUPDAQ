@@ -6,8 +6,11 @@
 
 class NKSADC64 {
 public:
+  NKSADC64();
   explicit NKSADC64(int sid);
   ~NKSADC64();
+
+  void SetSID(int sid);
 
   int Open();
   void Close();
@@ -18,8 +21,8 @@ public:
   int Sid() const;
 
 private:
-  int _sid;
-  USB3Com _usb;
+  int _sid{0};
+  USB3Com _usb{};
 };
 
 inline int NKSADC64::Sid() const { return _sid; }

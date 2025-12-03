@@ -26,6 +26,13 @@ constexpr unsigned int kUSB3_DEFAULT_TIMEOUT = 1000;
 
 } // namespace
 
+USB3Tcb::USB3Tcb()
+  : _vendorId(0),
+    _productId(0),
+    _sid(0)
+{
+}
+
 USB3Tcb::USB3Tcb(uint16_t vendorId, uint16_t productId, int sid)
   : _vendorId(vendorId),
     _productId(productId),

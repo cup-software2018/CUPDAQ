@@ -15,12 +15,12 @@ public:
 
   // tcb
   void Reset() override;
-  void ResetTIMER() override;
+  void ResetTimer() override;
   void TriggerStart() override;
   void TriggerStop() override;
 
-  unsigned long ReadBCOUNT(unsigned long mid) override { return 0; }
-  int ReadDATA(unsigned long mid, unsigned long bcount, unsigned char * data) override { return 0; }
+  unsigned long ReadBCount(unsigned long mid) override { return 0; }
+  int ReadData(unsigned long mid, unsigned long bcount, unsigned char * data) override { return 0; }
 
   void WriteCW(unsigned long mid, unsigned long ch, unsigned long data) override;
   unsigned long ReadCW(unsigned long mid, unsigned long ch) override;

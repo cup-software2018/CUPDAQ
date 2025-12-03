@@ -6,6 +6,7 @@
 
 namespace {
 constexpr uint8_t PVMEX_GET_ADDRESS = 0xD2;
+constexpr uint8_t NK_SID_ANY = 0xFF;
 }
 
 USBManager & USBManager::Instance()

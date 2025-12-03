@@ -29,7 +29,7 @@ public:
   AbsADC();
   AbsADC(int sid);
   AbsADC(AbsConf * config);
-  ~AbsADC() override;
+  ~AbsADC() = default;
 
   virtual void SetSID(int sid);
   virtual void SetMID(int mid);

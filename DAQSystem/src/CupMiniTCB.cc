@@ -32,7 +32,7 @@ void CupMiniTCB::Close()
 // tcb
 void CupMiniTCB::Reset() { MINITCBreset(fTCPHandle); }
 
-void CupMiniTCB::ResetTIMER() { MINITCBresetTIMER(fTCPHandle); }
+void CupMiniTCB::ResetTimer() { MINITCBresetTIMER(fTCPHandle); }
 
 void CupMiniTCB::TriggerStart() { MINITCBstart(fTCPHandle); }
 

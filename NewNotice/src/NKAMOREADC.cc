@@ -14,6 +14,8 @@ constexpr uint32_t kNKAMOREADC_REG_BCOUNT = 0x0Bu;
 constexpr uint32_t kNKAMOREADC_ADDR_DATA = 0x40000000u;
 } // namespace
 
+NKAMOREADC::NKAMOREADC() {}
+
 NKAMOREADC::NKAMOREADC(int sid)
   : _sid(sid),
     _usb(kNKAMOREADC_VENDOR_ID, kNKAMOREADC_PRODUCT_ID, sid)
@@ -21,6 +23,12 @@ NKAMOREADC::NKAMOREADC(int sid)
 }
 
 NKAMOREADC::~NKAMOREADC() { Close(); }
+
+void NKAMOREADC::SetSID(int sid)
+{
+  _sid = sid;
+  _usb.Set(kNKAMOREADC_VENDOR_ID, kNKAMOREADC_PRODUCT_ID, _sid);
+}
 
 int NKAMOREADC::Open()
 {
