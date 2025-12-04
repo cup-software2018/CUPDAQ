@@ -3,7 +3,7 @@
 #include <mutex>
 
 #include "DAQSystem/AbsTCB.hh"
-#include "NewNotice/NKTCB.hh"
+#include "Notice/NKTCB.hh"
 
 class CupTCB : public AbsTCB {
 public:

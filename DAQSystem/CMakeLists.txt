@@ -10,7 +10,7 @@ set(DICT_I_FLAGS
     -I${CMAKE_SOURCE_DIR}/OnlConsts
     -I${CMAKE_SOURCE_DIR}/DAQUtils
     -I${CMAKE_SOURCE_DIR}/Notice    
-    -I${CMAKE_SOURCE_DIR}/NewNotice    
+
     -I${CMAKE_SOURCE_DIR}/DAQConfig
 )
 
@@ -42,7 +42,6 @@ target_link_libraries ( ${MODULE_NAME}
   OnlConsts
   DAQUtils
   Notice
-  NewNotice
   DAQConfig
 )
 

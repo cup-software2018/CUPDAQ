@@ -5,7 +5,6 @@
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQSystem/CupFADCS.hh"
 #include "DAQUtils/ELog.hh"
-#include "Notice/NoticeNKFADC500S.hh"
 
 ClassImp(CupFADCS)
 
@@ -23,7 +22,7 @@ CupFADCS::CupFADCS(AbsConf * config)
 
 int CupFADCS::Open()
 {
-  int stat = NKFADC500Sopen(fSID, nullptr);
+  int stat = fFADC.Open();
   if (stat != 0) {
     ERROR("FADCS [sid=%d]: open failed, check connection and power", fSID);
     return stat;

@@ -34,7 +34,6 @@ CupDAQManager::CupDAQManager()
   fEndDatime = 0;
 
   fTCB = nullptr;
-  fUSB = nullptr;
 
   fMinimumBCount = kMINIMUMBCOUNT;
   fRecordLength = 0;
@@ -213,9 +212,6 @@ int CupDAQManager::FindADCAt(int sid)
 
 bool CupDAQManager::OpenDAQ()
 {
-  fUSB = new usb3comroot;
-  fUSB->USB3Init(nullptr);
-
   int nadc = GetEntries();
   for (int i = 0; i < nadc; i++) {
     auto * adc = static_cast<AbsADC *>(fCont[i]);
@@ -236,12 +232,6 @@ void CupDAQManager::CloseDAQ()
   for (int i = 0; i < nadc; i++) {
     auto * adc = static_cast<AbsADC *>(fCont[i]);
     adc->Close();
-  }
-
-  if (fUSB != nullptr) {
-    fUSB->USB3Exit(nullptr);
-    delete fUSB;
-    fUSB = nullptr;
   }
 
   INFO("all ADCs are closed");

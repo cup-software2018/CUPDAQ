@@ -1,19 +1,22 @@
 set ( MODULE_NAME Notice )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-# Sources (normal .cc)
+file ( GLOB MODULE_HEADERS ${MODULE_NAME}/*.hh )
 file ( GLOB MODULE_SOURCES src/*.cc )
 
-# ---- Specify exactly the headers for dictionary ----
-set ( DICT_HEADERS
-    ${MODULE_NAME}/usb3comroot.hh
-    ${MODULE_NAME}/usb3tcbroot.hh
+# --- Collect include dirs for dictionary
+set ( DICT_I_FLAGS
+    -I${LIBUSB_INCLUDE_DIRS}
+    -I${CMAKE_SOURCE_DIR}/OnlConsts
+    -I${CMAKE_SOURCE_DIR}/DAQUtils
+    -I${CMAKE_SOURCE_DIR}/DAQConfig
 )
 
-# Generate ROOT dictionary for only the two headers above
+# Generate ROOT dictionary (pass -I for OnlConsts)
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
-    ${DICT_HEADERS}
+    ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
+    OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
 # Build shared library (add dictionary source)
@@ -23,7 +26,7 @@ add_library ( ${MODULE_NAME} SHARED
 )
 
 # Ensure build order
-add_dependencies ( ${MODULE_NAME} DAQUtils )
+add_dependencies ( ${MODULE_NAME} DAQUtils DAQConfig)
 
 # Include paths
 target_include_directories ( ${MODULE_NAME}
@@ -31,6 +34,7 @@ target_include_directories ( ${MODULE_NAME}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     ${ROOT_INCLUDE_DIRS}
+    ${LIBUSB_INCLUDE_DIRS}
 )
 
 # Link ROOT and apply its compile defs
@@ -39,6 +43,7 @@ target_link_libraries ( ${MODULE_NAME}
     ${ROOT_LIBRARIES}
     PkgConfig::LIBUSB
     DAQUtils
+    DAQConfig
 )
 
 target_compile_definitions ( ${MODULE_NAME} PUBLIC ${ROOT_DEFINITIONS} )
@@ -55,3 +60,5 @@ install ( FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
     OPTIONAL
 )
+
+add_subdirectory ( test )

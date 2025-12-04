@@ -1,6 +1,5 @@
 #include "DAQSystem/CupSADCT.hh"
 #include "DAQUtils/ELog.hh"
-#include "Notice/NoticeM64ADC.hh"
 
 ClassImp(CupSADCT)
 

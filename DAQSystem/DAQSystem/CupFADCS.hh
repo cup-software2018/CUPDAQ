@@ -2,7 +2,7 @@
 
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
-#include "NewNotice/NKFADC500S.hh"
+#include "Notice/NKFADC500S.hh"
 
 class CupFADCS : public AbsADC {
 public:

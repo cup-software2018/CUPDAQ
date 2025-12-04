@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DAQSystem/AbsTCB.hh"
-#include "NewNotice/NKMiniTCB.hh"
+#include "Notice/NKMiniTCB.hh"
 
 class CupMiniTCB : public AbsTCB {
 public:

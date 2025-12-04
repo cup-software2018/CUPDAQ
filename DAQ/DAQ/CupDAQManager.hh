@@ -28,7 +28,6 @@
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/H5DataWriter.hh"
 #endif
-#include "Notice/usb3comroot.hh"
 #include "OnlConsts/adcconsts.hh"
 #include "OnlConsts/onlconsts.hh"
 #include "OnlObjs/AbsADCRaw.hh"
@@ -181,7 +180,6 @@ protected:
   TString fConfigFilename;
   AbsConfList * fConfigList;
 
-  usb3comroot * fUSB;
   CupGeneralTCB * fTCB;
   std::vector<TSocket *> fDAQSocket;
 

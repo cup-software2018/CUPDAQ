@@ -3,7 +3,7 @@
 
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
-#include "NewNotice/NKIADC64.hh"
+#include "Notice/NKIADC64.hh"
 
 class CupIADCT : public AbsADC {
 public:
