@@ -1,217 +1,143 @@
-#include <iostream>
-#include <unistd.h>
-
 #include "DAQSystem/CupMiniTCB.hh"
-#include "Notice/NoticeMINITCB.hh"
-
-using namespace std;
+#include "DAQUtils/ELog.hh"
 
 ClassImp(CupMiniTCB)
 
-CupMiniTCB::CupMiniTCB()
-  : AbsTCB()
-{
-  fTCPHandle = 0;
-}
-
 int CupMiniTCB::Open()
 {
-  fTCPHandle = MINITCBopen((char *)fIPAddress.Data());
-
-  return fTCPHandle;
+  fTCB.SetIPAddress(fIPAddress.c_str());
+  return fTCB.Open();
 }
 
 void CupMiniTCB::Close()
 {
   TriggerStop();
   Reset();
-
-  MINITCBclose(fTCPHandle);
+  fTCB.Close();
 }
 
-// tcb
-void CupMiniTCB::Reset() { MINITCBreset(fTCPHandle); }
+void CupMiniTCB::Reset() { fTCB.Reset(); }
 
-void CupMiniTCB::ResetTimer() { MINITCBresetTIMER(fTCPHandle); }
+void CupMiniTCB::ResetTimer() { fTCB.ResetTimer(); }
 
-void CupMiniTCB::TriggerStart() { MINITCBstart(fTCPHandle); }
+void CupMiniTCB::TriggerStart() { fTCB.Start(); }
 
-void CupMiniTCB::TriggerStop() { MINITCBstop(fTCPHandle); }
+void CupMiniTCB::TriggerStop() { fTCB.Stop(); }
 
-// tcb, fadc, sadc, amoreadc
-void CupMiniTCB::WriteCW(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_CW(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WriteCW(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WriteCW(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadCW(unsigned long mid, unsigned long ch) { return MINITCBread_CW(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadCW(unsigned long mid, unsigned long ch) { return fTCB.ReadCW(mid, ch); }
 
-// m64adc only
-void CupMiniTCB::WriteGW(unsigned long mid, unsigned long data) { MINITCBwrite_GW(fTCPHandle, mid, 0, data); }
+void CupMiniTCB::WriteGW(unsigned long mid, unsigned long data) { fTCB.WriteGW(mid, 0, data); }
 
-unsigned long CupMiniTCB::ReadGW(unsigned long mid) { return MINITCBread_GW(fTCPHandle, mid, 0); }
+unsigned long CupMiniTCB::ReadGW(unsigned long mid) { return fTCB.ReadGW(mid, 0); }
 
-// fadc, sadc, amoreadc
-void CupMiniTCB::WriteRL(unsigned long mid, unsigned long data) { MINITCBwrite_RL(fTCPHandle, mid, data); }
+void CupMiniTCB::WriteRL(unsigned long mid, unsigned long data) { fTCB.WriteRL(mid, data); }
 
-unsigned long CupMiniTCB::ReadRL(unsigned long mid) { return MINITCBread_RL(fTCPHandle, mid); }
+unsigned long CupMiniTCB::ReadRL(unsigned long mid) { return fTCB.ReadRL(mid); }
 
-void CupMiniTCB::WriteDRAMON(unsigned long mid, unsigned long data) { MINITCBwrite_DRAMON(fTCPHandle, mid, data); }
+void CupMiniTCB::WriteDRAMON(unsigned long mid, unsigned long data) { fTCB.WriteDRAMON(mid, data); }
 
-unsigned long CupMiniTCB::ReadDRAMON(unsigned long mid) { return MINITCBread_DRAMON(fTCPHandle, mid); }
+unsigned long CupMiniTCB::ReadDRAMON(unsigned long mid) { return fTCB.ReadDRAMON(mid); }
 
 void CupMiniTCB::WriteDACOFF(unsigned long mid, unsigned long ch, unsigned long data)
 {
-  MINITCBwrite_DACOFF(fTCPHandle, mid, ch, data);
+  fTCB.WriteDACOFF(mid, ch, data);
 }
 
-unsigned long CupMiniTCB::ReadDACOFF(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_DACOFF(fTCPHandle, mid, ch);
-}
+unsigned long CupMiniTCB::ReadDACOFF(unsigned long mid, unsigned long ch) { return fTCB.ReadDACOFF(mid, ch); }
 
-void CupMiniTCB::MeasurePED(unsigned long mid, unsigned long ch) { return MINITCBmeasure_PED(fTCPHandle, mid, ch); }
+void CupMiniTCB::MeasurePED(unsigned long mid, unsigned long ch) { fTCB.MeasurePED(mid, ch); }
 
-unsigned long CupMiniTCB::ReadPED(unsigned long mid, unsigned long ch) { return MINITCBread_PED(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadPED(unsigned long mid, unsigned long ch) { return fTCB.ReadPED(mid, ch); }
 
-void CupMiniTCB::WriteDLY(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_DLY(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WriteDLY(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WriteDLY(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadDLY(unsigned long mid, unsigned long ch) { return MINITCBread_DLY(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadDLY(unsigned long mid, unsigned long ch) { return fTCB.ReadDLY(mid, ch); }
 
-void CupMiniTCB::WriteTHR(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_THR(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WriteTHR(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WriteTHR(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadTHR(unsigned long mid, unsigned long ch) { return MINITCBread_THR(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadTHR(unsigned long mid, unsigned long ch) { return fTCB.ReadTHR(mid, ch); }
 
-// fadc, sadc
-void CupMiniTCB::WritePOL(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_POL(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WritePOL(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WritePOL(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadPOL(unsigned long mid, unsigned long ch) { return MINITCBread_POL(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadPOL(unsigned long mid, unsigned long ch) { return fTCB.ReadPOL(mid, ch); }
 
-void CupMiniTCB::WritePSW(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_PSW(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WritePSW(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WritePSW(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadPSW(unsigned long mid, unsigned long ch) { return MINITCBread_PSW(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadPSW(unsigned long mid, unsigned long ch) { return fTCB.ReadPSW(mid, ch); }
 
-// fadc
-void CupMiniTCB::WriteAMODE(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_AMODE(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WriteAMODE(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WriteAMODE(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadAMODE(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_AMODE(fTCPHandle, mid, ch);
-}
+unsigned long CupMiniTCB::ReadAMODE(unsigned long mid, unsigned long ch) { return fTCB.ReadAMODE(mid, ch); }
 
-void CupMiniTCB::WritePCT(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_PCT(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WritePCT(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WritePCT(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadPCT(unsigned long mid, unsigned long ch) { return MINITCBread_PCT(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadPCT(unsigned long mid, unsigned long ch) { return fTCB.ReadPCT(mid, ch); }
 
-void CupMiniTCB::WritePCI(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_PCI(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WritePCI(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WritePCI(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadPCI(unsigned long mid, unsigned long ch) { return MINITCBread_PCI(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadPCI(unsigned long mid, unsigned long ch) { return fTCB.ReadPCI(mid, ch); }
 
-void CupMiniTCB::WritePWT(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_PWT(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WritePWT(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WritePWT(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadPWT(unsigned long mid, unsigned long ch) { return MINITCBread_PWT(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadPWT(unsigned long mid, unsigned long ch) { return fTCB.ReadPWT(mid, ch); }
 
-void CupMiniTCB::WriteDT(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_DT(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WriteDT(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WriteDT(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadDT(unsigned long mid, unsigned long ch) { return MINITCBread_DT(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadDT(unsigned long mid, unsigned long ch) { return fTCB.ReadDT(mid, ch); }
 
-void CupMiniTCB::WriteTM(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_TM(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WriteTM(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WriteTM(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadTM(unsigned long mid, unsigned long ch) { return MINITCBread_TM(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadTM(unsigned long mid, unsigned long ch) { return fTCB.ReadTM(mid, ch); }
 
-void CupMiniTCB::WriteTLT(unsigned long mid, unsigned long data) { MINITCBwrite_TLT(fTCPHandle, mid, data); }
+void CupMiniTCB::WriteTLT(unsigned long mid, unsigned long data) { fTCB.WriteTLT(mid, data); }
 
-unsigned long CupMiniTCB::ReadTLT(unsigned long mid) { return MINITCBread_TLT(fTCPHandle, mid); }
+unsigned long CupMiniTCB::ReadTLT(unsigned long mid) { return fTCB.ReadTLT(mid); }
 
-void CupMiniTCB::WriteSTLT(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_STLT(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WriteSTLT(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WriteSTLT(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadSTLT(unsigned long mid, unsigned long ch)
-{
-  return MINITCBread_STLT(fTCPHandle, mid, ch);
-}
+unsigned long CupMiniTCB::ReadSTLT(unsigned long mid, unsigned long ch) { return fTCB.ReadSTLT(mid, ch); }
 
-void CupMiniTCB::WriteDSR(unsigned long mid, unsigned long data) { MINITCBwrite_DSR(fTCPHandle, mid, data); }
+void CupMiniTCB::WriteDSR(unsigned long mid, unsigned long data) { fTCB.WriteDSR(mid, data); }
 
-unsigned long CupMiniTCB::ReadDSR(unsigned long mid) { return MINITCBread_DSR(fTCPHandle, mid); }
+unsigned long CupMiniTCB::ReadDSR(unsigned long mid) { return fTCB.ReadDSR(mid); }
 
-void CupMiniTCB::AlignFADC(unsigned long mid) { MINITCB_ADCALIGN(fTCPHandle, mid); }
+void CupMiniTCB::AlignFADC(unsigned long mid) { fTCB.AlignFADC500(mid); }
 
-void CupMiniTCB::WritePSS(unsigned long mid, unsigned long ch, unsigned long data)
-{
-  MINITCBwrite_PSS(fTCPHandle, mid, ch, data);
-}
+void CupMiniTCB::WritePSS(unsigned long mid, unsigned long ch, unsigned long data) { fTCB.WritePSS(mid, ch, data); }
 
-unsigned long CupMiniTCB::ReadPSS(unsigned long mid, unsigned long ch) { return MINITCBread_PSS(fTCPHandle, mid, ch); }
+unsigned long CupMiniTCB::ReadPSS(unsigned long mid, unsigned long ch) { return fTCB.ReadPSS(mid, ch); }
 
-void CupMiniTCB::AlignSADC(unsigned long mid) { MINITCB_ADCALIGN_64(fTCPHandle, mid); }
+void CupMiniTCB::AlignSADC(unsigned long mid) { fTCB.AlignSADC64(mid); }
 
-void CupMiniTCB::AlignGADC(unsigned long mid)
-{
-  // not yet implemented
-  // MINITCB_ADCALIGN_125(fTCPHandle, mid);
-}
+void CupMiniTCB::AlignGADC(unsigned long mid) {}
 
-void CupMiniTCB::WritePTRIG(unsigned long data) { MINITCBwrite_PTRIG(fTCPHandle, data); }
+void CupMiniTCB::WritePTRIG(unsigned long data) { fTCB.WritePTRIG(data); }
 
-unsigned long CupMiniTCB::ReadPTRIG() { return MINITCBread_PTRIG(fTCPHandle); }
+unsigned long CupMiniTCB::ReadPTRIG() { return fTCB.ReadPTRIG(); }
 
-void CupMiniTCB::WriteTRIGENABLE(unsigned long mid, unsigned long data)
-{
-  MINITCBwrite_TRIGENABLE(fTCPHandle, mid, data);
-}
+void CupMiniTCB::WriteTRIGENABLE(unsigned long mid, unsigned long data) { fTCB.WriteTRIGENABLE(mid, data); }
 
-unsigned long CupMiniTCB::ReadTRIGENABLE(unsigned long mid) { return MINITCBread_TRIGENABLE(fTCPHandle, mid); }
+unsigned long CupMiniTCB::ReadTRIGENABLE(unsigned long mid) { return fTCB.ReadTRIGENABLE(mid); }
 
-void CupMiniTCB::WriteMTHRFADC(unsigned long data) { MINITCBwrite_MTHR(fTCPHandle, data); }
+void CupMiniTCB::WriteMTHRFADC(unsigned long data) { fTCB.WriteMTHR(data); }
 
-unsigned long CupMiniTCB::ReadMTHRFADC() { return MINITCBread_MTHR(fTCPHandle); }
+unsigned long CupMiniTCB::ReadMTHRFADC() { return fTCB.ReadMTHR(); }
 
-void CupMiniTCB::WritePSCALEFADC(unsigned long data) { MINITCBwrite_PSCALE(fTCPHandle, data); }
+void CupMiniTCB::WritePSCALEFADC(unsigned long data) { fTCB.WritePSCALE(data); }
 
-unsigned long CupMiniTCB::ReadPSCALEFADC() { return MINITCBread_PSCALE(fTCPHandle); }
+unsigned long CupMiniTCB::ReadPSCALEFADC() { return fTCB.ReadPSCALE(); }
 
-void CupMiniTCB::SendTRIG() { MINITCBsend_TRIG(fTCPHandle); }
+void CupMiniTCB::SendTRIG() { fTCB.SendTRIG(); }
 
-void CupMiniTCB::ReadLNSTAT(unsigned long * data) { data[0] = MINITCBread_LNSTAT(fTCPHandle); }
+void CupMiniTCB::ReadLNSTAT(unsigned long * data) { data[0] = fTCB.ReadLNSTAT(); }
 
 void CupMiniTCB::ReadMIDS(unsigned long * data)
 {
   for (int i = 1; i <= 4; i++) {
-    data[i - 1] = MINITCBread_MIDS(fTCPHandle, i);
+    data[i - 1] = fTCB.ReadMIDS(static_cast<unsigned long>(i));
   }
 }
 
-void CupMiniTCB::AlignDRAM(unsigned long mid) { MINITCB_ADCALIGN_DRAM(fTCPHandle, mid); }
+void CupMiniTCB::AlignDRAM(unsigned long mid) { fTCB.AlignDRAM(mid); }

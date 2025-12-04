@@ -1,5 +1,6 @@
 set ( TEST_SOURCES
-    test.cc
+    test_usb3com.cc
+    test_minitcb.cc
 )
 
 foreach ( src ${TEST_SOURCES} )

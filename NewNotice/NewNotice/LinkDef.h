@@ -7,6 +7,7 @@
 #pragma link C++ class  USB3Com+;
 #pragma link C++ class  USB3Tcb+;
 #pragma link C++ class  NKTCB+;
+#pragma link C++ class  NKMiniTCB+;
 #pragma link C++ class  NKFADC500+;
 #pragma link C++ class  NKFADC500S+;
 #pragma link C++ class  NKFADC125S+;

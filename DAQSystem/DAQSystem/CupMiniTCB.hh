@@ -1,11 +1,11 @@
 #pragma once
 
 #include "DAQSystem/AbsTCB.hh"
-#include "Notice/usb3tcbroot.hh"
+#include "NewNotice/NKMiniTCB.hh"
 
 class CupMiniTCB : public AbsTCB {
 public:
-  CupMiniTCB();
+  CupMiniTCB() = default;
   ~CupMiniTCB() override = default;
 
   void SetIPAddress(const char * ipaddr);
@@ -118,8 +118,8 @@ public:
   unsigned long ReadTRGSWIADC() override { return 0; }
 
 protected:
-  int fTCPHandle;
-  TString fIPAddress;
+  std::string fIPAddress{};
+  NKMiniTCB fTCB{};
 
   ClassDef(CupMiniTCB, 0)
 };
