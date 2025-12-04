@@ -171,7 +171,7 @@ private:
     std::string where = _extract_class_method(pretty_func);
 
     std::ostringstream header;
-    header << std::put_time(&tm_buf, _opt.time_fmt.c_str()) << "::[" << _level_tag(lv) << "] " << where << ": ";
+    header << std::put_time(&tm_buf, _opt.time_fmt.c_str()) << "::[" << _level_tag(lv) << "] " << where << " ";
 
     std::string line = header.str() + msg;
 
@@ -277,7 +277,7 @@ private:
 #define WARNING(fmt, ...) ELog::instance().logf(ELOGLEVEL::Warn, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define ERROR(fmt, ...) ELog::instance().logf(ELOGLEVEL::Error, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define DEBUG(fmt, ...) ELog::instance().logf(ELOGLEVEL::Debug, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define STATS(fmt, ...) ELog::instance().logf(ELOGLEVEL::Stats, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define STATS(fmt, ...) ELog::instance().logf(ELOGLEVEL::Stats, "", fmt, ##__VA_ARGS__)
 #define INFO_PROGRESS(base, token) ELog::instance().logf_flush(__PRETTY_FUNCTION__, base, token)
 #define INFO_PROGRESS_END(msg) ELog::instance().end_stream(msg)
 
