@@ -4,16 +4,20 @@
 
 #include "TObject.h"
 
+#include "AMOREDAQ/AMORETCBConf.hh"
+#include "AMOREDAQ/AMOREADCConf.hh"
+#include "DAQConfig/AbsConfList.hh"
 #include "Notice/NKTCB.hh"
 
 class AMORETCB : public TObject {
 public:
   static AMORETCB & Instance();
-
   ~AMORETCB() override = default;
 
   int Open();
   void Close();
+
+  bool Config();
 
   void Reset();
   void ResetTimer();
@@ -26,11 +30,22 @@ public:
   void WriteSR(unsigned long mid, unsigned long data);
   unsigned long ReadSR(unsigned long mid);
 
+  void SetConfig(AbsConfList * config);
+  int CheckLinkStatus();
+
+private:
+  bool ConfigAMORETCB(AMORETCBConf * conf);
+  bool ConfigAMOREADC(AMOREADCConf * conf);
+
 private:
   AMORETCB() = default;
 
   std::mutex fMutex;
   NKTCB fNKTCB;
 
+  AbsConfList * fConfigs = nullptr;
+
   ClassDef(AMORETCB, 0)
 };
+
+inline void AMORETCB::SetConfig(AbsConfList * config) { fConfigs = config; }

@@ -40,9 +40,8 @@ RunConfig::RunConfig()
   MAINCONFIGMENU[9] = "SADCT";
   MAINCONFIGMENU[10] = "SADCS";
   MAINCONFIGMENU[11] = "IADCT";
-  MAINCONFIGMENU[12] = "AMOREADC";
-  MAINCONFIGMENU[13] = "STRG";
-  MAINCONFIGMENU[14] = "DAQ";
+  MAINCONFIGMENU[12] = "STRG";
+  MAINCONFIGMENU[13] = "DAQ";
 
   for (int i = 0; i < kNMAINMENU; i++)
     fMainItem.insert(make_pair(MAINCONFIGMENU[i], i + 1));
@@ -228,25 +227,6 @@ RunConfig::RunConfig()
   for (int i = 0; i < kNIADCTMENU; i++)
     fIADCTItem.insert(make_pair(IADCTCONFIGMENU[i], i + 1));
 
-  AMOREADCCONFIGMENU[0] = "ENABLED";
-  AMOREADCCONFIGMENU[1] = "CID";
-  AMOREADCCONFIGMENU[2] = "PID";
-  AMOREADCCONFIGMENU[3] = "TRGON";
-  AMOREADCCONFIGMENU[4] = "ORDER";
-  AMOREADCCONFIGMENU[5] = "LOWER";
-  AMOREADCCONFIGMENU[6] = "UPPER";
-  AMOREADCCONFIGMENU[7] = "THR";
-  AMOREADCCONFIGMENU[8] = "DT";
-  AMOREADCCONFIGMENU[9] = "SR";
-  AMOREADCCONFIGMENU[10] = "RL";
-  AMOREADCCONFIGMENU[11] = "DLY";
-  AMOREADCCONFIGMENU[12] = "CW";
-  AMOREADCCONFIGMENU[13] = "SKBIN";
-  AMOREADCCONFIGMENU[14] = "ZEROSUP";
-
-  for (int i = 0; i < kNAMOREADCMENU; i++)
-    fAMOREADCItem.insert(make_pair(AMOREADCCONFIGMENU[i], i + 1));
-
   STRGCONFIGMENU[0] = "ENABLED";
   STRGCONFIGMENU[1] = "ADCTYPE";
   STRGCONFIGMENU[2] = "ZSU";
@@ -424,23 +404,6 @@ bool RunConfig::ReadConfig(ifstream & ticket)
         if (!iss.fail()) { conf->SetDAQID(daqid); }
 
         retVal = ConfigIADCT(ticket, conf);
-        break;
-      }
-      case AMOREADC: {
-        iss >> val;
-        auto * conf = new AmoreADCConf(val);
-
-        int nch;
-        iss >> nch;
-
-        conf->SetNCH(nch);
-        fConfigs->Add(conf);
-
-        int daqid;
-        iss >> daqid;
-        if (!iss.fail()) { conf->SetDAQID(daqid); }
-
-        retVal = ConfigAmoreADC(ticket, conf);
         break;
       }
       case STRG: {
@@ -2092,182 +2055,6 @@ bool RunConfig::ConfigIADCT(std::ifstream & ticket, IADCTConf * conf)
       }
       default: {
         Warning("ConfigIADCT", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
-  }
-
-  return retVal;
-}
-
-bool RunConfig::ConfigAmoreADC(std::ifstream & ticket, AmoreADCConf * conf)
-{
-  bool retVal = true;
-
-  int nch = conf->NCH();
-
-  string line;
-
-  while (true) {
-    getline(ticket, line);
-
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int val[32] = {0};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fAMOREADCItem[key]) {
-      case ENABLED_AMOREADC: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigAMOREADC", "Channel ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        break;
-      }
-      case PID_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigAMOREADC", "PMT ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetPID(i, val[i]);
-        }
-        break;
-      }
-      case TRGON_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetTRGON(i, val[0]);
-          }
-          else {
-            conf->SetTRGON(i, val[i]);
-          }
-        }
-        break;
-      }
-      case ORDER_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetORDER(i, val[0]);
-          }
-          else {
-            conf->SetORDER(i, val[i]);
-          }
-        }
-        break;
-      }
-      case LOWER_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetLOWER(i, val[0]);
-          }
-          else {
-            conf->SetLOWER(i, val[i]);
-          }
-        }
-        break;
-      }
-      case UPPER_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetUPPER(i, val[0]);
-          }
-          else {
-            conf->SetUPPER(i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetTHR(i, val[0]);
-          }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DT_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetDT(i, val[0]);
-          }
-          else {
-            conf->SetDT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case SR_AMOREADC: {
-        iss >> val[0];
-        conf->SetSR(val[0]);
-        break;
-      }
-      case RL_AMOREADC: {
-        iss >> val[0];
-        conf->SetRL(val[0]);
-        break;
-      }
-      case DLY_AMOREADC: {
-        iss >> val[0];
-        conf->SetDLY(val[0]);
-        break;
-      }
-      case CW_AMOREADC: {
-        iss >> val[0];
-        conf->SetCW(val[0]);
-        break;
-      }
-      case SKBIN_AMOREADC: {
-        iss >> val[0];
-        conf->SetSKBIN(val[0]);
-        break;
-      }
-      case ZEROSUP_AMOREADC: {
-        iss >> val[0];
-        conf->SetZEROSUP(val[0]);
-        break;
-      }
-      default: {
-        Warning("ConfigAMOREADC", Form("Configuration item %s is ambiguous.", key.data()));
         break;
       }
     }

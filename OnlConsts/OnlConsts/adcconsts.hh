@@ -78,12 +78,6 @@ const unsigned long kBYTESPEREVENTSADC = 256;
 const int kNCHFADC = 4;
 
 //
-// AMORE ADC constants
-//
-const int kMINIMUMBCOUNTAMOREADC = 2048; // kbytes
-const int kNCHAMOREADC = 16;
-
-//
 // GADC constants
 //
 const int kNCHGADC = 16;

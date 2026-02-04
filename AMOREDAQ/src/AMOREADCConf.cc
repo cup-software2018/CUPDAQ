@@ -17,8 +17,8 @@ AMOREADCConf::AMOREADCConf(int sid)
 
 void AMOREADCConf::PrintConf() const
 {
-  std::cout << Form(" ++ AMOREADC config: SID(%d) MID(%d) NCH(%d) SR(%d) RL(%d) DLY(%d)", fSID, fMID, fNCH, fSR, fRL,
-                    fDLY)
+  std::cout << Form(" ++ AMOREADC config: SID(%d) MID(%d) NCH(%d) SR(%d) RL(%d) DLY(%d) ZSU(%d)", fSID, fMID, fNCH, fSR,
+                    fRL, fDLY, fZSU)
             << std::endl;
   if (fIsEnabled) std::cout << " ++ This AMOREADC is enabled" << std::endl;
   else std::cout << " ++ This AMOREADC is disabled" << std::endl;

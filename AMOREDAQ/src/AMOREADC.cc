@@ -31,7 +31,6 @@ int AMOREADC::ReadData(int bcount, unsigned char * data)
   if (state != 0) { return state; }
 
   fTotalBCount += bcount;
-
   UpdateCurrentTime(data, bcount);
 
   return state;
@@ -44,7 +43,6 @@ int AMOREADC::ReadData(int bcount)
   if (state != 0) { return state; }
 
   fTotalBCount += bcount;
-
   UpdateCurrentTime(chunk->data, bcount);
 
   fChunkDataBuffer.push_back(std::move(chunk));

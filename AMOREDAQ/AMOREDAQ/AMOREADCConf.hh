@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DAQConfig/AbsConf.hh"
-#include "OnlConsts/adcconsts.hh"
+#include "OnlConsts/amoreconsts.hh"
 
 class AMOREADCConf : public AbsConf {
 public:
@@ -16,6 +16,7 @@ public:
   void SetSR(int val);
   void SetRL(int val);
   void SetDLY(int val);
+  void SetZSU(int val);
 
   int NCH() const;
   int CID(int ch) const override;
@@ -24,18 +25,19 @@ public:
   int SR() const;
   int RL() const;
   int DLY() const;
-
+  int ZSU() const;
 
   void PrintConf() const override;
 
 private:
-  int fNCH{kNCHAMOREADC};
+  int fNCH{AMORE::kNCHPERADC};
   int fSR{};
   int fRL{};
   int fDLY{};
-  int fCID[kNCHAMOREADC]{};
-  int fPID[kNCHAMOREADC]{};
-  int fTRGON[kNCHAMOREADC]{};
+  int fZSU{};
+  int fCID[AMORE::kNCHPERADC]{};
+  int fPID[AMORE::kNCHPERADC]{};
+  int fTRGON[AMORE::kNCHPERADC]{};
 
   ClassDef(AMOREADCConf, 1)
 };
@@ -47,6 +49,8 @@ inline void AMOREADCConf::SetSR(int val) { fSR = val; }
 inline void AMOREADCConf::SetRL(int val) { fRL = val; }
 
 inline void AMOREADCConf::SetDLY(int val) { fDLY = val; }
+
+inline void AMOREADCConf::SetZSU(int val) { fZSU = val; }
 
 inline void AMOREADCConf::SetCID(int ch, int val) { fCID[ch] = val; }
 
@@ -61,6 +65,8 @@ inline int AMOREADCConf::SR() const { return fSR; }
 inline int AMOREADCConf::RL() const { return fRL; }
 
 inline int AMOREADCConf::DLY() const { return fDLY; }
+
+inline int AMOREADCConf::ZSU() const { return fZSU; }
 
 inline int AMOREADCConf::CID(int ch) const { return fCID[ch]; }
 

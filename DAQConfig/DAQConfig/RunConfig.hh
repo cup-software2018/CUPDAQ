@@ -8,7 +8,6 @@
 #include "TObject.h"
 
 #include "DAQConfig/AbsConfList.hh"
-#include "DAQConfig/AmoreADCConf.hh"
 #include "DAQConfig/DAQConf.hh"
 #include "DAQConfig/FADCSConf.hh"
 #include "DAQConfig/FADCTConf.hh"
@@ -24,7 +23,7 @@
 class RunConfig : public TObject {
 public:
   static const int kNEXPERIMENT = 6;
-  static const int kNMAINMENU = 15;
+  static const int kNMAINMENU = 14;
   enum MAINCONFIG {
     INCLUDE = 1,
     EXPERIMENT = 2,
@@ -38,9 +37,8 @@ public:
     SADCT = 10,
     SADCS = 11,
     IADCT = 12,
-    AMOREADC = 13,
-    STRG = 14,
-    DAQ = 15
+    STRG = 13,
+    DAQ = 14
   };
 
   static const int kNTCBMENU = 21;
@@ -224,25 +222,6 @@ public:
     TLT10_IADCT = 30
   };
 
-  static const int kNAMOREADCMENU = 15;
-  enum AMOREADCCONFIG {
-    ENABLED_AMOREADC = 1,
-    CID_AMOREADC = 2,
-    PID_AMOREADC = 3,
-    TRGON_AMOREADC = 4,
-    ORDER_AMOREADC = 5,
-    LOWER_AMOREADC = 6,
-    UPPER_AMOREADC = 7,
-    THR_AMOREADC = 8,
-    DT_AMOREADC = 9,
-    SR_AMOREADC = 10,
-    RL_AMOREADC = 11,
-    DLY_AMOREADC = 12,
-    CW_AMOREADC = 13,
-    SKBIN_AMOREADC = 14,
-    ZEROSUP_AMOREADC = 15
-  };
-
   static const int kNSTRGMENU = 5;
   enum STRGCONFIG { ENABLED_STRG = 1, ADCTYPE_STRG = 2, ZSU_STRG = 3, PSC_STRG = 4, ICRD_STRG = 5 };
 
@@ -270,7 +249,6 @@ private:
   bool ConfigMADCS(std::ifstream & ticket, MADCSConf * conf);
   bool ConfigSADCT(std::ifstream & ticket, SADCTConf * conf);
   bool ConfigIADCT(std::ifstream & ticket, IADCTConf * conf);
-  bool ConfigAmoreADC(std::ifstream & ticket, AmoreADCConf * conf);
   bool ConfigSTRG(std::ifstream & ticket, STRGConf * conf);
   bool ConfigDAQ(std::ifstream & ticket, DAQConf * conf);
 
@@ -286,7 +264,6 @@ private:
   std::string MADCSCONFIGMENU[kNMADCSMENU];       //!
   std::string SADCTCONFIGMENU[kNSADCTMENU];       //!
   std::string IADCTCONFIGMENU[kNIADCTMENU];       //!
-  std::string AMOREADCCONFIGMENU[kNAMOREADCMENU]; //!
   std::string STRGCONFIGMENU[kNSTRGMENU];         //!
   std::string DAQCONFIGMENU[kNDAQMENU];           //!
 
@@ -299,7 +276,6 @@ private:
   std::map<std::string, int> fMADCSItem;     //!
   std::map<std::string, int> fSADCTItem;     //!
   std::map<std::string, int> fIADCTItem;     //!
-  std::map<std::string, int> fAMOREADCItem;  //!
   std::map<std::string, int> fSTRGItem;      //!
   std::map<std::string, int> fDAQItem;       //!
 

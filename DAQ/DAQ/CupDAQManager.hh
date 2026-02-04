@@ -60,7 +60,9 @@ public:
 
   bool OpenDAQ();
   void CloseDAQ();
-  bool PrepareDAQ();
+
+  virtual bool PrepareDAQ();
+
   bool ConfigureDAQ();
   bool InitializeDAQ();
   void StartTrigger();
@@ -82,7 +84,7 @@ public:
   void SetDAQTime(int t);
   void EnableHistograming();
 
-  void Run();
+  virtual void Run();
 
   void TF_TriggerMon();
   void TF_DebugMon();
@@ -260,10 +262,10 @@ protected:
   unsigned long fMonitorServerOn;
 
   TBenchmark * fBenchmark;
-  //TStopwatch fReadSW;
-  //TStopwatch fSortSW;
-  //TStopwatch fBuildSW;
-  //TStopwatch fWriteSW;
+  // TStopwatch fReadSW;
+  // TStopwatch fSortSW;
+  // TStopwatch fBuildSW;
+  // TStopwatch fWriteSW;
 
   AbsSoftTrigger * fSoftTrigger;
 
