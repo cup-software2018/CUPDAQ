@@ -4,10 +4,6 @@
 #pragma link off all    classes;
 #pragma link off all    functions;
 
-#pragma link C++ class  AMOREADCConf+;
-#pragma link C++ class  AMORETCBConf+;
-#pragma link C++ class  AMOREADC;
-#pragma link C++ class  AMORETCB;
 #pragma link C++ class  AMOREDAQManager;
 
 #endif

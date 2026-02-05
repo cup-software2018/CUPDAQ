@@ -1,4 +1,4 @@
-#include "AMOREDAQ/AMORETCB.hh"
+#include "AMORESystem/AMORETCB.hh"
 #include "DAQUtils/ELog.hh"
 
 ClassImp(AMORETCB)

@@ -6,25 +6,25 @@
 
 #include "TObject.h"
 
-#include "AMOREDAQ/AMOREADCConf.hh"
+#include "AMORESystem/AMOREADCConf.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
 
-struct ChunkData {
+struct AMOREChunk {
   std::vector<unsigned long> fTime;
   std::vector<std::vector<unsigned int>> fADC;
 
-  ChunkData(int nch, int ndp)
+  AMOREChunk(int nch, int ndp)
   {
     fTime.resize(ndp);
     fADC.assign(nch, std::vector<unsigned int>(ndp));
   }
 };
 
-class ChunkDataFIFO : public TObject {
+class AMOREChunkFIFO : public TObject {
 public:
-  ChunkDataFIFO();
-  ChunkDataFIFO(int nch, int head, int tail);
-  virtual ~ChunkDataFIFO() = default;
+  AMOREChunkFIFO();
+  AMOREChunkFIFO(int nch, int head, int tail);
+  virtual ~AMOREChunkFIFO() = default;
 
   void BookFIFO(int nch, int head, int tail);
 
@@ -48,18 +48,18 @@ private:
   int fHead; // Head window size
   int fTail; // Tail window size
 
-  ConcurrentDeque<std::unique_ptr<ChunkData>> fQueue;
+  ConcurrentDeque<std::unique_ptr<AMOREChunk>> fQueue;
 
-  std::unique_ptr<ChunkData> fLastChunk;
-  std::unique_ptr<ChunkData> fCurrentChunk;
-  std::unique_ptr<ChunkData> fNextChunk;
+  std::unique_ptr<AMOREChunk> fLastChunk;
+  std::unique_ptr<AMOREChunk> fCurrentChunk;
+  std::unique_ptr<AMOREChunk> fNextChunk;
   size_t fCurrentSampleIndex;
 
-  ClassDef(ChunkDataFIFO, 0)
+  ClassDef(AMOREChunkFIFO, 0)
 };
 
-inline void ChunkDataFIFO::Stop() { fQueue.stop(); }
-inline void ChunkDataFIFO::Restart() { fQueue.restart(); }
-inline bool ChunkDataFIFO::IsStopped() const { return fQueue.is_stopped(); }
-inline bool ChunkDataFIFO::Empty() const { return fQueue.empty() && !fCurrentChunk; }
-inline std::size_t ChunkDataFIFO::GetQueueSize() const { return fQueue.size(); }
+inline void AMOREChunkFIFO::Stop() { fQueue.stop(); }
+inline void AMOREChunkFIFO::Restart() { fQueue.restart(); }
+inline bool AMOREChunkFIFO::IsStopped() const { return fQueue.is_stopped(); }
+inline bool AMOREChunkFIFO::Empty() const { return fQueue.empty() && !fCurrentChunk; }
+inline std::size_t AMOREChunkFIFO::GetQueueSize() const { return fQueue.size(); }

@@ -4,8 +4,8 @@
 
 #include "TObject.h"
 
-#include "AMOREDAQ/AMORETCBConf.hh"
-#include "AMOREDAQ/AMOREADCConf.hh"
+#include "AMORESystem/AMORETCBConf.hh"
+#include "AMORESystem/AMOREADCConf.hh"
 #include "DAQConfig/AbsConfList.hh"
 #include "Notice/NKTCB.hh"
 

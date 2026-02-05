@@ -5,10 +5,10 @@
 #include <thread>
 #include <vector>
 
-#include "AMOREDAQ/AMOREADC.hh"
-#include "AMOREDAQ/AMOREADCConf.hh"
+#include "AMORESystem/AMOREADC.hh"
+#include "AMORESystem/AMOREADCConf.hh"
 #include "AMOREDAQ/AMOREDAQManager.hh"
-#include "AMOREDAQ/AMORETCBConf.hh"
+#include "AMORESystem/AMORETCBConf.hh"
 #include "DAQConfig/DAQConf.hh"
 #include "DAQUtils/ELog.hh"
 
@@ -225,4 +225,13 @@ bool AMOREDAQManager::ParseConfig(std::ifstream & file)
   return true;
 }
 
-bool AMOREDAQManager::PrepareDAQ() { return true; }
+bool AMOREDAQManager::PrepareDAQ() 
+{ 
+  const int nadc = GetEntries();
+
+  for (int i = 0; i < nadc; ++i) {
+    fFIFOs[i]->Restart();
+  }
+
+  return true; 
+}

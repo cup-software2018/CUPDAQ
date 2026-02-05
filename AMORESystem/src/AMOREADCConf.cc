@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "AMOREDAQ/AMOREADCConf.hh"
+#include "AMORESystem/AMOREADCConf.hh"
 
 ClassImp(AMOREADCConf)
 

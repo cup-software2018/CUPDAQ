@@ -1,4 +1,4 @@
-#include "AMOREDAQ/AMOREADC.hh"
+#include "AMORESystem/AMOREADC.hh"
 
 ClassImp(AMOREADC)
 

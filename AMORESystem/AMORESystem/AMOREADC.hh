@@ -1,6 +1,6 @@
 #pragma once
 
-#include "AMOREDAQ/AMORETCB.hh"
+#include "AMORESystem/AMORETCB.hh"
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
 

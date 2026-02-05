@@ -1,8 +1,10 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
-#include "AMOREDAQ/AMORETCB.hh"
+#include "AMOREAlgs/AMOREChunkFIFO.hh"
+#include "AMORESystem/AMORETCB.hh"
 #include "DAQ/CupDAQManager.hh"
 #include "DAQConfig/AbsConf.hh"
 #include "DAQConfig/AbsConfList.hh"
@@ -25,9 +27,14 @@ private:
   bool PrepareDAQ() override;
 
   void TF_ReadData_AMORE();
+  void TF_StreamData();
 
 private:
   AMORETCB & fTCB;
+
+  std::vector<std::unique_ptr<AMOREChunkFIFO>> fFIFOs;
+
+  PROCSTATE fStreamStatus;
 
   ClassDef(AMOREDAQManager, 0)
 };

@@ -17,6 +17,9 @@ set ( DICT_I_FLAGS
     -I${CMAKE_SOURCE_DIR}/DAQConfig
     -I${CMAKE_SOURCE_DIR}/DAQTrigger
     -I${CMAKE_SOURCE_DIR}/DAQ
+    -I${CMAKE_SOURCE_DIR}/AMORESystem
+    -I${CMAKE_SOURCE_DIR}/AMOREAlgs
+    
 )
 
 if ( CUPDAQ_ENABLE_HDF5 )
@@ -62,6 +65,8 @@ target_link_libraries ( ${MODULE_NAME}
     DAQConfig
     DAQTrigger
     DAQ
+    AMORESystem    
+    AMOREAlgs
 )
 
 if ( CUPDAQ_ENABLE_HDF5 )

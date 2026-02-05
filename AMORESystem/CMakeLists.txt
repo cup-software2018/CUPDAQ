@@ -1,4 +1,4 @@
-set ( MODULE_NAME AMOREAlgs )
+set ( MODULE_NAME AMORESystem )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
 # Sources (normal .cc)
@@ -7,10 +7,12 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 
 # --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
 set ( DICT_I_FLAGS
+    -I${LIBUSB_INCLUDE_DIRS}
     -I${CMAKE_SOURCE_DIR}/OnlConsts
+    -I${CMAKE_SOURCE_DIR}/Notice
     -I${CMAKE_SOURCE_DIR}/DAQUtils
+    -I${CMAKE_SOURCE_DIR}/DAQSystem
     -I${CMAKE_SOURCE_DIR}/DAQConfig
-    -I${CMAKE_SOURCE_DIR}/AMORESystem
 )
 
 # Generate ROOT dictionary for only the two headers above
@@ -29,7 +31,6 @@ add_library ( ${MODULE_NAME} SHARED
 # Include paths
 target_include_directories ( ${MODULE_NAME}
     PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     ${ROOT_INCLUDE_DIRS}
@@ -39,12 +40,9 @@ target_include_directories ( ${MODULE_NAME}
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
     ${ROOT_LIBRARIES}
-    AMORESystem
-)
-
-target_compile_definitions ( ${MODULE_NAME}
-    PUBLIC
-    ${ROOT_DEFINITIONS}
+    Notice
+    DAQConfig
+    DAQSystem
 )
 
 # ---- Install ----
@@ -61,5 +59,3 @@ install ( FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}
     OPTIONAL
 )
-
-add_subdirectory ( test )

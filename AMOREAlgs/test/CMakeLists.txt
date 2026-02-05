@@ -15,10 +15,7 @@ foreach ( src ${TEST_SOURCES} )
     target_link_libraries ( ${test_name}
         PRIVATE
             ${ROOT_LIBRARIES}
-            DAQConfig
-            DAQUtils
             AMOREAlgs
-            AMOREDAQ
     )
 
     install ( TARGETS ${test_name}
