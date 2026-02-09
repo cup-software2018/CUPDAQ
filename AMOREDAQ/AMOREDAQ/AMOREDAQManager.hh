@@ -18,7 +18,6 @@ public:
   virtual void Run();
 
 private:
-  bool AddADC(AbsConf * conf) override;
   bool AddADC(AbsConfList * conflist) override;
 
   void RC_AMORETCB();

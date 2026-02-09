@@ -25,20 +25,6 @@ AMOREDAQManager::AMOREDAQManager()
 
 AMOREDAQManager::~AMOREDAQManager() { delete fConfigList; }
 
-bool AMOREDAQManager::AddADC(AbsConf * conf)
-{
-  if (!conf->IsEnabled()) { return true; }
-  if (!conf->IsLinked()) {
-    ERROR("AMOREADC[sid=%2d] enabled but not linked", conf->SID());
-    return false;
-  }
-
-  AbsADC * adc = new AMOREADC(conf);
-  Add(adc);
-
-  return true;
-}
-
 bool AMOREDAQManager::AddADC(AbsConfList * conflist)
 {
   int nadc = conflist->GetNADC(fADCType);
@@ -49,8 +35,15 @@ bool AMOREDAQManager::AddADC(AbsConfList * conflist)
 
   for (int i = 0; i < nadc; i++) {
     AbsConf * conf = conflist->GetConfig(fADCType, i);
+    if (!conf->IsEnabled()) continue;
+    if (!conf->IsLinked()) {
+      ERROR("AMOREADC[sid=%2d] enabled but not linked", conf->SID());
+      return false;
+    }
     if (conf->GetDAQID() == fDAQID) {
-      if (!AddADC(conf)) { return false; }
+      auto * adc = new AMOREADC(conf);
+      Add(adc);
+      INFO("AMOREADC[sid=%2d] added to DAQ manager", adc->GetSID());
     }
   }
 
