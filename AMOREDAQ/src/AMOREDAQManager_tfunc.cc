@@ -42,7 +42,7 @@ void AMOREDAQManager::TF_ReadData_AMORE()
       break;
     }
 
-    if (isFlushingData && fDoEndRun && minBCount < fMinimumBCount) {
+    if (isFlushingData && minBCount < fMinimumBCount) {
       INFO("No more data [minBCount=%d]. Stop.", minBCount);
       break;
     }
@@ -199,5 +199,5 @@ void AMOREDAQManager::TF_SWTrigger(int n)
     }
   }
 
-  INFO("software trigger for AMOREADC[%d] ended.", conf->SID());
+  INFO("software trigger for AMOREADC[sid=%d] ended.", conf->SID());
 }
