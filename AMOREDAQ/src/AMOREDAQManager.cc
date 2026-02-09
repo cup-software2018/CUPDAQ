@@ -221,6 +221,10 @@ bool AMOREDAQManager::ParseConfig(std::ifstream & file)
         // Single values
         else {
           int val = 0;
+          if (key == "ENABLED") {
+            if (!GetNextInt(val, "ENABLED")) return false;
+            if (val > 0) adc->SetEnable();
+          }
           if (key == "SR") {
             if (!GetNextInt(val, "SR")) return false;
             adc->SetSR(val);
