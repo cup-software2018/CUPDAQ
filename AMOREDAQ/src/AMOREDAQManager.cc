@@ -25,6 +25,38 @@ AMOREDAQManager::AMOREDAQManager()
 
 AMOREDAQManager::~AMOREDAQManager() { delete fConfigList; }
 
+bool AMOREDAQManager::AddADC(AbsConf * conf)
+{
+  if (!conf->IsEnabled()) { return true; }
+  if (!conf->IsLinked()) {
+    ERROR("AMOREADC[sid=%2d] enabled but not linked", conf->SID());
+    return false;
+  }
+
+  AbsADC * adc = new AMOREADC(conf);
+  Add(adc);
+
+  return true;
+}
+
+bool AMOREDAQManager::AddADC(AbsConfList * conflist)
+{
+  int nadc = conflist->GetNADC(fADCType);
+  if (nadc == 0) {
+    ERROR("there is no AMOREADC");
+    return false;
+  }
+
+  for (int i = 0; i < nadc; i++) {
+    AbsConf * conf = conflist->GetConfig(fADCType, i);
+    if (conf->GetDAQID() == fDAQID) {
+      if (!AddADC(conf)) { return false; }
+    }
+  }
+
+  return true;
+}
+
 bool AMOREDAQManager::ReadConfig()
 {
   if (fConfigFilename.IsNull()) {

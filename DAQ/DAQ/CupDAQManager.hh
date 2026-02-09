@@ -51,9 +51,9 @@ public:
 
   void UseEventMerger();
 
-  void AddADC(AbsADC * adc);
-  bool AddADC(AbsConf * conf);
-  bool AddADC(AbsConfList * conflist);
+  virtual void AddADC(AbsADC * adc);
+  virtual bool AddADC(AbsConf * conf);
+  virtual bool AddADC(AbsConfList * conflist);
 
   AbsADC * FindADC(int sid);
   int FindADCAt(int sid);
