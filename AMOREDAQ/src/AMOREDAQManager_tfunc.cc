@@ -144,6 +144,11 @@ void AMOREDAQManager::TF_StreamData()
 
 void AMOREDAQManager::TF_SWTrigger(int n)
 {
+  if (!ThreadWait(fRunStatus, fDoExit)) {
+    WARNING("Exited by exit command before starting");
+    return;
+  }
+
   auto * adc = static_cast<AbsADC *>(fCont[n]);
   auto * conf = static_cast<AMOREADCConf *>(adc->GetConfig());
 
@@ -169,12 +174,14 @@ void AMOREDAQManager::TF_SWTrigger(int n)
         unsigned long delta = currenttime - lasttime;
         if (delta != fTimeDelta) {
           if (delta < fTimeDelta) {
-            WARNING("[NS ERROR] Overlap/Jitter! Last: %lu Now: %lu Gap: %lu ns", lasttime, currenttime, delta);
+            WARNING("[NS ERROR] Overlap/Jitter! Last: %lu Now: %lu Gap: %lu ns", lasttime,
+                    currenttime, delta);
           }
           else {
             unsigned long lost = (delta / fTimeDelta) - 1;
             if (lost != 0) {
-              WARNING("[NS ERROR] missing samples! Last: %lu Now: %lu Gap: %lu ns | Lost: %lu", lasttime, currenttime, delta, lost);
+              WARNING("[NS ERROR] missing samples! Last: %lu Now: %lu Gap: %lu ns | Lost: %lu",
+                      lasttime, currenttime, delta, lost);
             }
           }
         }
