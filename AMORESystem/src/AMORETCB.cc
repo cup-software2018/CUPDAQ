@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "AMORESystem/AMORETCB.hh"
 #include "DAQUtils/ELog.hh"
 
@@ -64,9 +66,8 @@ bool AMORETCB::Config()
     else if (name.Contains("AMOREADC")) {
       unsigned long bcount = fNKTCB.ReadBCount(mid);
       if (bcount) {
-        auto * data = new unsigned char[bcount * kKILOBYTES];
-        fNKTCB.ReadData(mid, bcount, data);
-        delete[] data;
+        std::vector<unsigned char> data(bcount * kKILOBYTES);
+        fNKTCB.ReadData(mid, bcount, data.data());
       }
       retval &= ConfigAMOREADC(static_cast<AMOREADCConf *>(conf));
     }
@@ -151,22 +152,21 @@ bool AMORETCB::ConfigAMOREADC(AMOREADCConf * conf)
 
 int AMORETCB::CheckLinkStatus()
 {
-  const int nport = 24;
-  int nlinked = 0;
-
-  unsigned long linkedMID[nport];
-  int linked[nport];
+  const int nport = 8;
 
   unsigned long data[2];
   fNKTCB.ReadLNSTAT(data);
 
+  int linked[nport];
   for (unsigned int i = 0; i < nport; i++) {
     linked[i] = (data[0] >> i) & 0x1;
   }
 
   // get mid
+  unsigned long linkedMID[40];
   fNKTCB.ReadMIDS(linkedMID);
 
+  int nlinked = 0;
   for (int i = 0; i < nport; i++) {
     if (linked[i]) {
       AbsConf * conf = fConfigs->FindConfig(ADC::AMOREADC, linkedMID[i]);

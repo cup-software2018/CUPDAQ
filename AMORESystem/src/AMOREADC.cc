@@ -55,14 +55,11 @@ void AMOREADC::UpdateCurrentTime(const unsigned char * data, int bcount)
   unsigned long coarsetime = 0;
   int j = kKILOBYTES * bcount - 64;
 
+  for (int k = 0; k < 6; ++k) {
+    unsigned long ltmp = data[j + 48 + k] & 0xFF;
+    coarsetime += (ltmp << (k * 8));
+  }
+
   std::unique_lock<std::mutex> lock(fMutex);
-
-  coarsetime = static_cast<unsigned long>(data[j + 48] & 0xFFu);
-  coarsetime |= static_cast<unsigned long>(data[j + 49] & 0xFFu) << 8;
-  coarsetime |= static_cast<unsigned long>(data[j + 50] & 0xFFu) << 16;
-  coarsetime |= static_cast<unsigned long>(data[j + 51] & 0xFFu) << 24;
-  coarsetime |= static_cast<unsigned long>(data[j + 52] & 0xFFu) << 32;
-  coarsetime |= static_cast<unsigned long>(data[j + 53] & 0xFFu) << 40;
-
   fCurrentTime = coarsetime * 1000ul;
 }

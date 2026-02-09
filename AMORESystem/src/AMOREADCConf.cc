@@ -13,6 +13,8 @@ AMOREADCConf::AMOREADCConf(int sid)
     fCID[i] = i + 1;
     fPID[i] = 0;
   }
+
+  fMID = sid + 128;
 }
 
 void AMOREADCConf::PrintConf() const
