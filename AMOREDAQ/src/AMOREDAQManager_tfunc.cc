@@ -200,4 +200,5 @@ void AMOREDAQManager::TF_SWTrigger(int n)
   }
 
   INFO("software trigger for AMOREADC[sid=%d] ended.", conf->SID());
+  fifo->DumpStat();
 }

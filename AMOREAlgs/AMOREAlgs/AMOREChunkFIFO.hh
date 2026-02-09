@@ -43,6 +43,9 @@ public:
   bool Empty() const;
   std::size_t GetQueueSize() const;
 
+  // Statistics
+  void DumpStat();
+
 private:
   int fNChannel;
   int fHead; // Head window size
@@ -54,6 +57,12 @@ private:
   std::unique_ptr<AMOREChunk> fCurrentChunk;
   std::unique_ptr<AMOREChunk> fNextChunk;
   size_t fCurrentSampleIndex;
+
+  // for dump statistics
+  unsigned long fTotalChunks;
+  unsigned long fTotalSamples;
+  unsigned long fFirstTime;
+  unsigned long fLastTime;
 
   ClassDef(AMOREChunkFIFO, 0)
 };

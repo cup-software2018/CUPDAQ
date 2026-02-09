@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
+#include <iostream>
 
 #include "AMOREAlgs/AMOREChunkFIFO.hh"
 
@@ -33,6 +35,11 @@ void AMOREChunkFIFO::BookFIFO(int nch, int head, int tail)
   fLastChunk = nullptr;
   fNextChunk = nullptr;
   fQueue.restart();
+
+  fTotalChunks = 0;
+  fTotalSamples = 0;
+  fFirstTime = 0;
+  fLastTime = 0;
 }
 
 // Producer: Push from unpacked data buffers
@@ -44,6 +51,12 @@ int AMOREChunkFIFO::PushChunk(unsigned int ** adc, unsigned long * time, int ndp
   for (int ch = 0; ch < fNChannel; ++ch) {
     std::memcpy(chunk->fADC[ch].data(), adc[ch], ndp * sizeof(unsigned int));
   }
+
+  fTotalChunks++;
+  fTotalSamples += ndp;
+  if (fFirstTime == 0) fFirstTime = chunk->fTime[0];
+  fLastTime = chunk->fTime[ndp - 1];
+
   fQueue.push_back(std::move(chunk));
   return 0;
 }
@@ -73,6 +86,12 @@ int AMOREChunkFIFO::PushChunk(unsigned char * data, int ndp, AMOREADCConf * conf
     }
     chunk->fTime[j] = coarsetime * 1000; // ns
   }
+
+  fTotalChunks++;
+  fTotalSamples += ndp;
+  if (fFirstTime == 0) fFirstTime = chunk->fTime[0];
+  fLastTime = chunk->fTime[ndp - 1];
+
   fQueue.push_back(std::move(chunk));
 
   return 0;
@@ -197,4 +216,20 @@ int AMOREChunkFIFO::DumpCurrent(unsigned int ** outADC, unsigned long * outTime)
   }
 
   return copied;
+}
+
+void AMOREChunkFIFO::DumpStat()
+{
+  double duration = (fLastTime - fFirstTime) / 1.e9;
+  double rate = (duration > 0) ? (fTotalSamples / duration) / 1000.0 : 0;
+
+  std::cout << "\n" << std::setw(40) << std::setfill('=') << "" << std::endl;
+  std::cout << " AMORE FIFO FINAL STATISTICS" << std::endl;
+  std::cout << std::setw(40) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+  std::cout << " - Runtime      : " << std::fixed << std::setprecision(2) << duration << " sec"
+            << std::endl;
+  std::cout << " - Total Chunks : " << fTotalChunks << std::endl;
+  std::cout << " - Total Samples: " << fTotalSamples << std::endl;
+  std::cout << " - Avg Rate     : " << rate << " kHz" << std::endl;
+  std::cout << std::setw(40) << std::setfill('=') << "" << std::endl;
 }
