@@ -147,7 +147,7 @@ void AMOREDAQManager::TF_SWTrigger(int n)
   auto * adc = static_cast<AbsADC *>(fCont[n]);
   auto * conf = static_cast<AMOREADCConf *>(adc->GetConfig());
 
-  INFO("software trigger for AMOREADC[%d] started.", conf->SID());
+  INFO("software trigger for AMOREADC[sid=%d] started.", conf->SID());
 
   auto & fifo = fFIFOs[n];
 

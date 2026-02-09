@@ -41,6 +41,16 @@ void AMOREDAQManager::RC_AMOREDAQ()
     th_swt[i] = std::thread(&AMOREDAQManager::TF_SWTrigger, this, i);
   }
 
+  //sleep for 2 secs
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
+  fRunStatus = RUNSTATE::kRUNNING;
+
+  //sleep for 10 secs
+  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+
+  fRunStatus = RUNSTATE::kRUNENDED;
+
   th1.join();
   th2.join();
   for (int i = 0; i < nadc; ++i) {
