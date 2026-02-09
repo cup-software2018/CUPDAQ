@@ -19,6 +19,7 @@ AMOREDAQManager::AMOREDAQManager()
   : CupDAQManager(),
     fTCB(AMORETCB::Instance())
 {
+  fADCType = ADC::AMOREADC; // only AMOREADC will be added, this is amoredaq
   fConfigList = new AbsConfList();
 }
 
