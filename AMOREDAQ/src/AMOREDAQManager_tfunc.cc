@@ -10,12 +10,6 @@ void AMOREDAQManager::TF_ReadData_AMORE()
   }
 
   const int nadc = GetEntries();
-  if (nadc <= 0) {
-    ERROR("No ADC module included in the configuration");
-    fReadStatus = ERROR;
-    RUNSTATE::SetError(fRunStatus);
-    return;
-  }
 
   INFO("Reading data from ADCs started.");
 
@@ -99,14 +93,31 @@ void AMOREDAQManager::TF_StreamData()
 
   const int nadc = GetEntries();
 
+  double sleepError = 0.0;
+  double sleepIntegral = 0.0;
+  const int kTargetChunk = 4;
+
   INFO("Streaming data started.");
+  fStreamStatus = RUNNING;
 
   while (true) {
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
 
+    if (fReadStatus == ENDED) {
+      int remain = 0;
+      for (int i = 0; i < nadc; ++i) {
+        auto * adc = static_cast<AbsADC *>(fCont[i]);
+        remain += adc->Bsize();
+      }
+      if (remain == 0) { break; }
+    }
+
+    int nTotalChunkinADC = 0;
     for (int i = 0; i < nadc; ++i) {
       auto * adc = static_cast<AbsADC *>(fCont[i]);
       auto * conf = static_cast<AMOREADCConf *>(adc->GetConfig());
+
+      nTotalChunkinADC += adc->Bsize();
 
       auto chunkdata = adc->Bpop_front();
       if (!chunkdata) { continue; }
@@ -115,8 +126,71 @@ void AMOREDAQManager::TF_StreamData()
       int ndp = kKILOBYTES * chunkdata->size / 64;
 
       fFIFOs[i]->PushChunk(data, ndp, conf);
+
+      nTotalChunkinADC -= 1;
+    }
+
+    int nAvailableChunk = nTotalChunkinADC / nadc;
+    ThreadSleep(fReadSleep, sleepError, sleepIntegral, nAvailableChunk, kTargetChunk);
+  }
+
+  for (int i = 0; i < nadc; ++i) {
+    fFIFOs[i]->Stop();
+  }
+
+  fStreamStatus = ENDED;
+  INFO("Streaming data ended");
+}
+
+void AMOREDAQManager::TF_SWTrigger(int n)
+{
+  auto * adc = static_cast<AbsADC *>(fCont[n]);
+  auto * conf = static_cast<AMOREADCConf *>(adc->GetConfig());
+
+  INFO("software trigger for AMOREADC[%d] started.", conf->SID());
+
+  auto & fifo = fFIFOs[n];
+
+  const int nch = kNCHAMOREADC;
+  std::vector<unsigned int> adcval(nch);
+  unsigned long currenttime;
+  unsigned long lasttime;
+  bool isFirstSample = true;
+
+  while (true) {
+    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
+
+    if (fStreamStatus == ENDED && fifo->Empty()) { break; }
+
+    int stat = fifo->PopCurrent(adcval.data(), currenttime);
+    if (stat == 0) {
+      // realtime integrity check
+      if (!isFirstSample) {
+        unsigned long delta = currenttime - lasttime;
+        if (delta != fTimeDelta) {
+          if (delta < fTimeDelta) {
+            WARNING("[NS ERROR] Overlap/Jitter! Last: %lu Now: %lu Gap: %lu ns", lasttime, currenttime, delta);
+          }
+          else {
+            unsigned long lost = (delta / fTimeDelta) - 1;
+            if (lost != 0) {
+              WARNING("[NS ERROR] missing samples! Last: %lu Now: %lu Gap: %lu ns | Lost: %lu", lasttime, currenttime, delta, lost);
+            }
+          }
+        }
+      }
+      else {
+        isFirstSample = false;
+      }
+      lasttime = currenttime;
+
+      // success poping a sample from fifo, triggering
+    }
+    else {
+      // or waiting for new chunk
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   }
 
-  INFO("Streaming data ended");
+  INFO("software trigger for AMOREADC[%d] ended.", conf->SID());
 }

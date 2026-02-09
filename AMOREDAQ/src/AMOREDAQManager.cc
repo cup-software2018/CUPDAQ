@@ -5,12 +5,13 @@
 #include <thread>
 #include <vector>
 
+#include "AMOREDAQ/AMOREDAQManager.hh"
 #include "AMORESystem/AMOREADC.hh"
 #include "AMORESystem/AMOREADCConf.hh"
-#include "AMOREDAQ/AMOREDAQManager.hh"
 #include "AMORESystem/AMORETCBConf.hh"
 #include "DAQConfig/DAQConf.hh"
 #include "DAQUtils/ELog.hh"
+#include "OnlConsts/adcconsts.hh"
 
 ClassImp(AMOREDAQManager)
 
@@ -225,13 +226,29 @@ bool AMOREDAQManager::ParseConfig(std::ifstream & file)
   return true;
 }
 
-bool AMOREDAQManager::PrepareDAQ() 
-{ 
+bool AMOREDAQManager::PrepareDAQ()
+{
   const int nadc = GetEntries();
 
-  for (int i = 0; i < nadc; ++i) {
-    fFIFOs[i]->Restart();
+  if (nadc <= 0) {
+    ERROR("No ADC module included in the configuration");
+    fReadStatus = ERROR;
+    RUNSTATE::SetError(fRunStatus);
+    return false;
   }
 
-  return true; 
+  int dsr = 0;
+  for (int i = 0; i < nadc; ++i) {
+    auto * adc = static_cast<AbsADC *>(fCont[i]);
+    auto * conf = static_cast<AMOREADCConf *>(adc->GetConfig());
+    dsr = conf->SR();
+
+    int head = conf->DLY();
+    int tail = conf->RL() - head;
+    fFIFOs[i]->BookFIFO(kNCHAMOREADC, head, tail);
+  }
+
+  fTimeDelta = dsr * 1000;
+
+  return true;
 }

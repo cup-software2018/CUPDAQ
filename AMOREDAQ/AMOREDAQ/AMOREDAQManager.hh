@@ -28,6 +28,7 @@ private:
 
   void TF_ReadData_AMORE();
   void TF_StreamData();
+  void TF_SWTrigger(int n);
 
 private:
   AMORETCB & fTCB;
@@ -35,6 +36,8 @@ private:
   std::vector<std::unique_ptr<AMOREChunkFIFO>> fFIFOs;
 
   PROCSTATE fStreamStatus;
+
+  unsigned long fTimeDelta;
 
   ClassDef(AMOREDAQManager, 0)
 };

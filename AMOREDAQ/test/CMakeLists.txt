@@ -1,5 +1,6 @@
 set ( TEST_SOURCES
     amoretcb.cc
+    amoredaq.cc
 )
 
 foreach ( src ${TEST_SOURCES} )

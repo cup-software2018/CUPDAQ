@@ -1,5 +1,4 @@
-#ifndef adcconsts_hh
-#define adcconsts_hh
+#pragma once
 
 #include <string>
 
@@ -92,4 +91,10 @@ const int kNCHMADC = 4;
 //
 const int kNCHIADC = 40;
 const unsigned long kBYTESPEREVENTIADC = 256;
-#endif
+
+
+//
+// AMOREADC
+//
+const int kNCHAMOREADC = 16;
+const unsigned long kBYTEPERSAMPLE = 64;

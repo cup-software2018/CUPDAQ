@@ -71,10 +71,10 @@ int AMOREChunkFIFO::PushChunk(unsigned char * data, int ndp, AMOREADCConf * conf
       unsigned long ltmp = data[offset + 48 + k] & 0xFF;
       coarsetime += (ltmp << (k * 8));
     }
-    chunk->fTime[j] = coarsetime;
+    chunk->fTime[j] = coarsetime * 1000; // ns
   }
   fQueue.push_back(std::move(chunk));
-  
+
   return 0;
 }
 
@@ -88,7 +88,8 @@ int AMOREChunkFIFO::PopCurrent(unsigned int * adc, unsigned long & time)
     fNextChunk = nullptr;
   }
 
-  // 2. Try to fetch fNextChunk if it's missing or if we're nearing the end of fCurrentChunk (look-ahead for fTail)
+  // 2. Try to fetch fNextChunk if it's missing or if we're nearing the end of fCurrentChunk
+  // (look-ahead for fTail)
   if (!fCurrentChunk || (fCurrentSampleIndex + fTail) > fCurrentChunk->fTime.size()) {
     if (!fNextChunk) {
       // If queue is stopped, do not wait; otherwise, wait for a short timeout
@@ -145,7 +146,8 @@ int AMOREChunkFIFO::DumpCurrent(unsigned int ** outADC, unsigned long * outTime)
       long lastStart = (long)fLastChunk->fTime.size() - headPartNDP;
       std::memcpy(&outTime[0], &fLastChunk->fTime[lastStart], headPartNDP * sizeof(unsigned long));
       for (int ch = 0; ch < fNChannel; ++ch)
-        std::memcpy(&outADC[ch][0], &fLastChunk->fADC[ch][lastStart], headPartNDP * sizeof(unsigned int));
+        std::memcpy(&outADC[ch][0], &fLastChunk->fADC[ch][lastStart],
+                    headPartNDP * sizeof(unsigned int));
     }
     else {
       // No LastChunk available: fill with zeros
@@ -162,9 +164,11 @@ int AMOREChunkFIFO::DumpCurrent(unsigned int ** outADC, unsigned long * outTime)
   int toCopyFromCurrent = std::min((int)totalNDP - copied, currentAvailable);
 
   if (toCopyFromCurrent > 0) {
-    std::memcpy(&outTime[copied], &fCurrentChunk->fTime[startIdx], toCopyFromCurrent * sizeof(unsigned long));
+    std::memcpy(&outTime[copied], &fCurrentChunk->fTime[startIdx],
+                toCopyFromCurrent * sizeof(unsigned long));
     for (int ch = 0; ch < fNChannel; ++ch)
-      std::memcpy(&outADC[ch][copied], &fCurrentChunk->fADC[ch][startIdx], toCopyFromCurrent * sizeof(unsigned int));
+      std::memcpy(&outADC[ch][copied], &fCurrentChunk->fADC[ch][startIdx],
+                  toCopyFromCurrent * sizeof(unsigned int));
     copied += toCopyFromCurrent;
   }
 
@@ -176,7 +180,8 @@ int AMOREChunkFIFO::DumpCurrent(unsigned int ** outADC, unsigned long * outTime)
       int toCopyFromNext = std::min(tailRemaining, (int)fNextChunk->fTime.size());
       std::memcpy(&outTime[copied], &fNextChunk->fTime[0], toCopyFromNext * sizeof(unsigned long));
       for (int ch = 0; ch < fNChannel; ++ch)
-        std::memcpy(&outADC[ch][copied], &fNextChunk->fADC[ch][0], toCopyFromNext * sizeof(unsigned int));
+        std::memcpy(&outADC[ch][copied], &fNextChunk->fADC[ch][0],
+                    toCopyFromNext * sizeof(unsigned int));
 
       copied += toCopyFromNext;
       tailRemaining = totalNDP - copied;

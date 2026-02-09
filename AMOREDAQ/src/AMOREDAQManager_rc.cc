@@ -8,7 +8,7 @@ void AMOREDAQManager::Run()
 
   if (!ReadConfig()) return;
 
-  fTCB.SetConfig(fConfigList);
+  RC_AMOREDAQ();
 }
 
 void AMOREDAQManager::RC_AMORETCB()
@@ -19,21 +19,36 @@ void AMOREDAQManager::RC_AMORETCB()
 
 void AMOREDAQManager::RC_AMOREDAQ()
 {
-  INFO("daq now starting [run=%d]", fRunNumber);
+  INFO("amoredaq now starting [run=%d]", fRunNumber);
 
   std::thread th1;
+  std::thread th2;
+  std::thread th_swt[8];
 
-  // AMORETCB Open
-  if (fTCB.Open() != 0) { goto TERMINATE; }
-  if (!fTCB.Config()) { goto TERMINATE; }
-  if (!AddADC(fConfigList)) { goto TERMINATE; }
-  if (!PrepareDAQ()) { goto TERMINATE; }
-  if (!OpenDAQ()) { goto TERMINATE; }
+  fTCB.SetConfig(fConfigList);
+
+  if (fTCB.Open() != 0) return;
+  if (!fTCB.Config()) return;
+  if (!AddADC(fConfigList)) return;
+  if (!PrepareDAQ()) return;
+  if (!OpenDAQ()) return;
 
   th1 = std::thread(&AMOREDAQManager::TF_ReadData_AMORE, this);
+  th2 = std::thread(&AMOREDAQManager::TF_StreamData, this);
 
-TERMINATE:
+  int nadc = GetEntries();
+  for (int i = 0; i < nadc; ++i) {
+    th_swt[i] = std::thread(&AMOREDAQManager::TF_SWTrigger, this, i);
+  }
 
-  INFO("daq ended");
+  th1.join();
+  th2.join();
+  for (int i = 0; i < nadc; ++i) {
+    th_swt[i].join();
+  }
+
   CloseDAQ();
+  fTCB.Close();
+
+  INFO("amoredaq ended");
 }
