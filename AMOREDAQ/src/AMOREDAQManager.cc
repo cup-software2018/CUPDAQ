@@ -267,6 +267,7 @@ bool AMOREDAQManager::PrepareDAQ()
     return false;
   }
 
+  fFIFOs.clear();
   int dsr = 0;
   for (int i = 0; i < nadc; ++i) {
     auto * adc = static_cast<AbsADC *>(fCont[i]);
@@ -275,7 +276,7 @@ bool AMOREDAQManager::PrepareDAQ()
 
     int head = conf->DLY();
     int tail = conf->RL() - head;
-    fFIFOs[i]->BookFIFO(kNCHAMOREADC, head, tail);
+    fFIFOs.push_back(std::make_unique<AMOREChunkFIFO>(kNCHAMOREADC, head, tail));
   }
 
   fTimeDelta = dsr * 1000;
