@@ -92,6 +92,7 @@ void AMOREDAQManager::TF_StreamData()
   }
 
   const int nadc = GetEntries();
+  std::cout << nadc << std::endl;
 
   double sleepError = 0.0;
   double sleepIntegral = 0.0;
