@@ -7,3 +7,5 @@
 /lib/
 /.clang-format
 /ld.sh
+/*.C
+/*.config
