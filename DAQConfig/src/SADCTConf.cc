@@ -38,8 +38,8 @@ void SADCTConf::PrintConf() const
   using std::endl;
 
   cout << Form(" ++ %s config: SID(%d) MID(%d) NCH(%d) CW(%d) GW(%d) PSW(%d) "
-               "SUBPED(%d)",
-               GetName(), fSID, fMID, fNCH, fCW, fGW, fPSW, fSUBPED)
+               "SUBPED(%d) DAQID(%d)",
+               GetName(), fSID, fMID, fNCH, fCW, fGW, fPSW, fSUBPED, fDAQID)
        << endl;
 
   cout << Form("                  TLT1(%X) TLT2(%X) TLT3(%X) TLT4(%X)", fTLT[0], fTLT[1], fTLT[2],

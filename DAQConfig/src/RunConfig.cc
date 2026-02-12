@@ -41,8 +41,7 @@ bool RunConfig::ReadConfig(const char * name)
     ERROR("file not found, %s", filename.c_str());
   }
   catch (const YAML::ParserException & e) {
-    ERROR("syntax error (%s) at line %d, col %d of config file", e.mark.line + 1, e.mark.column + 1,
-          e.msg);
+    ERROR("syntax error (%s) at line %d, col %d of config file", e.msg, e.mark.line + 1, e.mark.column + 1);
   }
   catch (const std::exception & e) {
     ERROR("unknown error(%s) on reading config file", e.what());
@@ -89,21 +88,19 @@ void RunConfig::ConfigDAQ(YAML::Node ymlnode)
   if (!ymlnode["DAQ"]) return;
 
   auto * conf = new DAQConf();
-  YAML::Node daq_section = ymlnode["DAQ"];
+  YAML::Node daq_list = ymlnode["DAQ"];
 
-  for (auto it = daq_section.begin(); it != daq_section.end(); ++it) {
-    std::string name = it->first.as<std::string>();
-    YAML::Node info = it->second;
-
-    if (info.IsSequence() && info.size() >= 3) {
-      int id = info[0].as<int>();
-      std::string ip = info[1].as<std::string>();
-      int port = info[2].as<int>();
+  for (const auto& server : daq_list) {
+    try {
+      int id          = server["ID"].as<int>();
+      std::string name = server["NAME"].as<std::string>();
+      std::string ip   = server["IP"].as<std::string>();
+      int port        = server["PORT"].as<int>();
 
       conf->AddDAQ(id, name, ip, port);
     }
-    else {
-      WARNING("Invalid DAQ info for %s", name.c_str());
+    catch (const YAML::Exception& e) {
+      WARNING("Failed to parse DAQ server entry: %s", e.what());
     }
   }
 
@@ -243,6 +240,8 @@ void RunConfig::ConfigIADCT(YAML::Node ymlnode)
 
     if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
+    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());    
+
     if (node["SID"]) {
       int sid = node["SID"].as<int>();
       conf->SetSID(sid);
@@ -313,6 +312,8 @@ void RunConfig::ConfigSADCT(YAML::Node ymlnode)
     conf->SetADCType(ADC::SADCT);
 
     if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
+
+    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());    
 
     if (node["SID"]) {
       int sid = node["SID"].as<int>();

@@ -42,8 +42,8 @@ void IADCTConf::PrintConf() const
   using std::cout;
   using std::endl;
 
-  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) MODE(%d) RL(%d) CW(%d) GW(%d) PSW(%d)",
-               GetName(), fSID, fMID, fNCH, fMODE, fRL, fCW, fGW, fPSW)
+  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) MODE(%d) RL(%d) CW(%d) GW(%d) PSW(%d) DAQID(%d)",
+               GetName(), fSID, fMID, fNCH, fMODE, fRL, fCW, fGW, fPSW, fDAQID)
        << endl;
 
   cout << Form("                  TLT1(%X) TLT2(%X) TLT3(%X) TLT4(%X) TLT5(%X)", fTLT[0], fTLT[1],
