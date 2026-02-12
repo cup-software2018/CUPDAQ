@@ -1,16 +1,19 @@
 #ifndef TriggerLookupTable_hh
 #define TriggerLookupTable_hh
 
-#include "TObject.h"
-
-class TriggerLookupTable : public TObject {
+class TriggerLookupTable {
 public:
-  TriggerLookupTable();
-  ~TriggerLookupTable() override = default;
+  static TriggerLookupTable & Instance()
+  {
+    static TriggerLookupTable instance;
+    return instance;
+  }
 
-  UShort_t GetTLT(const char * val);
+  unsigned short GetTLT(const char * val);
 
-  ClassDef(TriggerLookupTable, 0)
+private:
+  TriggerLookupTable() = default;
+  ~TriggerLookupTable() = default;
 };
 
 #endif

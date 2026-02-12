@@ -1,20 +1,8 @@
-#include <string>
-#include <algorithm>
-
-#include "DAQConfig/TriggerLookupTable.hh"
-
-/**
- * Generates a 16-bit Trigger Lookup Table (TLT) value based on a logic string.
- * Supports AND logic ('x', '*', '&') and OR logic ('+', '|').
- * Input example: "1x2 + 3x4" means (Ch1 AND Ch2) OR (Ch3 AND Ch4).
- */
-unsigned short TriggerLookupTable::GetTLT(const char * val)
+unsigned short GetTLT(const char * val)
 {
-  if (!val) return 0;
-
   std::string expr(val);
 
-  // Pre-processing: Remove whitespaces and convert to lowercase
+  // 1. Pre-processing: Remove whitespaces and convert to lowercase
   expr.erase(std::remove(expr.begin(), expr.end(), ' '), expr.end());
   std::transform(expr.begin(), expr.end(), expr.begin(), ::tolower);
 
@@ -25,7 +13,7 @@ unsigned short TriggerLookupTable::GetTLT(const char * val)
 
   unsigned short tlt_result = 0;
 
-  // Iterate through all 16 possible combinations of 4 input channels (2^4 = 16)
+  // 2. Iterate through all 16 possible combinations of 4 input channels (2^4 = 16)
   // i represents the bit index (0 to 15) in the lookup table
   for (int i = 0; i < 16; ++i) {
     bool ch[5];             // Using ch[1] to ch[4] for intuitive mapping
@@ -34,8 +22,8 @@ unsigned short TriggerLookupTable::GetTLT(const char * val)
     ch[3] = (i >> 2) & 0x1; // Channel 3 status
     ch[4] = (i >> 3) & 0x1; // Channel 4 status (MSB)
 
-    // Logic Evaluation (Simple Parser)
-    // split the expression by OR ('|') and evaluate each AND-group
+    // 3. Logic Evaluation (Simple Parser)
+    // We split the expression by OR ('|') and evaluate each AND-group
     bool final_logic_state = false;
     std::string or_delimiters = "|";
 
@@ -62,9 +50,17 @@ unsigned short TriggerLookupTable::GetTLT(const char * val)
       start = end + 1;
     }
 
-    // Set the i-th bit if the logic evaluates to true for this combination
+    // 4. Set the i-th bit if the logic evaluates to true for this combination
     if (final_logic_state) { tlt_result |= (1 << i); }
   }
 
   return tlt_result;
+}
+
+
+
+void test()
+{
+  unsigned short tlt = GetTLT("1+2x3x4");
+  cout <<Form("%X", tlt) << endl;
 }

@@ -12,7 +12,6 @@
 #include "DAQConfig/MADCSConf.hh"
 #include "DAQConfig/SADCTConf.hh"
 #include "DAQConfig/TCBConf.hh"
-#include "DAQConfig/TriggerLookupTable.hh"
 
 class RunConfig {
 public:

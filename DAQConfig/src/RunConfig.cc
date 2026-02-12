@@ -1,14 +1,12 @@
 #include "DAQConfig/RunConfig.hh"
+#include "DAQConfig/TriggerLookupTable.hh"
 #include "DAQUtils/ELog.hh"
 
 RunConfig::RunConfig() { fConfigs = new AbsConfList(); }
 
 RunConfig::~RunConfig() { delete fConfigs; }
 
-bool RunConfig::ReadConfig()
-{
-  return ReadConfig(fConfigFilename.c_str());
-}
+bool RunConfig::ReadConfig() { return ReadConfig(fConfigFilename.c_str()); }
 
 bool RunConfig::ReadConfig(const char * name)
 {
@@ -41,7 +39,8 @@ bool RunConfig::ReadConfig(const char * name)
     ERROR("file not found, %s", filename.c_str());
   }
   catch (const YAML::ParserException & e) {
-    ERROR("syntax error (%s) at line %d, col %d of config file", e.msg, e.mark.line + 1, e.mark.column + 1);
+    ERROR("syntax error (%s) at line %d, col %d of config file", e.msg, e.mark.line + 1,
+          e.mark.column + 1);
   }
   catch (const std::exception & e) {
     ERROR("unknown error(%s) on reading config file", e.what());
@@ -90,16 +89,16 @@ void RunConfig::ConfigDAQ(YAML::Node ymlnode)
   auto * conf = new DAQConf();
   YAML::Node daq_list = ymlnode["DAQ"];
 
-  for (const auto& server : daq_list) {
+  for (const auto & server : daq_list) {
     try {
-      int id          = server["ID"].as<int>();
+      int id = server["ID"].as<int>();
       std::string name = server["NAME"].as<std::string>();
-      std::string ip   = server["IP"].as<std::string>();
-      int port        = server["PORT"].as<int>();
+      std::string ip = server["IP"].as<std::string>();
+      int port = server["PORT"].as<int>();
 
       conf->AddDAQ(id, name, ip, port);
     }
-    catch (const YAML::Exception& e) {
+    catch (const YAML::Exception & e) {
       WARNING("Failed to parse DAQ server entry: %s", e.what());
     }
   }
@@ -190,9 +189,8 @@ void RunConfig::ConfigFADCT(YAML::Node ymlnode)
 
     // TLT String Parsing
     if (node["TLT"]) {
-      TriggerLookupTable tbl;
       std::string tlt_str = node["TLT"].as<std::string>();
-      unsigned short tlt_val = tbl.GetTLT(tlt_str.c_str());
+      unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_str.c_str());
       conf->SetTLT(tlt_val);
     }
 
@@ -240,7 +238,7 @@ void RunConfig::ConfigIADCT(YAML::Node ymlnode)
 
     if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());    
+    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());
 
     if (node["SID"]) {
       int sid = node["SID"].as<int>();
@@ -259,18 +257,18 @@ void RunConfig::ConfigIADCT(YAML::Node ymlnode)
     if (node["PSW"]) conf->SetPSW(node["PSW"].as<int>());
 
     if (node["TLT"]) {
-      TriggerLookupTable tbl;
       if (node["TLT"].IsSequence()) {
         std::vector<std::string> tlt_strs = node["TLT"].as<std::vector<std::string>>();
         int valsize = tlt_strs.size();
         for (int i = 0; i < 10; ++i) {
           std::string target_s = (i < valsize) ? tlt_strs[i] : tlt_strs[valsize - 1];
-          conf->SetTLT(i, tbl.GetTLT(target_s.c_str()));
+          unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(target_s.c_str());
+          conf->SetTLT(i, tlt_val);
         }
       }
       else {
         std::string tlt_s = node["TLT"].as<std::string>();
-        unsigned short tlt_val = tbl.GetTLT(tlt_s.c_str());
+        unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_s.c_str());
         for (int i = 0; i < 10; ++i)
           conf->SetTLT(i, tlt_val);
       }
@@ -313,7 +311,7 @@ void RunConfig::ConfigSADCT(YAML::Node ymlnode)
 
     if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());    
+    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());
 
     if (node["SID"]) {
       int sid = node["SID"].as<int>();
@@ -330,18 +328,18 @@ void RunConfig::ConfigSADCT(YAML::Node ymlnode)
     if (node["SUBPED"]) conf->SetSUBPED(node["SUBPED"].as<int>());
 
     if (node["TLT"]) {
-      TriggerLookupTable tbl;
       if (node["TLT"].IsSequence()) {
         std::vector<std::string> tlt_strs = node["TLT"].as<std::vector<std::string>>();
         int valsize = tlt_strs.size();
         for (int i = 0; i < 8; ++i) {
           std::string target_s = (i < valsize) ? tlt_strs[i] : tlt_strs[valsize - 1];
-          conf->SetTLT(i, tbl.GetTLT(target_s.c_str()));
+          unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(target_s.c_str());
+          conf->SetTLT(i, tlt_val);
         }
       }
       else if (node["TLT"].IsScalar()) {
         std::string tlt_s = node["TLT"].as<std::string>();
-        unsigned short tlt_val = tbl.GetTLT(tlt_s.c_str());
+        unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_s.c_str());
         for (int i = 0; i < 8; ++i)
           conf->SetTLT(i, tlt_val);
       }
@@ -377,9 +375,8 @@ void RunConfig::ConfigFADCS(YAML::Node ymlnode)
   }
 
   if (node["TLT"]) {
-    TriggerLookupTable tbl;
     std::string tlt_str = node["TLT"].as<std::string>();
-    unsigned short tlt_val = tbl.GetTLT(tlt_str.c_str());
+    unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_str.c_str());
     conf->SetTLT(tlt_val);
   }
 
@@ -433,9 +430,8 @@ void RunConfig::ConfigGADCS(YAML::Node ymlnode)
   if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
 
   if (node["TLT"]) {
-    TriggerLookupTable tbl;
     std::string tlt_str = node["TLT"].as<std::string>();
-    unsigned short tlt_val = tbl.GetTLT(tlt_str.c_str());
+    unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_str.c_str());
     conf->SetTLT(tlt_val);
   }
 
@@ -478,9 +474,9 @@ void RunConfig::ConfigMADCS(YAML::Node ymlnode)
   }
 
   if (node["TLT"]) {
-    TriggerLookupTable tbl;
     std::string tlt_str = node["TLT"].as<std::string>();
-    conf->SetTLT(tbl.GetTLT(tlt_str.c_str()));
+    unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_str.c_str());
+    conf->SetTLT(tlt_val);
   }
 
   if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());

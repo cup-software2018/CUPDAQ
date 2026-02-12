@@ -15,7 +15,7 @@
 #pragma link C++ class  TCBConf+;
 #pragma link C++ class  STRGConf+;
 #pragma link C++ class  DAQConf+;
-#pragma link C++ class  RunConfig;
-#pragma link C++ class  TriggerLookupTable;
+#pragma link C++ class  RunConfig+;
+#pragma link C++ class  TriggerLookupTable+;
 
 #endif
