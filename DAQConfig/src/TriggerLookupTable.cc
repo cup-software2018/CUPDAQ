@@ -1,111 +1,73 @@
 #include <algorithm>
-#include <set>
+#include <cctype>
+#include <sstream>
 #include <string>
+#include <vector>
 
 #include "DAQConfig/TriggerLookupTable.hh"
 
-/**
- * Generates a 16-bit Trigger Lookup Table (TLT) value based on a logic string.
- * Supports AND logic ('x', '*', '&') and OR logic ('+', '|').
- *
- * Input example: "1x2 + 3x4" means (Ch1 AND Ch2) OR (Ch3 AND Ch4).
- *
- * Improvements:
- * 1. Input validation for channel numbers (1-4 only)
- * 2. Duplicate channel detection within AND terms
- * 3. Empty term handling
- * 4. Better bounds checking
- *
- * @param val Logic expression string
- * @return 16-bit lookup table value (0 if input is invalid)
- */
 unsigned short TriggerLookupTable::GetTLT(const char * val)
 {
-  // Handle null input
-  if (!val) return 0;
-
+  // 1. Safety Checks
+  if (!val || val[0] == '\0') return 0;
   std::string expr(val);
 
-  // Pre-processing: Remove whitespaces and convert to lowercase
-  expr.erase(std::remove(expr.begin(), expr.end(), ' '), expr.end());
-  std::transform(expr.begin(), expr.end(), expr.begin(), ::tolower);
-
-  // Handle empty string after whitespace removal
+  // Remove spaces
+  expr.erase(std::remove_if(expr.begin(), expr.end(), ::isspace), expr.end());
   if (expr.empty()) return 0;
 
-  // Normalize AND operators to '&' and OR operators to '|'
-  std::replace(expr.begin(), expr.end(), '*', '&');
-  std::replace(expr.begin(), expr.end(), 'x', '&');
-  std::replace(expr.begin(), expr.end(), '+', '|');
+  // 2. Parse Logic into Bitmasks (The "Compiler" Phase)
+  // We store required bits for each OR-term.
+  // Example: "1x2 + 4" -> stores { 0x3 (binary 0011), 0x8 (binary 1000) }
+  std::vector<unsigned short> logic_masks;
 
-  unsigned short tlt_result = 0;
+  // Normalize splitters: treat '+' as logic OR separator
+  std::replace(expr.begin(), expr.end(), '|', '+');
 
-  // Iterate through all 16 possible combinations of 4 input channels (2^4 = 16)
-  // i represents the bit index (0 to 15) in the lookup table
-  for (int i = 0; i < 16; ++i) {
-    bool ch[5];             // Using ch[1] to ch[4] for intuitive mapping (ch[0] unused)
-    ch[1] = (i & 0x1);      // Channel 1 status (LSB of i)
-    ch[2] = (i >> 1) & 0x1; // Channel 2 status
-    ch[3] = (i >> 2) & 0x1; // Channel 3 status
-    ch[4] = (i >> 3) & 0x1; // Channel 4 status (MSB of i)
+  std::stringstream ss(expr);
+  std::string segment;
 
-    // Logic Evaluation: Parse and evaluate the expression
-    // Split by OR ('|') and evaluate each AND-group
-    bool final_logic_state = false;
-    std::string or_delimiters = "|";
-    size_t start = 0, end;
+  while (std::getline(ss, segment, '+')) {
+    if (segment.empty()) continue;
 
-    while ((end = expr.find_first_of(or_delimiters, start)) != std::string::npos ||
-           start < expr.length()) {
-      // Extract a single term (e.g., "1&2&3")
-      std::string term =
-          expr.substr(start, (end == std::string::npos) ? std::string::npos : end - start);
+    unsigned short current_mask = 0;
+    bool has_valid_channel = false;
 
-      // Skip empty terms (e.g., from "1||2" or leading/trailing '|')
-      if (term.empty()) {
-        if (end == std::string::npos) break;
-        start = end + 1;
-        continue;
+    for (char c : segment) {
+      if (c >= '1' && c <= '4') {
+        // Convert char '1'..'4' to bit index 0..3
+        // '1' -> bit 0 (1 << 0)
+        // '2' -> bit 1 (1 << 1)
+        int bit_idx = c - '1';
+        current_mask |= (1 << bit_idx);
+        has_valid_channel = true;
       }
-
-      // Evaluate AND logic within the term
-      bool term_state = true;
-      bool has_valid_channel = false;
-      std::set<char> seen_channels; // Track channels to detect duplicates
-
-      for (char c : term) {
-        // Process only valid channel numbers (1-4)
-        if (c >= '1' && c <= '4') {
-          has_valid_channel = true;
-
-          // Check for duplicate channels in the same AND term
-          if (seen_channels.count(c)) {
-            // Duplicate detected: "1&1" is redundant but we'll allow it
-            // (it doesn't change the logic, just redundant)
-            // Option: could issue a warning in a logging system
-          }
-          seen_channels.insert(c);
-
-          // Apply AND logic with the channel state
-          term_state &= ch[c - '0'];
-        }
-        // Ignore '&' operators and any other characters (they're separators)
-        // Invalid characters are simply skipped
-      }
-
-      // If term has no valid channels, treat it as false
-      // (e.g., term was just "&&&" or contained only invalid chars)
-      if (!has_valid_channel) { term_state = false; }
-
-      // Logic OR: Result is true if any term is true
-      final_logic_state |= term_state;
-
-      if (end == std::string::npos) break;
-      start = end + 1;
     }
 
-    // Set the i-th bit if the logic evaluates to true for this combination
-    if (final_logic_state) { tlt_result |= (1 << i); }
+    // Only add valid terms (ignore garbage like "&&&")
+    if (has_valid_channel) { logic_masks.push_back(current_mask); }
+  }
+
+  if (logic_masks.empty()) return 0;
+
+  // 3. Evaluate Logic (The "Execution" Phase)
+  unsigned short tlt_result = 0;
+
+  // Iterate through all 16 combinations (0x0 to 0xF)
+  for (unsigned short i = 0; i < 16; ++i) {
+    bool match = false;
+
+    // Check against pre-calculated masks
+    // Logic: For a term to be true, the input (i) must have ALL bits of the mask set.
+    // Formula: (input & mask) == mask
+    for (unsigned short mask : logic_masks) {
+      if ((i & mask) == mask) {
+        match = true;
+        break; // Short-circuit: Logic OR satisfied
+      }
+    }
+
+    if (match) { tlt_result |= (1 << i); }
   }
 
   return tlt_result;
