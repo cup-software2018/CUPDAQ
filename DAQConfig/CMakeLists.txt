@@ -5,8 +5,9 @@ file ( GLOB MODULE_HEADERS ${MODULE_NAME}/*.hh )
 file ( GLOB MODULE_SOURCES src/*.cc )
 
 # --- Collect include dirs for dictionary
-set(DICT_I_FLAGS
+set ( DICT_I_FLAGS
     -I${CMAKE_SOURCE_DIR}/OnlConsts
+    -I${CMAKE_SOURCE_DIR}/DAQUtils
 )
 
 # Generate ROOT dictionary (pass -I for OnlConsts)
@@ -35,6 +36,7 @@ target_link_libraries ( ${MODULE_NAME}
     PUBLIC
         ${ROOT_LIBRARIES}
         OnlConsts
+        DAQUtils
 )
 
 target_compile_definitions ( ${MODULE_NAME}
@@ -49,7 +51,7 @@ install ( DIRECTORY ${MODULE_NAME}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
     FILES_MATCHING PATTERN "*.hh"
 )
-install(FILES
+install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}_rdict.pcm
     ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}.rootmap
     DESTINATION ${CMAKE_INSTALL_LIBDIR}

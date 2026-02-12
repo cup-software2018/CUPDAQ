@@ -42,40 +42,37 @@ void SADCTConf::PrintConf() const
                GetName(), fSID, fMID, fNCH, fCW, fGW, fPSW, fSUBPED)
        << endl;
 
-  cout << Form("                  TLT1(%X) TLT2(%X) TLT3(%X) TLT4(%X)", fTLT[0], fTLT[1], fTLT[2], fTLT[3]) << endl;
-  cout << Form("                  TLT5(%X) TLT6(%X) TLT7(%X) TLT8(%X)", fTLT[4], fTLT[5], fTLT[6], fTLT[7]) << endl;
+  cout << Form("                  TLT1(%X) TLT2(%X) TLT3(%X) TLT4(%X)", fTLT[0], fTLT[1], fTLT[2],
+               fTLT[3])
+       << endl;
+  cout << Form("                  TLT5(%X) TLT6(%X) TLT7(%X) TLT8(%X)", fTLT[4], fTLT[5], fTLT[6],
+               fTLT[7])
+       << endl;
 
   if (fIsEnabled) cout << Form(" ++ This %s is enabled", GetName()) << endl;
   else cout << Form(" ++ This %s is disabled", GetName()) << endl;
 
   cout << " -----------------------------------------------" << endl;
-  for (int j = 0; j < 4; j++) {
-    if (j > 0) cout << endl;
 
-    cout << "    CID : ";
-    for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%6d", fCID[i]);
-    }
-    cout << endl;
+  for (int step = 0; step < fNCH; step += 8) {
+    int end = (step + 8 > fNCH) ? fNCH : step + 8;
 
-    cout << "    PID : ";
-    for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%6d", fPID[i]);
-    }
-    cout << endl;
+    auto print = [&](const char * label, const int * arr) {
+      cout << Form("%8s :", label);
+      for (int i = step; i < end; i++) {
+        cout << Form("%6d", arr[i]);
+      }
+      cout << endl;
+    };
 
-    cout << "    THR : ";
-    for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%6d", fTHR[i]);
-    }
-    cout << endl;
+    print("CID", fCID);
+    print("PID", fPID);
+    print("THR", fTHR);
+    print("DLY", fDLY);
 
-    cout << "    DLY : ";
-    for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%6d", fDLY[i]);
-    }
-    cout << endl;
+    if (step + 8 < fNCH) cout << endl;
   }
+
   cout << " -----------------------------------------------" << endl;
   cout << endl;
 }

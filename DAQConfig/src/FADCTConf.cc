@@ -56,8 +56,9 @@ void FADCTConf::PrintConf() const
   using std::cout;
   using std::endl;
 
-  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) TRGON(%d) RL(%d) TLT(%X) DSR(%d) DAQID(%d)", GetName(), fSID,
-               fMID, fNCH, fTRGON, fRL, fTLT, fDSR, fDAQID)
+  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) TRGON(%d) RL(%d) "
+               "TLT(%X) DSR(%d) DAQID(%d)",
+               GetName(), fSID, fMID, fNCH, fTRGON, fRL, fTLT, fDSR, fDAQID)
        << endl;
 
   if (fIsEnabled) cout << Form(" ++ This %s is enabled", GetName()) << endl;
@@ -66,7 +67,7 @@ void FADCTConf::PrintConf() const
   cout << " -----------------------------------------------" << endl;
 
   auto print = [&](const char * label, const int * arr) {
-    cout << " " << label << " : ";
+    cout << Form("%8s", label);
     for (int i = 0; i < fNCH; i++) {
       cout << Form("%8d", arr[i]);
     }

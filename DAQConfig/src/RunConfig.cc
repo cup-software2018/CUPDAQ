@@ -1,2371 +1,506 @@
-#include <algorithm>
-#include <sstream>
-
-#include "TObjString.h"
-#include "TString.h"
-
 #include "DAQConfig/RunConfig.hh"
+#include "DAQUtils/ELog.hh"
 
-using namespace std;
+RunConfig::RunConfig() { fConfigs = new AbsConfList(); }
 
-ClassImp(RunConfig)
+RunConfig::~RunConfig() { delete fConfigs; }
 
-RunConfig::RunConfig()
-  : TObject()
+bool RunConfig::ReadConfig()
 {
-  fDAQMode = 0;
-  fExperiment = DAQ::NONE;
-
-  EXPERIMENTNAME[0] = "NONE";
-  EXPERIMENTNAME[1] = "NEOS";
-  EXPERIMENTNAME[2] = "COSINE";
-  EXPERIMENTNAME[3] = "NEON";
-  EXPERIMENTNAME[4] = "AMORE1";
-  EXPERIMENTNAME[5] = "AMORE2";
-
-  for (int i = 0; i < kNEXPERIMENT; i++)
-    fExpeimentItem.insert(make_pair(EXPERIMENTNAME[i], i));
-
-  fConfigs = new AbsConfList();
-
-  MAINCONFIGMENU[0] = "INCLUDE";
-  MAINCONFIGMENU[1] = "EXPERIMENT";
-  MAINCONFIGMENU[2] = "DAQMODE";
-  MAINCONFIGMENU[3] = "TCB";
-  MAINCONFIGMENU[4] = "FADCT";
-  MAINCONFIGMENU[5] = "FADCS";
-  MAINCONFIGMENU[6] = "GADCT";
-  MAINCONFIGMENU[7] = "GADCS";
-  MAINCONFIGMENU[8] = "MADCS";
-  MAINCONFIGMENU[9] = "SADCT";
-  MAINCONFIGMENU[10] = "SADCS";
-  MAINCONFIGMENU[11] = "IADCT";
-  MAINCONFIGMENU[12] = "AMOREADC";
-  MAINCONFIGMENU[13] = "STRG";
-  MAINCONFIGMENU[14] = "DAQ";
-
-  for (int i = 0; i < kNMAINMENU; i++)
-    fMainItem.insert(make_pair(MAINCONFIGMENU[i], i + 1));
-
-  TCBCONFIGMENU[0] = "TRGON";
-  TCBCONFIGMENU[1] = "CW";
-  TCBCONFIGMENU[2] = "DLY";
-  TCBCONFIGMENU[3] = "PTRIG";
-  TCBCONFIGMENU[4] = "MTHRF";
-  TCBCONFIGMENU[5] = "PSCF";
-  TCBCONFIGMENU[6] = "DTF";
-  TCBCONFIGMENU[7] = "TRGF";
-  TCBCONFIGMENU[8] = "MTHRSM";
-  TCBCONFIGMENU[9] = "PSCSM";
-  TCBCONFIGMENU[10] = "DTSM";
-  TCBCONFIGMENU[11] = "TRGSM";
-  TCBCONFIGMENU[12] = "MTHRSL";
-  TCBCONFIGMENU[13] = "PSCSL";
-  TCBCONFIGMENU[14] = "DTSL";
-  TCBCONFIGMENU[15] = "TRGSL";
-  TCBCONFIGMENU[16] = "MTHRI";
-  TCBCONFIGMENU[17] = "PSCI";
-  TCBCONFIGMENU[18] = "DTI";
-  TCBCONFIGMENU[19] = "TRGI";
-  TCBCONFIGMENU[20] = "TYPE";
-
-  for (int i = 0; i < kNTCBMENU; i++)
-    fTCBItem.insert(make_pair(TCBCONFIGMENU[i], i + 1));
-
-  FADCTCONFIGMENU[0] = "ENABLED";
-  FADCTCONFIGMENU[1] = "CID";
-  FADCTCONFIGMENU[2] = "PID";
-  FADCTCONFIGMENU[3] = "POL";
-  FADCTCONFIGMENU[4] = "DACOFF";
-  FADCTCONFIGMENU[5] = "DLY";
-  FADCTCONFIGMENU[6] = "DTIME";
-  FADCTCONFIGMENU[7] = "CW";
-  FADCTCONFIGMENU[8] = "TM";
-  FADCTCONFIGMENU[9] = "THR";
-  FADCTCONFIGMENU[10] = "PCT";
-  FADCTCONFIGMENU[11] = "PCI";
-  FADCTCONFIGMENU[12] = "PWT";
-  FADCTCONFIGMENU[13] = "PSW";
-  FADCTCONFIGMENU[14] = "RL";
-  FADCTCONFIGMENU[15] = "TLT";
-  FADCTCONFIGMENU[16] = "DSR";
-  FADCTCONFIGMENU[17] = "PEDRMS";
-  FADCTCONFIGMENU[18] = "PGAIN";
-  FADCTCONFIGMENU[19] = "PGAINS";
-  FADCTCONFIGMENU[20] = "PFTIME";
-  FADCTCONFIGMENU[21] = "PTTIME";
-  FADCTCONFIGMENU[22] = "PTTS";
-  FADCTCONFIGMENU[23] = "PQEFF";
-  FADCTCONFIGMENU[24] = "TRGON";
-
-  for (int i = 0; i < kNFADCTMENU; i++)
-    fFADCTItem.insert(make_pair(FADCTCONFIGMENU[i], i + 1));
-
-  FADCSCONFIGMENU[0] = "ENABLED";
-  FADCSCONFIGMENU[1] = "CID";
-  FADCSCONFIGMENU[2] = "PID";
-  FADCSCONFIGMENU[3] = "POL";
-  FADCSCONFIGMENU[4] = "DACOFF";
-  FADCSCONFIGMENU[5] = "DLY";
-  FADCSCONFIGMENU[6] = "DTIME";
-  FADCSCONFIGMENU[7] = "CW";
-  FADCSCONFIGMENU[8] = "TM";
-  FADCSCONFIGMENU[9] = "THR";
-  FADCSCONFIGMENU[10] = "PCT";
-  FADCSCONFIGMENU[11] = "PCI";
-  FADCSCONFIGMENU[12] = "PWT";
-  FADCSCONFIGMENU[13] = "PSW";
-  FADCSCONFIGMENU[14] = "RL";
-  FADCSCONFIGMENU[15] = "TLT";
-  FADCSCONFIGMENU[16] = "DSR";
-  FADCSCONFIGMENU[17] = "TRGON";
-  FADCSCONFIGMENU[18] = "PTRG";
-  FADCSCONFIGMENU[19] = "PSC";
-
-  for (int i = 0; i < kNFADCSMENU; i++)
-    fFADCSItem.insert(make_pair(FADCSCONFIGMENU[i], i + 1));
-
-  GADCSCONFIGMENU[0] = "ENABLED";
-  GADCSCONFIGMENU[1] = "CID";
-  GADCSCONFIGMENU[2] = "PID";
-  GADCSCONFIGMENU[3] = "POL";
-  GADCSCONFIGMENU[4] = "DACOFF";
-  GADCSCONFIGMENU[5] = "DLY";
-  GADCSCONFIGMENU[6] = "DTIME";
-  GADCSCONFIGMENU[7] = "CW";
-  GADCSCONFIGMENU[8] = "TM";
-  GADCSCONFIGMENU[9] = "THR";
-  GADCSCONFIGMENU[10] = "PCT";
-  GADCSCONFIGMENU[11] = "PCI";
-  GADCSCONFIGMENU[12] = "PWT";
-  GADCSCONFIGMENU[13] = "PSW";
-  GADCSCONFIGMENU[14] = "RL";
-  GADCSCONFIGMENU[15] = "TLT";
-  GADCSCONFIGMENU[16] = "DSR";
-  GADCSCONFIGMENU[17] = "TRGON";
-  GADCSCONFIGMENU[18] = "PTRG";
-  GADCSCONFIGMENU[19] = "PSC";
-
-  for (int i = 0; i < kNGADCSMENU; i++)
-    fGADCSItem.insert(make_pair(GADCSCONFIGMENU[i], i + 1));
-
-  MADCSCONFIGMENU[0] = "ENABLED";
-  MADCSCONFIGMENU[1] = "CID";
-  MADCSCONFIGMENU[2] = "PID";
-  MADCSCONFIGMENU[3] = "POL";
-  MADCSCONFIGMENU[4] = "DACOFF";
-  MADCSCONFIGMENU[5] = "DLY";
-  MADCSCONFIGMENU[6] = "DTIME";
-  MADCSCONFIGMENU[7] = "CW";
-  MADCSCONFIGMENU[8] = "TM";
-  MADCSCONFIGMENU[9] = "THR";
-  MADCSCONFIGMENU[10] = "PCT";
-  MADCSCONFIGMENU[11] = "PCI";
-  MADCSCONFIGMENU[12] = "PWT";
-  MADCSCONFIGMENU[13] = "PSW";
-  MADCSCONFIGMENU[14] = "RL";
-  MADCSCONFIGMENU[15] = "TLT";
-  MADCSCONFIGMENU[16] = "DSR";
-  MADCSCONFIGMENU[17] = "TRGON";
-  MADCSCONFIGMENU[18] = "PTRG";
-  MADCSCONFIGMENU[19] = "PSC";
-
-  for (int i = 0; i < kNMADCSMENU; i++)
-    fMADCSItem.insert(make_pair(MADCSCONFIGMENU[i], i + 1));
-
-  SADCTCONFIGMENU[0] = "ENABLED";
-  SADCTCONFIGMENU[1] = "CID";
-  SADCTCONFIGMENU[2] = "PID";
-  SADCTCONFIGMENU[3] = "CW";
-  SADCTCONFIGMENU[4] = "GW";
-  SADCTCONFIGMENU[5] = "PSW";
-  SADCTCONFIGMENU[6] = "THR";
-  SADCTCONFIGMENU[7] = "DLY";
-  SADCTCONFIGMENU[8] = "SUBPED";
-  SADCTCONFIGMENU[9] = "TLT1";
-  SADCTCONFIGMENU[10] = "TLT2";
-  SADCTCONFIGMENU[11] = "TLT3";
-  SADCTCONFIGMENU[12] = "TLT4";
-  SADCTCONFIGMENU[13] = "TLT5";
-  SADCTCONFIGMENU[14] = "TLT6";
-  SADCTCONFIGMENU[15] = "TLT7";
-  SADCTCONFIGMENU[16] = "TLT8";
-
-  for (int i = 0; i < kNSADCTMENU; i++)
-    fSADCTItem.insert(make_pair(SADCTCONFIGMENU[i], i + 1));
-
-  IADCTCONFIGMENU[0] = "ENABLED";
-  IADCTCONFIGMENU[1] = "CID";
-  IADCTCONFIGMENU[2] = "PID";
-  IADCTCONFIGMENU[3] = "MODE";
-  IADCTCONFIGMENU[4] = "RL";
-  IADCTCONFIGMENU[5] = "CW";
-  IADCTCONFIGMENU[6] = "GW";
-  IADCTCONFIGMENU[7] = "PSW";
-  IADCTCONFIGMENU[8] = "THR1";
-  IADCTCONFIGMENU[9] = "THR2";
-  IADCTCONFIGMENU[10] = "THR3";
-  IADCTCONFIGMENU[11] = "THR4";
-  IADCTCONFIGMENU[12] = "THR5";
-  IADCTCONFIGMENU[13] = "THR6";
-  IADCTCONFIGMENU[14] = "THR7";
-  IADCTCONFIGMENU[15] = "THR8";
-  IADCTCONFIGMENU[16] = "THR9";
-  IADCTCONFIGMENU[17] = "THR10";
-  IADCTCONFIGMENU[18] = "DLY";
-  IADCTCONFIGMENU[19] = "HV";
-  IADCTCONFIGMENU[20] = "TLT1";
-  IADCTCONFIGMENU[21] = "TLT2";
-  IADCTCONFIGMENU[22] = "TLT3";
-  IADCTCONFIGMENU[23] = "TLT4";
-  IADCTCONFIGMENU[24] = "TLT5";
-  IADCTCONFIGMENU[25] = "TLT6";
-  IADCTCONFIGMENU[26] = "TLT7";
-  IADCTCONFIGMENU[27] = "TLT8";
-  IADCTCONFIGMENU[28] = "TLT9";
-  IADCTCONFIGMENU[29] = "TLT10";
-
-  for (int i = 0; i < kNIADCTMENU; i++)
-    fIADCTItem.insert(make_pair(IADCTCONFIGMENU[i], i + 1));
-
-  AMOREADCCONFIGMENU[0] = "ENABLED";
-  AMOREADCCONFIGMENU[1] = "CID";
-  AMOREADCCONFIGMENU[2] = "PID";
-  AMOREADCCONFIGMENU[3] = "TRGON";
-  AMOREADCCONFIGMENU[4] = "ORDER";
-  AMOREADCCONFIGMENU[5] = "LOWER";
-  AMOREADCCONFIGMENU[6] = "UPPER";
-  AMOREADCCONFIGMENU[7] = "THR";
-  AMOREADCCONFIGMENU[8] = "DT";
-  AMOREADCCONFIGMENU[9] = "SR";
-  AMOREADCCONFIGMENU[10] = "RL";
-  AMOREADCCONFIGMENU[11] = "DLY";
-  AMOREADCCONFIGMENU[12] = "CW";
-  AMOREADCCONFIGMENU[13] = "SKBIN";
-  AMOREADCCONFIGMENU[14] = "ZEROSUP";
-
-  for (int i = 0; i < kNAMOREADCMENU; i++)
-    fAMOREADCItem.insert(make_pair(AMOREADCCONFIGMENU[i], i + 1));
-
-  STRGCONFIGMENU[0] = "ENABLED";
-  STRGCONFIGMENU[1] = "ADCTYPE";
-  STRGCONFIGMENU[2] = "ZSU";
-  STRGCONFIGMENU[3] = "PSC";
-  STRGCONFIGMENU[4] = "ICRD";
-
-  for (int i = 0; i < kNSTRGMENU; i++)
-    fSTRGItem.insert(make_pair(STRGCONFIGMENU[i], i + 1));
-
-  DAQCONFIGMENU[0] = "SERVER";
-
-  for (int i = 0; i < kNDAQMENU; i++)
-    fDAQItem.insert(make_pair(DAQCONFIGMENU[i], i + 1));
-
-  fTLT = new TriggerLookupTable();
+  return ReadConfig(fConfigFilename.c_str());
 }
 
-RunConfig::~RunConfig()
+bool RunConfig::ReadConfig(const char * name)
 {
-  fConfigs->Clear();
+  std::string filename(name);
 
-  delete fConfigs;
-  delete fTLT;
-}
+  if (filename.empty()) {
+    ERROR("config filename is empty");
+    return false;
+  }
 
-bool RunConfig::ReadConfig(const char * fname)
-{
-  ifstream input;
-  input.open(fname, ifstream::in);
-  if (input.is_open()) { return ReadConfig(input); }
+  try {
+    YAML::Node node = YAML::LoadFile(filename.c_str());
+    if (node.IsNull()) {
+      ERROR("config file is empty");
+      return false;
+    }
+
+    ConfigDAQ(node);
+    ConfigTCB(node);
+    ConfigFADCT(node);
+    ConfigIADCT(node);
+    ConfigSADCT(node);
+    ConfigFADCS(node);
+    ConfigGADCS(node);
+    ConfigMADCS(node);
+
+    return true;
+  }
+  catch (const YAML::BadFile & e) {
+    ERROR("file not found, %s", filename.c_str());
+  }
+  catch (const YAML::ParserException & e) {
+    ERROR("syntax error (%s) at line %d, col %d of config file", e.mark.line + 1, e.mark.column + 1,
+          e.msg);
+  }
+  catch (const std::exception & e) {
+    ERROR("unknown error(%s) on reading config file", e.what());
+  }
 
   return false;
 }
 
-bool RunConfig::ReadConfig(ifstream & ticket)
+template <typename T>
+void RunConfig::FillConfigArray(YAML::Node node, int nch, std::function<void(int, T)> setter,
+                                bool inc)
 {
-  bool retVal = true;
-  string line;
+  if (!node) return;
 
-  while (ticket.good()) {
-    getline(ticket, line);
-
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int val = 0;
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fMainItem[key]) {
-      case INCLUDE: {
-        string fname;
-        iss >> fname;
-
-        ifstream ifs(fname);
-        if (ifs.is_open()) { ReadConfig(ifs); }
-        else {
-          Warning("ReadConfig", Form("there is no file %s.", fname));
-        }
-        break;
-      }
-      case DAQMODE: {
-        int mode;
-        iss >> mode;
-        fDAQMode = mode;
-        break;
-      }
-      case EXPERIMENT: {
-        string exp;
-        iss >> exp;
-        if (fExpeimentItem.find(exp) != fExpeimentItem.end()) {
-          fExperiment = static_cast<DAQ::EXPERIMENT>(fExpeimentItem[exp]);
-        }
-        else {
-          fExperiment = DAQ::NONE;
-          Warning("ReadConfig", Form("experiment %s is ambiguous.", exp.data()));
-        }
-        break;
-      }
-      case TCB: {
-        auto * conf = new TCBConf(0);
-        fConfigs->Add(conf);
-
-        retVal = ConfigTCB(ticket, conf);
-        break;
-      }
-      case FADCT: {
-        iss >> val;
-        auto * conf = new FADCTConf(val);
-
-        int nch;
-        iss >> nch;
-        conf->SetNCH(nch);
-
-        int daqid;
-        iss >> daqid;
-        if (!iss.fail()) { conf->SetDAQID(daqid); }
-
-        fConfigs->Add(conf);
-
-        retVal = ConfigFADCT(ticket, conf);
-        break;
-      }
-      case FADCS: {
-        iss >> val;
-        auto * conf = new FADCSConf(val);
-
-        int nch;
-        iss >> nch;
-
-        conf->SetNCH(nch);
-        fConfigs->Add(conf);
-
-        retVal = ConfigFADCS(ticket, conf);
-        break;
-      }
-      case GADCS: {
-        iss >> val;
-        auto * conf = new GADCSConf(val);
-
-        int nch;
-        iss >> nch;
-
-        conf->SetNCH(nch);
-        fConfigs->Add(conf);
-
-        retVal = ConfigGADCS(ticket, conf);
-        break;
-      }
-      case MADCS: {
-        iss >> val;
-        auto * conf = new MADCSConf(val);
-
-        int nch;
-        iss >> nch;
-
-        conf->SetNCH(nch);
-        fConfigs->Add(conf);
-
-        retVal = ConfigMADCS(ticket, conf);
-        break;
-      }
-      case SADCT: {
-        iss >> val;
-        auto * conf = new SADCTConf(val);
-
-        int nch;
-        iss >> nch;
-
-        conf->SetNCH(nch);
-        fConfigs->Add(conf);
-
-        int daqid;
-        iss >> daqid;
-        if (!iss.fail()) { conf->SetDAQID(daqid); }
-
-        retVal = ConfigSADCT(ticket, conf);
-        break;
-      }
-      case IADCT: {
-        iss >> val;
-        auto * conf = new IADCTConf(val);
-
-        int nch;
-        iss >> nch;
-
-        conf->SetNCH(nch);
-        fConfigs->Add(conf);
-
-        int daqid;
-        iss >> daqid;
-        if (!iss.fail()) { conf->SetDAQID(daqid); }
-
-        retVal = ConfigIADCT(ticket, conf);
-        break;
-      }
-      case AMOREADC: {
-        iss >> val;
-        auto * conf = new AmoreADCConf(val);
-
-        int nch;
-        iss >> nch;
-
-        conf->SetNCH(nch);
-        fConfigs->Add(conf);
-
-        int daqid;
-        iss >> daqid;
-        if (!iss.fail()) { conf->SetDAQID(daqid); }
-
-        retVal = ConfigAmoreADC(ticket, conf);
-        break;
-      }
-      case STRG: {
-        auto * conf = new STRGConf();
-        retVal = ConfigSTRG(ticket, conf);
-        fConfigs->Add(conf);
-        break;
-      }
-      case DAQ: {
-        auto * conf = new DAQConf();
-        retVal = ConfigDAQ(ticket, conf);
-        fConfigs->Add(conf);
-        break;
-      }
-      default: {
-        Warning("ReadConfig", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
+  std::vector<T> val;
+  if (node.IsScalar()) { val.push_back(node.as<T>()); }
+  else {
+    try {
+      val = node.as<std::vector<T>>();
+    }
+    catch (...) {
+      return;
     }
   }
 
-  if (retVal) fConfigs->Sort();
+  int valsize = val.size();
+  if (valsize == 0) return;
 
-  return retVal;
+  for (int i = 0; i < nch; ++i) {
+    T target;
+    if (i < valsize) { target = val[i]; }
+    else {
+      if (inc) { target = val[valsize - 1] + (i - (valsize - 1)); }
+      else {
+        target = val[valsize - 1];
+      }
+    }
+    setter(i, target);
+  }
 }
 
-bool RunConfig::ConfigTCB(std::ifstream & ticket, TCBConf * conf)
+void RunConfig::ConfigDAQ(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  if (!ymlnode["DAQ"]) return;
 
-  string line;
+  auto * conf = new DAQConf();
+  YAML::Node daq_section = ymlnode["DAQ"];
 
-  while (true) {
-    getline(ticket, line);
+  for (auto it = daq_section.begin(); it != daq_section.end(); ++it) {
+    std::string name = it->first.as<std::string>();
+    YAML::Node info = it->second;
 
-    if (line == "END") break;
-    if (line.empty()) continue;
+    if (info.IsSequence() && info.size() >= 3) {
+      int id = info[0].as<int>();
+      std::string ip = info[1].as<std::string>();
+      int port = info[2].as<int>();
 
-    istringstream iss(line);
-
-    string key;
-    int val[4] = {0};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fTCBItem[key]) {
-      case TM_TCB: {
-        iss >> val[0];
-        conf->SetTM(val[0]);
-        break;
-      }
-      case CW_TCB: {
-        iss >> val[0];
-        conf->SetCW(val[0]);
-        break;
-      }
-      case DLY_TCB: {
-        iss >> val[0];
-        conf->SetDLY(val[0]);
-        break;
-      }
-      case PTRG_TCB: {
-        iss >> val[0];
-        conf->SetPTRG(val[0]);
-        break;
-      }
-      case MTHRF_TCB: {
-        iss >> val[0];
-        conf->SetMTHRF(val[0]);
-        break;
-      }
-      case PSCF_TCB: {
-        iss >> val[0];
-        conf->SetPSCF(val[0]);
-        break;
-      }
-      case DTF_TCB: {
-        iss >> val[0];
-        conf->SetDTF(val[0]);
-        break;
-      }
-      case TRGF_TCB: {
-        iss >> val[0] >> val[1] >> val[2] >> val[3];
-        conf->SetSWF(val[0], val[1], val[2], val[3]);
-        break;
-      }
-      case MTHRSM_TCB: {
-        iss >> val[0];
-        conf->SetMTHRSM(val[0]);
-        break;
-      }
-      case PSCSM_TCB: {
-        iss >> val[0];
-        conf->SetPSCSM(val[0]);
-        break;
-      }
-      case DTSM_TCB: {
-        iss >> val[0];
-        conf->SetDTSM(val[0]);
-        break;
-      }
-      case TRGSM_TCB: {
-        iss >> val[0] >> val[1] >> val[2] >> val[3];
-        conf->SetSWSM(val[0], val[1], val[2], val[3]);
-        break;
-      }
-      case MTHRSL_TCB: {
-        iss >> val[0];
-        conf->SetMTHRSL(val[0]);
-        break;
-      }
-      case PSCSL_TCB: {
-        iss >> val[0];
-        conf->SetPSCSL(val[0]);
-        break;
-      }
-      case DTSL_TCB: {
-        iss >> val[0];
-        conf->SetDTSL(val[0]);
-        break;
-      }
-      case TRGSL_TCB: {
-        iss >> val[0] >> val[1] >> val[2] >> val[3];
-        conf->SetSWSL(val[0], val[1], val[2], val[3]);
-        break;
-      }
-      case MTHRI_TCB: {
-        iss >> val[0];
-        conf->SetMTHRI(val[0]);
-        break;
-      }
-      case PSCI_TCB: {
-        iss >> val[0];
-        conf->SetPSCI(val[0]);
-        break;
-      }
-      case DTI_TCB: {
-        iss >> val[0];
-        conf->SetDTI(val[0]);
-        break;
-      }
-      case TRGI_TCB: {
-        iss >> val[0] >> val[1] >> val[2] >> val[3];
-        conf->SetSWI(val[0], val[1], val[2], val[3]);
-        break;
-      }
-      case TYPE_TCB: {
-        iss >> val[0];
-        conf->SetTCBTYPE(static_cast<TCB::TYPE>(val[0]));
-        break;
-      }
-      default: {
-        Warning("ConfigTCB", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
+      conf->AddDAQ(id, name, ip, port);
+    }
+    else {
+      WARNING("Invalid DAQ info for %s", name.c_str());
     }
   }
 
-  return retVal;
+  fConfigs->Add(conf);
 }
 
-bool RunConfig::ConfigFADCT(std::ifstream & ticket, FADCTConf * conf)
+void RunConfig::ConfigTCB(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  if (!ymlnode["TCB"]) return;
 
-  int nch = conf->NCH();
+  auto * conf = new TCBConf();
+  auto tcb = ymlnode["TCB"];
 
-  string line;
+  auto setSafeSW = [](YAML::Node node, std::function<void(int, int, int, int)> setter) {
+    if (!node) return;
+    std::vector<int> sw = node.as<std::vector<int>>();
+    int s0 = (sw.size() > 0) ? sw[0] : 0;
+    int s1 = (sw.size() > 1) ? sw[1] : 0;
+    int s2 = (sw.size() > 2) ? sw[2] : 0;
+    int s3 = (sw.size() > 3) ? sw[3] : 0;
+    setter(s0, s1, s2, s3);
+  };
 
-  while (true) {
-    getline(ticket, line);
+  if (tcb["DAQID"]) conf->SetDAQID(tcb["DAQID"].as<int>());
+  if (tcb["TYPE"]) conf->SetTCBTYPE(static_cast<TCB::TYPE>(tcb["TYPE"].as<int>()));
+  if (tcb["TM"]) conf->SetTM(tcb["TM"].as<int>());
+  if (tcb["CW"]) conf->SetCW(tcb["CW"].as<int>());
+  if (tcb["DLY"]) conf->SetDLY(tcb["DLY"].as<int>());
+  if (tcb["PTRG"]) conf->SetPTRG(tcb["PTRG"].as<int>());
 
-    if (line == "END") break;
-    if (line.empty()) continue;
+  if (tcb["MTHRF"]) conf->SetMTHRF(tcb["MTHRF"].as<int>());
+  if (tcb["PSCF"]) conf->SetPSCF(tcb["PSCF"].as<int>());
+  if (tcb["DTF"]) conf->SetDTF(tcb["DTF"].as<int>());
+  setSafeSW(tcb["SWF"], [&](int a, int b, int c, int d) { conf->SetSWF(a, b, c, d); });
 
-    istringstream iss(line);
+  if (tcb["MTHRSM"]) conf->SetMTHRSM(tcb["MTHRSM"].as<int>());
+  if (tcb["PSCSM"]) conf->SetPSCSM(tcb["PSCSM"].as<int>());
+  if (tcb["DTSM"]) conf->SetDTSM(tcb["DTSM"].as<int>());
+  setSafeSW(tcb["SWSM"], [&](int a, int b, int c, int d) { conf->SetSWSM(a, b, c, d); });
 
-    string key;
-    int val[4] = {0};
-    double dval[4] = {0.};
+  if (tcb["MTHRSL"]) conf->SetMTHRSL(tcb["MTHRSL"].as<int>());
+  if (tcb["PSCSL"]) conf->SetPSCSL(tcb["PSCSL"].as<int>());
+  if (tcb["DTSL"]) conf->SetDTSL(tcb["DTSL"].as<int>());
+  setSafeSW(tcb["SWSL"], [&](int a, int b, int c, int d) { conf->SetSWSL(a, b, c, d); });
 
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
+  if (tcb["MTHRI"]) conf->SetMTHRI(tcb["MTHRI"].as<int>());
+  if (tcb["PSCI"]) conf->SetPSCI(tcb["PSCI"].as<int>());
+  if (tcb["DTI"]) conf->SetDTI(tcb["DTI"].as<int>());
+  setSafeSW(tcb["SWI"], [&](int a, int b, int c, int d) { conf->SetSWI(a, b, c, d); });
 
-    switch (fFADCTItem[key]) {
-      case ENABLED_FADCT: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigFADCT", "Channel ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        break;
-      }
-      case PID_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) { Warning("ConfigFADCT", "PMT ID is not defined ...."); }
-          conf->SetPID(i, val[i]);
-        }
-        break;
-      }
-      case POL_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPOL(i, val[0]);
-          }
-          else {
-            conf->SetPOL(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DACOFF_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDACOFF(i, val[0]);
-          }
-          else {
-            conf->SetDACOFF(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DLY_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDLY(i, val[0]);
-          }
-          else {
-            conf->SetDLY(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DTIME_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDT(i, val[0]);
-          }
-          else {
-            conf->SetDT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case CW_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetCW(i, val[0]);
-          }
-          else {
-            conf->SetCW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case TM_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTM(i, val[0]);
-          }
-          else {
-            conf->SetTM(i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTHR(i, val[0]);
-          }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCT_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCT(i, val[0]);
-          }
-          else {
-            conf->SetPCT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCI_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCI(i, val[0]);
-          }
-          else {
-            conf->SetPCI(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PWT_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPWT(i, val[0]);
-          }
-          else {
-            conf->SetPWT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PSW_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPSW(i, val[0]);
-          }
-          else {
-            conf->SetPSW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PEDRMS_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> dval[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPedRMS(i, dval[0]);
-          }
-          else {
-            conf->SetPedRMS(i, dval[i]);
-          }
-        }
-        break;
-      }
-      case PGAIN_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> dval[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPMTGain(i, dval[0]);
-          }
-          else {
-            conf->SetPMTGain(i, dval[i]);
-          }
-        }
-        break;
-      }
-      case PGAINS_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> dval[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPMTGainScale(i, dval[0]);
-          }
-          else {
-            conf->SetPMTGainScale(i, dval[i]);
-          }
-        }
-        break;
-      }
-      case PFTIME_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> dval[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPMTFallTime(i, dval[0]);
-          }
-          else {
-            conf->SetPMTFallTime(i, dval[i]);
-          }
-        }
-        break;
-      }
-      case PTTIME_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> dval[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPMTTransitTime(i, dval[0]);
-          }
-          else {
-            conf->SetPMTTransitTime(i, dval[i]);
-          }
-        }
-        break;
-      }
-      case PTTS_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> dval[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPMTTTS(i, dval[0]);
-          }
-          else {
-            conf->SetPMTTTS(i, dval[i]);
-          }
-        }
-        break;
-      }
-      case PQEFF_FADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> dval[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPMTQEff(i, dval[0]);
-          }
-          else {
-            conf->SetPMTQEff(i, dval[i]);
-          }
-        }
-        break;
-      }
-      case RL_FADCT: {
-        iss >> val[0];
-        conf->SetRL(val[0]);
-        break;
-      }
-      case TLT_FADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case DSR_FADCT: {
-        iss >> val[0];
-        conf->SetDSR(val[0]);
-        break;
-      }
-      case TRGON_FADCT: {
-        iss >> val[0];
-        conf->SetTRGON(val[0]);
-        break;
-      }
-      default: {
-        Warning("ConfigFADCT", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
-  }
-
-  return retVal;
+  fConfigs->Add(conf);
 }
 
-bool RunConfig::ConfigFADCS(std::ifstream & ticket, FADCSConf * conf)
+void RunConfig::ConfigFADCT(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  if (!ymlnode["FADCT"]) return;
 
-  int nch = conf->NCH();
-
-  string line;
-
-  while (true) {
-    getline(ticket, line);
-
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int val[4] = {0};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fFADCSItem[key]) {
-      case ENABLED_FADCS: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigFADCS", "Channel ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        break;
-      }
-      case PID_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) { Warning("ConfigFADCS", "PMT ID is not defined ...."); }
-          conf->SetPID(i, val[i]);
-        }
-        break;
-      }
-      case POL_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPOL(i, val[0]);
-          }
-          else {
-            conf->SetPOL(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DACOFF_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDACOFF(i, val[0]);
-          }
-          else {
-            conf->SetDACOFF(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DLY_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDLY(i, val[0]);
-          }
-          else {
-            conf->SetDLY(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DTIME_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDT(i, val[0]);
-          }
-          else {
-            conf->SetDT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case CW_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetCW(i, val[0]);
-          }
-          else {
-            conf->SetCW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case TM_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTM(i, val[0]);
-          }
-          else {
-            conf->SetTM(i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTHR(i, val[0]);
-          }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCT_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCT(i, val[0]);
-          }
-          else {
-            conf->SetPCT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCI_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCI(i, val[0]);
-          }
-          else {
-            conf->SetPCI(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PWT_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPWT(i, val[0]);
-          }
-          else {
-            conf->SetPWT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PSW_FADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigFADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPSW(i, val[0]);
-          }
-          else {
-            conf->SetPSW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case RL_FADCS: {
-        iss >> val[0];
-        conf->SetRL(val[0]);
-        break;
-      }
-      case TLT_FADCS: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case DSR_FADCS: {
-        iss >> val[0];
-        conf->SetDSR(val[0]);
-        break;
-      }
-      case TRGON_FADCS: {
-        iss >> val[0];
-        conf->SetTRGON(val[0]);
-        break;
-      }
-      case PTRG_FADCS: {
-        iss >> val[0];
-        conf->SetPTRG(val[0]);
-        break;
-      }
-      case PSC_FADCS: {
-        iss >> val[0];
-        conf->SetPSC(val[0]);
-        break;
-      }
-      default: {
-        Warning("ConfigFADCS", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  std::vector<YAML::Node> nodes;
+  if (ymlnode["FADCT"].IsSequence()) {
+    for (const auto & n : ymlnode["FADCT"])
+      nodes.push_back(n);
+  }
+  else {
+    nodes.push_back(ymlnode["FADCT"]);
   }
 
-  return retVal;
+  for (auto & node : nodes) {
+    int nch = 0;
+
+    FADCTConf * conf = new FADCTConf();
+    conf->SetName("FADCT");
+    conf->SetADCType(ADC::FADCT);
+
+    if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
+
+    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());
+
+    if (node["SID"]) {
+      int sid = node["SID"].as<int>();
+      conf->SetSID(sid);
+      conf->SetMID(sid);
+    }
+    if (node["NCH"]) {
+      nch = node["NCH"].as<int>();
+      conf->SetNCH(nch);
+    }
+
+    // TLT String Parsing
+    if (node["TLT"]) {
+      TriggerLookupTable tbl;
+      std::string tlt_str = node["TLT"].as<std::string>();
+      unsigned short tlt_val = tbl.GetTLT(tlt_str.c_str());
+      conf->SetTLT(tlt_val);
+    }
+
+    if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
+
+    if (nch > 0) {
+      FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
+      FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
+      FillConfigArray<int>(node["POL"], nch, [&](int i, int v) { conf->SetPOL(i, v); });
+      FillConfigArray<int>(node["DACOFF"], nch, [&](int i, int v) { conf->SetDACOFF(i, v); });
+      FillConfigArray<int>(node["AMD"], nch, [&](int i, int v) { conf->SetAMD(i, v); });
+      FillConfigArray<int>(node["DLY"], nch, [&](int i, int v) { conf->SetDLY(i, v); });
+      FillConfigArray<int>(node["DT"], nch, [&](int i, int v) { conf->SetDT(i, v); });
+      FillConfigArray<int>(node["CW"], nch, [&](int i, int v) { conf->SetCW(i, v); });
+      FillConfigArray<int>(node["TM"], nch, [&](int i, int v) { conf->SetTM(i, v); });
+      FillConfigArray<int>(node["THR"], nch, [&](int i, int v) { conf->SetTHR(i, v); });
+      FillConfigArray<int>(node["PCT"], nch, [&](int i, int v) { conf->SetPCT(i, v); });
+      FillConfigArray<int>(node["PCI"], nch, [&](int i, int v) { conf->SetPCI(i, v); });
+      FillConfigArray<int>(node["PWT"], nch, [&](int i, int v) { conf->SetPWT(i, v); });
+      FillConfigArray<int>(node["PSW"], nch, [&](int i, int v) { conf->SetPSW(i, v); });
+    }
+    fConfigs->Add(conf);
+  }
 }
 
-bool RunConfig::ConfigGADCS(std::ifstream & ticket, GADCSConf * conf)
+void RunConfig::ConfigIADCT(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  if (!ymlnode["IADCT"]) return;
 
-  int nch = conf->NCH();
-
-  string line;
-
-  while (true) {
-    getline(ticket, line);
-
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int val[16] = {0};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fGADCSItem[key]) {
-      case ENABLED_GADCS: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigGADCS", "Channel ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        break;
-      }
-      case PID_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) { Warning("ConfigGADCS", "PMT ID is not defined ...."); }
-          conf->SetPID(i, val[i]);
-        }
-        break;
-      }
-      case POL_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPOL(i, val[0]);
-          }
-          else {
-            conf->SetPOL(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DACOFF_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDACOFF(i, val[0]);
-          }
-          else {
-            conf->SetDACOFF(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DLY_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDLY(i, val[0]);
-          }
-          else {
-            conf->SetDLY(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DTIME_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDT(i, val[0]);
-          }
-          else {
-            conf->SetDT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case CW_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetCW(i, val[0]);
-          }
-          else {
-            conf->SetCW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case TM_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTM(i, val[0]);
-          }
-          else {
-            conf->SetTM(i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTHR(i, val[0]);
-          }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCT_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCT(i, val[0]);
-          }
-          else {
-            conf->SetPCT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCI_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCI(i, val[0]);
-          }
-          else {
-            conf->SetPCI(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PWT_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPWT(i, val[0]);
-          }
-          else {
-            conf->SetPWT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PSW_GADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigGADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPSW(i, val[0]);
-          }
-          else {
-            conf->SetPSW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case RL_GADCS: {
-        iss >> val[0];
-        conf->SetRL(val[0]);
-        break;
-      }
-      case TLT_GADCS: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case DSR_GADCS: {
-        iss >> val[0];
-        conf->SetDSR(val[0]);
-        break;
-      }
-      case TRGON_GADCS: {
-        iss >> val[0];
-        conf->SetTRGON(val[0]);
-        break;
-      }
-      case PTRG_GADCS: {
-        iss >> val[0];
-        conf->SetPTRG(val[0]);
-        break;
-      }
-      case PSC_GADCS: {
-        iss >> val[0];
-        conf->SetPSC(val[0]);
-        break;
-      }
-      default: {
-        Warning("ConfigGADCS", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  std::vector<YAML::Node> nodes;
+  if (ymlnode["IADCT"].IsSequence()) {
+    for (const auto & n : ymlnode["IADCT"])
+      nodes.push_back(n);
+  }
+  else {
+    nodes.push_back(ymlnode["IADCT"]);
   }
 
-  return retVal;
+  for (auto & node : nodes) {
+    int nch = 0;
+
+    IADCTConf * conf = new IADCTConf();
+    conf->SetName("IADCT");
+    conf->SetADCType(ADC::IADCT);
+
+    if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
+
+    if (node["SID"]) {
+      int sid = node["SID"].as<int>();
+      conf->SetSID(sid);
+      conf->SetMID(sid + 192);
+    }
+    if (node["NCH"]) {
+      nch = node["NCH"].as<int>();
+      conf->SetNCH(nch);
+    }
+
+    if (node["MODE"]) conf->SetMODE(node["MODE"].as<int>());
+    if (node["RL"]) conf->SetRL(node["RL"].as<int>());
+    if (node["CW"]) conf->SetCW(node["CW"].as<int>());
+    if (node["GW"]) conf->SetGW(node["GW"].as<int>());
+    if (node["PSW"]) conf->SetPSW(node["PSW"].as<int>());
+
+    if (node["TLT"]) {
+      TriggerLookupTable tbl;
+      if (node["TLT"].IsSequence()) {
+        std::vector<std::string> tlt_strs = node["TLT"].as<std::vector<std::string>>();
+        int valsize = tlt_strs.size();
+        for (int i = 0; i < 10; ++i) {
+          std::string target_s = (i < valsize) ? tlt_strs[i] : tlt_strs[valsize - 1];
+          conf->SetTLT(i, tbl.GetTLT(target_s.c_str()));
+        }
+      }
+      else {
+        std::string tlt_s = node["TLT"].as<std::string>();
+        unsigned short tlt_val = tbl.GetTLT(tlt_s.c_str());
+        for (int i = 0; i < 10; ++i)
+          conf->SetTLT(i, tlt_val);
+      }
+    }
+
+    if (node["HV"]) {
+      FillConfigArray<float>(node["HV"], 5, [&](int group, float v) { conf->SetHV(group, v); });
+    }
+
+    if (nch > 0) {
+      FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
+      FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
+      FillConfigArray<int>(node["THR"], nch, [&](int i, int v) { conf->SetTHR(i, v); });
+      FillConfigArray<int>(node["DLY"], nch, [&](int i, int v) { conf->SetDLY(i, v); });
+    }
+
+    fConfigs->Add(conf);
+  }
 }
 
-bool RunConfig::ConfigMADCS(std::ifstream & ticket, MADCSConf * conf)
+void RunConfig::ConfigSADCT(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  if (!ymlnode["SADCT"]) return;
 
-  int nch = conf->NCH();
-
-  string line;
-
-  while (true) {
-    getline(ticket, line);
-
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int val[16] = {0};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fMADCSItem[key]) {
-      case ENABLED_MADCS: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigMADCS", "Channel ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        break;
-      }
-      case PID_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) { Warning("ConfigMADCS", "PMT ID is not defined ...."); }
-          conf->SetPID(i, val[i]);
-        }
-        break;
-      }
-      case POL_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPOL(i, val[0]);
-          }
-          else {
-            conf->SetPOL(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DACOFF_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDACOFF(i, val[0]);
-          }
-          else {
-            conf->SetDACOFF(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DLY_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDLY(i, val[0]);
-          }
-          else {
-            conf->SetDLY(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DTIME_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDT(i, val[0]);
-          }
-          else {
-            conf->SetDT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case CW_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetCW(i, val[0]);
-          }
-          else {
-            conf->SetCW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case TM_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTM(i, val[0]);
-          }
-          else {
-            conf->SetTM(i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTHR(i, val[0]);
-          }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCT_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCT(i, val[0]);
-          }
-          else {
-            conf->SetPCT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PCI_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPCI(i, val[0]);
-          }
-          else {
-            conf->SetPCI(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PWT_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPWT(i, val[0]);
-          }
-          else {
-            conf->SetPWT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case PSW_MADCS: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigMADCS",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetPSW(i, val[0]);
-          }
-          else {
-            conf->SetPSW(i, val[i]);
-          }
-        }
-        break;
-      }
-      case RL_MADCS: {
-        iss >> val[0];
-        conf->SetRL(val[0]);
-        break;
-      }
-      case TLT_MADCS: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case DSR_MADCS: {
-        iss >> val[0];
-        conf->SetDSR(val[0]);
-        break;
-      }
-      case TRGON_MADCS: {
-        iss >> val[0];
-        conf->SetTRGON(val[0]);
-        break;
-      }
-      case PTRG_MADCS: {
-        iss >> val[0];
-        conf->SetPTRG(val[0]);
-        break;
-      }
-      case PSC_MADCS: {
-        iss >> val[0];
-        conf->SetPSC(val[0]);
-        break;
-      }
-      default: {
-        Warning("ConfigMADCS", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  std::vector<YAML::Node> nodes;
+  if (ymlnode["SADCT"].IsSequence()) {
+    for (const auto & n : ymlnode["SADCT"])
+      nodes.push_back(n);
+  }
+  else {
+    nodes.push_back(ymlnode["SADCT"]);
   }
 
-  return retVal;
+  for (auto & node : nodes) {
+    int nch = 0;
+
+    SADCTConf * conf = new SADCTConf();
+    conf->SetName("SADCT");
+    conf->SetADCType(ADC::SADCT);
+
+    if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
+
+    if (node["SID"]) {
+      int sid = node["SID"].as<int>();
+      conf->SetSID(sid);
+      conf->SetMID(sid + 64);
+    }
+    if (node["NCH"]) {
+      nch = node["NCH"].as<int>();
+      conf->SetNCH(nch);
+    }
+    if (node["CW"]) conf->SetCW(node["CW"].as<int>());
+    if (node["GW"]) conf->SetGW(node["GW"].as<int>());
+    if (node["PSW"]) conf->SetPSW(node["PSW"].as<int>());
+    if (node["SUBPED"]) conf->SetSUBPED(node["SUBPED"].as<int>());
+
+    if (node["TLT"]) {
+      TriggerLookupTable tbl;
+      if (node["TLT"].IsSequence()) {
+        std::vector<std::string> tlt_strs = node["TLT"].as<std::vector<std::string>>();
+        int valsize = tlt_strs.size();
+        for (int i = 0; i < 8; ++i) {
+          std::string target_s = (i < valsize) ? tlt_strs[i] : tlt_strs[valsize - 1];
+          conf->SetTLT(i, tbl.GetTLT(target_s.c_str()));
+        }
+      }
+      else if (node["TLT"].IsScalar()) {
+        std::string tlt_s = node["TLT"].as<std::string>();
+        unsigned short tlt_val = tbl.GetTLT(tlt_s.c_str());
+        for (int i = 0; i < 8; ++i)
+          conf->SetTLT(i, tlt_val);
+      }
+    }
+    if (nch > 0) {
+      FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
+      FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
+      FillConfigArray<int>(node["THR"], nch, [&](int i, int v) { conf->SetTHR(i, v); });
+      FillConfigArray<int>(node["DLY"], nch, [&](int i, int v) { conf->SetDLY(i, v); });
+    }
+
+    fConfigs->Add(conf);
+  }
 }
 
-bool RunConfig::ConfigSADCT(std::ifstream & ticket, SADCTConf * conf)
+void RunConfig::ConfigFADCS(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  YAML::Node node = ymlnode["FADCS"];
+  if (!node) return;
 
-  int nch = conf->NCH();
+  int nch = 0;
 
-  string line;
+  FADCSConf * conf = new FADCSConf();
+  conf->SetName("FADCS");
+  conf->SetADCType(ADC::FADCS);
 
-  while (true) {
-    getline(ticket, line);
+  if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int val[32] = {0};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fSADCTItem[key]) {
-      case ENABLED_SADCT: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_SADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigSADCT", "Channel ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        break;
-      }
-      case PID_SADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigSADCT", "PMT ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetPID(i, val[i]);
-        }
-        break;
-      }
-      case THR_SADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigSADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetTHR(i, val[0]);
-          }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DLY_SADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigSADCT",Form("%s of all channels are configured as
-            // same value.", key.data()));
-            conf->SetDLY(i, val[0]);
-          }
-          else {
-            conf->SetDLY(i, val[i]);
-          }
-        }
-        break;
-      }
-      case CW_SADCT: {
-        iss >> val[0];
-        conf->SetCW(val[0]);
-        break;
-      }
-      case GW_SADCT: {
-        iss >> val[0];
-        conf->SetGW(val[0]);
-        break;
-      }
-      case PSW_SADCT: {
-        iss >> val[0];
-        conf->SetPSW(val[0]);
-        break;
-      }
-      case SUBPED_SADCT: {
-        iss >> val[0];
-        conf->SetSUBPED(val[0]);
-        break;
-      }
-      case TLT1_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(0, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT2_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(1, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT3_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(2, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT4_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(3, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT5_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(4, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT6_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(5, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT7_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(6, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT8_SADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(7, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      default: {
-        Warning("ConfigSADCT", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  if (node["SID"]) conf->SetSID(node["SID"].as<int>());
+  if (node["NCH"]) {
+    nch = node["NCH"].as<int>();
+    conf->SetNCH(nch);
   }
 
-  return retVal;
+  if (node["TLT"]) {
+    TriggerLookupTable tbl;
+    std::string tlt_str = node["TLT"].as<std::string>();
+    unsigned short tlt_val = tbl.GetTLT(tlt_str.c_str());
+    conf->SetTLT(tlt_val);
+  }
+
+  if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
+  if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
+  if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
+  if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
+
+  if (nch > 0) {
+    FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
+    FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
+    FillConfigArray<int>(node["POL"], nch, [&](int i, int v) { conf->SetPOL(i, v); });
+    FillConfigArray<int>(node["DACOFF"], nch, [&](int i, int v) { conf->SetDACOFF(i, v); });
+    FillConfigArray<int>(node["AMD"], nch, [&](int i, int v) { conf->SetAMD(i, v); });
+    FillConfigArray<int>(node["DLY"], nch, [&](int i, int v) { conf->SetDLY(i, v); });
+    FillConfigArray<int>(node["DT"], nch, [&](int i, int v) { conf->SetDT(i, v); });
+    FillConfigArray<int>(node["CW"], nch, [&](int i, int v) { conf->SetCW(i, v); });
+    FillConfigArray<int>(node["TM"], nch, [&](int i, int v) { conf->SetTM(i, v); });
+    FillConfigArray<int>(node["THR"], nch, [&](int i, int v) { conf->SetTHR(i, v); });
+    FillConfigArray<int>(node["PCT"], nch, [&](int i, int v) { conf->SetPCT(i, v); });
+    FillConfigArray<int>(node["PCI"], nch, [&](int i, int v) { conf->SetPCI(i, v); });
+    FillConfigArray<int>(node["PWT"], nch, [&](int i, int v) { conf->SetPWT(i, v); });
+    FillConfigArray<int>(node["PSW"], nch, [&](int i, int v) { conf->SetPSW(i, v); });
+  }
+  fConfigs->Add(conf);
 }
 
-bool RunConfig::ConfigIADCT(std::ifstream & ticket, IADCTConf * conf)
+void RunConfig::ConfigGADCS(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  YAML::Node node = ymlnode["GADCS"];
+  if (!node) return;
 
-  int nch = conf->NCH();
+  int nch = 0;
 
-  string line;
+  GADCSConf * conf = new GADCSConf();
+  conf->SetName("GADCS");
+  conf->SetADCType(ADC::GADCS);
 
-  while (true) {
-    getline(ticket, line);
+  if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-    if (line == "END") break;
-    if (line.empty()) continue;
+  if (node["SID"]) conf->SetSID(node["SID"].as<int>());
+  if (node["NCH"]) {
+    nch = node["NCH"].as<int>();
+    conf->SetNCH(nch);
+  }
+  if (node["RL"]) conf->SetRL(node["RL"].as<int>());
+  if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
 
-    istringstream iss(line);
+  if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
+  if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
+  if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
 
-    string key;
-    int val[40] = {0};
-    float fval[5] = {0.};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    bool iscon = false;
-
-    switch (fIADCTItem[key]) {
-      case ENABLED_IADCT: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_IADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail() && i == 1) {
-            iscon = true;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        if (iscon) {
-          for (int i = 1; i < nch; i++) {
-            conf->SetCID(i, ++val[0]);
-          }
-        }
-        break;
-      }
-      case PID_IADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail() && i == 1) {
-            iscon = true;
-            break;
-          }
-          conf->SetPID(i, val[i]);
-        }
-        if (iscon) {
-          for (int i = 1; i < nch; i++) {
-            conf->SetPID(i, ++val[0]);
-          }
-        }
-        break;
-      }
-      case THR1_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(i, val[0]); }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR2_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(4 + i, val[0]); }
-          else {
-            conf->SetTHR(4 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR3_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(8 + i, val[0]); }
-          else {
-            conf->SetTHR(8 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR4_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(12 + i, val[0]); }
-          else {
-            conf->SetTHR(12 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR5_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(16 + i, val[0]); }
-          else {
-            conf->SetTHR(16 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR6_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(20 + i, val[0]); }
-          else {
-            conf->SetTHR(20 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR7_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(24 + i, val[0]); }
-          else {
-            conf->SetTHR(24 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR8_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(28 + i, val[0]); }
-          else {
-            conf->SetTHR(28 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR9_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(32 + i, val[0]); }
-          else {
-            conf->SetTHR(32 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR10_IADCT: {
-        for (int i = 0; i < 4; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetTHR(36 + i, val[0]); }
-          else {
-            conf->SetTHR(36 + i, val[i]);
-          }
-        }
-        break;
-      }
-      case DLY_IADCT: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) { conf->SetDLY(i, val[0]); }
-          else {
-            conf->SetDLY(i, val[i]);
-          }
-        }
-        break;
-      }
-      case HV_IADCT: {
-        for (int i = 0; i < 5; i++) {
-          iss >> fval[i];
-          if (i != 0 && iss.fail()) { conf->SetHV(i, fval[0]); }
-          else {
-            conf->SetHV(i, fval[i]);
-          }
-        }
-        break;
-      }
-      case MODE_IADCT: {
-        iss >> val[0];
-        conf->SetMODE(val[0]);
-        break;
-      }
-      case RL_IADCT: {
-        iss >> val[0];
-        conf->SetRL(val[0]);
-        break;
-      }
-      case CW_IADCT: {
-        iss >> val[0];
-        conf->SetCW(val[0]);
-        break;
-      }
-      case GW_IADCT: {
-        iss >> val[0];
-        conf->SetGW(val[0]);
-        break;
-      }
-      case PSW_IADCT: {
-        iss >> val[0];
-        conf->SetPSW(val[0]);
-        break;
-      }
-      case TLT1_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(0, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT2_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(1, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT3_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(2, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT4_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(3, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT5_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(4, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT6_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(5, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT7_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(6, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT8_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(7, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT9_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(8, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      case TLT10_IADCT: {
-        string tlt;
-        iss >> tlt;
-        conf->SetTLT(9, fTLT->GetTLT(tlt.data()));
-        break;
-      }
-      default: {
-        Warning("ConfigIADCT", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  if (node["TLT"]) {
+    TriggerLookupTable tbl;
+    std::string tlt_str = node["TLT"].as<std::string>();
+    unsigned short tlt_val = tbl.GetTLT(tlt_str.c_str());
+    conf->SetTLT(tlt_val);
   }
 
-  return retVal;
+  if (nch > 0) {
+    FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
+    FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
+    FillConfigArray<int>(node["POL"], nch, [&](int i, int v) { conf->SetPOL(i, v); });
+    FillConfigArray<int>(node["DACOFF"], nch, [&](int i, int v) { conf->SetDACOFF(i, v); });
+    FillConfigArray<int>(node["AMD"], nch, [&](int i, int v) { conf->SetAMD(i, v); });
+    FillConfigArray<int>(node["DLY"], nch, [&](int i, int v) { conf->SetDLY(i, v); });
+    FillConfigArray<int>(node["DT"], nch, [&](int i, int v) { conf->SetDT(i, v); });
+    FillConfigArray<int>(node["CW"], nch, [&](int i, int v) { conf->SetCW(i, v); });
+    FillConfigArray<int>(node["TM"], nch, [&](int i, int v) { conf->SetTM(i, v); });
+    FillConfigArray<int>(node["THR"], nch, [&](int i, int v) { conf->SetTHR(i, v); });
+    FillConfigArray<int>(node["PCT"], nch, [&](int i, int v) { conf->SetPCT(i, v); });
+    FillConfigArray<int>(node["PCI"], nch, [&](int i, int v) { conf->SetPCI(i, v); });
+    FillConfigArray<int>(node["PWT"], nch, [&](int i, int v) { conf->SetPWT(i, v); });
+    FillConfigArray<int>(node["PSW"], nch, [&](int i, int v) { conf->SetPSW(i, v); });
+  }
+  fConfigs->Add(conf);
 }
 
-bool RunConfig::ConfigAmoreADC(std::ifstream & ticket, AmoreADCConf * conf)
+void RunConfig::ConfigMADCS(YAML::Node ymlnode)
 {
-  bool retVal = true;
+  YAML::Node node = ymlnode["MADCS"];
+  if (!node) return;
 
-  int nch = conf->NCH();
+  int nch = 0;
 
-  string line;
+  auto * conf = new MADCSConf();
+  conf->SetName("MADCS");
+  conf->SetADCType(ADC::MADCS);
 
-  while (true) {
-    getline(ticket, line);
+  if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int val[32] = {0};
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fAMOREADCItem[key]) {
-      case ENABLED_AMOREADC: {
-        iss >> val[0];
-        if (val[0] > 0) conf->SetEnable();
-        break;
-      }
-      case CID_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigAMOREADC", "Channel ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetCID(i, val[i]);
-        }
-        break;
-      }
-      case PID_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (iss.fail()) {
-            Error("ConfigAMOREADC", "PMT ID is not defined ....");
-            retVal = false;
-            break;
-          }
-          conf->SetPID(i, val[i]);
-        }
-        break;
-      }
-      case TRGON_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetTRGON(i, val[0]);
-          }
-          else {
-            conf->SetTRGON(i, val[i]);
-          }
-        }
-        break;
-      }
-      case ORDER_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetORDER(i, val[0]);
-          }
-          else {
-            conf->SetORDER(i, val[i]);
-          }
-        }
-        break;
-      }
-      case LOWER_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetLOWER(i, val[0]);
-          }
-          else {
-            conf->SetLOWER(i, val[i]);
-          }
-        }
-        break;
-      }
-      case UPPER_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetUPPER(i, val[0]);
-          }
-          else {
-            conf->SetUPPER(i, val[i]);
-          }
-        }
-        break;
-      }
-      case THR_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetTHR(i, val[0]);
-          }
-          else {
-            conf->SetTHR(i, val[i]);
-          }
-        }
-        break;
-      }
-      case DT_AMOREADC: {
-        for (int i = 0; i < nch; i++) {
-          iss >> val[i];
-          if (i != 0 && iss.fail()) {
-            // Warning("ConfigAMOREADC",Form("%s of all channels are configured
-            // as same value.", key.data()));
-            conf->SetDT(i, val[0]);
-          }
-          else {
-            conf->SetDT(i, val[i]);
-          }
-        }
-        break;
-      }
-      case SR_AMOREADC: {
-        iss >> val[0];
-        conf->SetSR(val[0]);
-        break;
-      }
-      case RL_AMOREADC: {
-        iss >> val[0];
-        conf->SetRL(val[0]);
-        break;
-      }
-      case DLY_AMOREADC: {
-        iss >> val[0];
-        conf->SetDLY(val[0]);
-        break;
-      }
-      case CW_AMOREADC: {
-        iss >> val[0];
-        conf->SetCW(val[0]);
-        break;
-      }
-      case SKBIN_AMOREADC: {
-        iss >> val[0];
-        conf->SetSKBIN(val[0]);
-        break;
-      }
-      case ZEROSUP_AMOREADC: {
-        iss >> val[0];
-        conf->SetZEROSUP(val[0]);
-        break;
-      }
-      default: {
-        Warning("ConfigAMOREADC", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  if (node["SID"]) { conf->SetSID(node["SID"].as<int>()); }
+  if (node["NCH"]) {
+    nch = node["NCH"].as<int>();
+    conf->SetNCH(nch);
   }
 
-  return retVal;
-}
-
-bool RunConfig::ConfigSTRG(std::ifstream & ticket, STRGConf * conf)
-{
-  bool retVal = true;
-
-  string line;
-
-  while (true) {
-    getline(ticket, line);
-
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int ipar;
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fSTRGItem[key]) {
-      case ENABLED_STRG: {
-        iss >> ipar;
-        if (ipar > 0) conf->SetEnable();
-        break;
-      }
-      case ADCTYPE_STRG: {
-        iss >> ipar;
-        if (ipar > 0) conf->SetADCType((ADC::TYPE)ipar);
-        break;
-      }
-      case ZSU_STRG: {
-        iss >> ipar;
-        if (ipar > 0) conf->SetZSUMode(ipar);
-        break;
-      }
-      case PSC_STRG: {
-        iss >> ipar;
-        conf->SetPrescale(ipar);
-        break;
-      }
-      case ICRD_STRG: {
-        string spar;
-        iss >> spar;
-        conf->SetInputCard(spar.c_str());
-        break;
-      }
-      default: {
-        Warning("ConfigSTRG", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  if (node["TLT"]) {
+    TriggerLookupTable tbl;
+    std::string tlt_str = node["TLT"].as<std::string>();
+    conf->SetTLT(tbl.GetTLT(tlt_str.c_str()));
   }
 
-  return retVal;
-}
+  if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
+  if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
+  if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
 
-bool RunConfig::ConfigDAQ(std::ifstream & ticket, DAQConf * conf)
-{
-  bool retVal = true;
-
-  string line;
-
-  while (true) {
-    getline(ticket, line);
-
-    if (line == "END") break;
-    if (line.empty()) continue;
-
-    istringstream iss(line);
-
-    string key;
-    int id, port;
-    string name, addr;
-
-    iss >> key;
-    if (iss.fail() || key.length() == 0 || (key.data())[0] == '#') continue;
-
-    switch (fDAQItem[key]) {
-      case SERVER: {
-        iss >> id >> name >> addr >> port;
-        conf->AddDAQ(id, name, addr, port);
-        break;
-      }
-      default: {
-        Warning("ConfigDAQ", Form("Configuration item %s is ambiguous.", key.data()));
-        break;
-      }
-    }
+  if (nch > 0) {
+    FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
+    FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
+    FillConfigArray<int>(node["POL"], nch, [&](int i, int v) { conf->SetPOL(i, v); });
+    FillConfigArray<int>(node["DACOFF"], nch, [&](int i, int v) { conf->SetDACOFF(i, v); });
+    FillConfigArray<int>(node["AMD"], nch, [&](int i, int v) { conf->SetAMD(i, v); });
+    FillConfigArray<int>(node["DLY"], nch, [&](int i, int v) { conf->SetDLY(i, v); });
+    FillConfigArray<int>(node["DT"], nch, [&](int i, int v) { conf->SetDT(i, v); });
+    FillConfigArray<int>(node["CW"], nch, [&](int i, int v) { conf->SetCW(i, v); });
+    FillConfigArray<int>(node["TM"], nch, [&](int i, int v) { conf->SetTM(i, v); });
+    FillConfigArray<int>(node["THR"], nch, [&](int i, int v) { conf->SetTHR(i, v); });
+    FillConfigArray<int>(node["PCT"], nch, [&](int i, int v) { conf->SetPCT(i, v); });
+    FillConfigArray<int>(node["PCI"], nch, [&](int i, int v) { conf->SetPCI(i, v); });
+    FillConfigArray<int>(node["PWT"], nch, [&](int i, int v) { conf->SetPWT(i, v); });
+    FillConfigArray<int>(node["PSW"], nch, [&](int i, int v) { conf->SetPSW(i, v); });
   }
-
-  return retVal;
+  fConfigs->Add(conf);
 }

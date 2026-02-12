@@ -22,66 +22,40 @@ FADCSConf::FADCSConf(int sid)
 
 void FADCSConf::PrintConf() const
 {
-  std::cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) RL(%d) TLT(%X) "
+  using std::cout;
+  using std::endl;
+
+  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) RL(%d) TLT(%X) "
                "DSR(%d) TRGON(%d) PTRG(%d) PSCALE(%d)",
                GetName(), fSID, fMID, fNCH, fRL, fTLT, fDSR, fTRGON, fPTRG, fPSC)
-       << std::endl;
-  if (fIsEnabled) std::cout << Form(" ++ This %s is enabled", GetName()) << std::endl;
-  else std::cout << Form(" ++ This %s is disabled", GetName()) << std::endl;
+       << endl;
+  if (fIsEnabled) cout << Form(" ++ This %s is enabled", GetName()) << endl;
+  else cout << Form(" ++ This %s is disabled", GetName()) << endl;
 
-  std::cout << " -----------------------------------------------" << std::endl;
-  std::cout << "        CID : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fCID[i]);
-  std::cout << std::endl;
-  std::cout << "        PID : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fPID[i]);
-  std::cout << std::endl;
-  std::cout << "        POL : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fPOL[i]);
-  std::cout << std::endl;
-  std::cout << "     DACOFF : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fDACOFF[i]);
-  std::cout << std::endl;
-  std::cout << "        DLY : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fDLY[i]);
-  std::cout << std::endl;
-  std::cout << "      DTIME : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fDT[i]);
-  std::cout << std::endl;
-  std::cout << "         CW : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fCW[i]);
-  std::cout << std::endl;
-  std::cout << "         TM : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fTM[i]);
-  std::cout << std::endl;
-  std::cout << "        THR : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fTHR[i]);
-  std::cout << std::endl;
-  std::cout << "        PCT : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fPCT[i]);
-  std::cout << std::endl;
-  std::cout << "        PCI : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fPCI[i]);
-  std::cout << std::endl;
-  std::cout << "        PWT : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fPWT[i]);
-  std::cout << std::endl;
-  std::cout << "        PSW : ";
-  for (int i = 0; i < fNCH; i++)
-    std::cout << Form("%8d", fPSW[i]);
-  std::cout << std::endl;
-  std::cout << " -----------------------------------------------" << std::endl;
-  std::cout << std::endl;
+  cout << " -----------------------------------------------" << endl;
+
+  auto print = [&](const char * label, const int * arr) {
+    cout << Form("%8s", label);
+    for (int i = 0; i < fNCH; i++) {
+      cout << Form("%8d", arr[i]);
+    }
+    cout << endl;
+  };
+
+  print("CID", fCID);
+  print("PID", fPID);
+  print("POL", fPOL);
+  print("DACOFF", fDACOFF);
+  print("DLY", fDLY);
+  print("DTIME", fDT);
+  print("CW", fCW);
+  print("TM", fTM);
+  print("THR", fTHR);
+  print("PCT", fPCT);
+  print("PCI", fPCI);
+  print("PWT", fPWT);
+  print("PSW", fPSW);
+
+  cout << " -----------------------------------------------" << endl;
+  cout << endl;
 }

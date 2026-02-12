@@ -54,8 +54,9 @@ void GADCSConf::PrintConf() const
   using std::cout;
   using std::endl;
 
-  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) RL(%d) DSR(%d) TLT(%X) TRGON(%d) PTRG(%d) PSC(%d)", GetName(),
-               fSID, fMID, fNCH, fRL, fDSR, fTLT, fTRGON, fPTRG, fPSC)
+  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) RL(%d) DSR(%d) TLT(%X) TRGON(%d) PTRG(%d) "
+               "PSC(%d)",
+               GetName(), fSID, fMID, fNCH, fRL, fDSR, fTLT, fTRGON, fPTRG, fPSC)
        << endl;
 
   if (fIsEnabled) cout << Form(" ++ This %s is enabled", GetName()) << endl;
@@ -63,27 +64,33 @@ void GADCSConf::PrintConf() const
 
   cout << " -----------------------------------------------" << endl;
 
-  auto print = [&](const char * label, const int * arr) {
-    cout << " " << label << " : ";
-    for (int i = 0; i < fNCH; i++) {
-      cout << Form("%8d", arr[i]);
-    }
-    cout << endl;
-  };
+  for (int step = 0; step < fNCH; step += 8) {
+    int end = (step + 8 > fNCH) ? fNCH : step + 8;
 
-  print("CID", fCID);
-  print("PID", fPID);
-  print("POL", fPOL);
-  print("DACOFF", fDACOFF);
-  print("DLY", fDLY);
-  print("DTIME", fDT);
-  print("CW", fCW);
-  print("TM", fTM);
-  print("THR", fTHR);
-  print("PCT", fPCT);
-  print("PCI", fPCI);
-  print("PWT", fPWT);
-  print("PSW", fPSW);
+    auto print = [&](const char * label, const int * arr) {
+      cout << Form("%8s :", label);
+      for (int i = step; i < end; i++) {
+        cout << Form("%6d", arr[i]);
+      }
+      cout << endl;
+    };
+
+    print("CID", fCID);
+    print("PID", fPID);
+    print("POL", fPOL);
+    print("DACOFF", fDACOFF);
+    print("DLY", fDLY);
+    print("DTIME", fDT);
+    print("CW", fCW);
+    print("TM", fTM);
+    print("THR", fTHR);
+    print("PCT", fPCT);
+    print("PCI", fPCI);
+    print("PWT", fPWT);
+    print("PSW", fPSW);
+
+    if (step + 8 < fNCH) cout << endl;
+  }
 
   cout << " -----------------------------------------------" << endl;
   cout << endl;

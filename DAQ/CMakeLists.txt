@@ -58,6 +58,7 @@ endif ()
 # Link ROOT and apply its compile defs
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
+    yaml-cpp
     ${ROOT_LIBRARIES}
     OnlConsts
     Notice
