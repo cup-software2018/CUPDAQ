@@ -3,6 +3,9 @@
 ## Requirements
 - **ROOT** ≥ 6.00  
 - **libusb-1.0**  
+- **yaml-cpp** for parsing config file
+```bash
+   dnf install yaml-cpp yaml-cpp-devel
 - **(Optional)** **HDF5** — tested with version **1.14.1**
 
 ---
