@@ -1,4 +1,3 @@
-// Notice/USBManager.cc
 #include <cstdlib>
 
 #include "DAQUtils/ELog.hh"
@@ -7,7 +6,7 @@
 namespace {
 constexpr uint8_t PVMEX_GET_ADDRESS = 0xD2;
 constexpr uint8_t NK_SID_ANY = 0xFF;
-}
+} // namespace
 
 USBManager & USBManager::Instance()
 {
@@ -42,8 +41,8 @@ unsigned char USBManager::GetSerialId(libusb_device_handle * handle) const
 {
   if (!handle) { return 0; }
   unsigned char data[1] = {0};
-  int ret = libusb_control_transfer(handle, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_IN, PVMEX_GET_ADDRESS, 0, 0,
-                                    data, 1, 1000);
+  int ret = libusb_control_transfer(handle, LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_ENDPOINT_IN,
+                                    PVMEX_GET_ADDRESS, 0, 0, data, 1, 1000);
   if (ret < 0) {
     WARNING("could not get serial id");
     return 0;
@@ -72,7 +71,8 @@ bool USBManager::IsDeviceAlreadyOpen(libusb_device_handle * handle) const
   return false;
 }
 
-void USBManager::AddDevice(libusb_device_handle * handle, uint16_t vendor_id, uint16_t product_id, int sid)
+void USBManager::AddDevice(libusb_device_handle * handle, uint16_t vendor_id, uint16_t product_id,
+                           int sid)
 {
   DeviceEntry entry{handle, vendor_id, product_id, sid};
   _devices.push_back(entry);
@@ -94,22 +94,14 @@ void USBManager::RemoveDevice(libusb_device_handle * handle)
 
 void USBManager::RemoveDevice(uint16_t vendor_id, uint16_t product_id, int sid)
 {
+  // std::lock_guard<std::mutex> lock(_mutex);
+
   auto it = _devices.begin();
   while (it != _devices.end()) {
-    libusb_device * dev = libusb_get_device(it->handle);
-    if (!dev) {
-      WARNING("could not get device");
-      ++it;
-      continue;
-    }
-    libusb_device_descriptor desc{};
-    if (libusb_get_device_descriptor(dev, &desc) < 0) {
-      WARNING("could not get device descriptor");
-      break;
-    }
-    if (desc.idVendor == vendor_id && desc.idProduct == product_id &&
-        (sid == NK_SID_ANY || sid == GetSerialId(it->handle))) {
-      libusb_close(it->handle);
+    if (it->vendor_id == vendor_id && it->product_id == product_id &&
+        (sid == NK_SID_ANY || it->serial_id == sid)) {
+
+      if (it->handle) { libusb_close(it->handle); }
       it = _devices.erase(it);
     }
     else {
@@ -118,33 +110,30 @@ void USBManager::RemoveDevice(uint16_t vendor_id, uint16_t product_id, int sid)
   }
 }
 
-int USBManager::HandleInterface(uint16_t vendor_id, uint16_t product_id, int sid, int interface, bool claim) const
+int USBManager::HandleInterface(uint16_t vendor_id, uint16_t product_id, int sid, int interface,
+                                bool claim) const
 {
   int ret = 0;
   if (!_ctx) { return -1; }
+
+  // Mutex lock is already held by the caller (ClaimInterface/ReleaseInterface)
+
   for (const auto & entry : _devices) {
-    libusb_device * dev = libusb_get_device(entry.handle);
-    if (!dev) {
-      WARNING("could not get device");
-      continue;
-    }
-    libusb_device_descriptor desc{};
-    if (libusb_get_device_descriptor(dev, &desc) < 0) {
-      WARNING("could not get device descriptor");
-      continue;
-    }
-    if (desc.idVendor == vendor_id && desc.idProduct == product_id &&
-        (sid == NK_SID_ANY || sid == GetSerialId(entry.handle))) {
-      if (claim) {
-        ret = libusb_claim_interface(entry.handle, interface);
-        if (ret < 0) {
-          WARNING("could not claim interface(%d) on device(%u,%u,%u)", interface, vendor_id, product_id, sid);
+    // 하드웨어 쿼리 대신 캐시된 정보(entry) 사용 -> 속도 향상 및 통신 에러 방지
+    if (entry.vendor_id == vendor_id && entry.product_id == product_id) {
+      if (sid == NK_SID_ANY || entry.serial_id == sid) {
+        if (claim) {
+          ret = libusb_claim_interface(entry.handle, interface);
+          if (ret < 0) {
+            WARNING("could not claim interface(%d) on device(SID: %d)", interface, entry.serial_id);
+          }
         }
-      }
-      else {
-        ret = libusb_release_interface(entry.handle, interface);
-        if (ret < 0) {
-          WARNING("could not release interface(%d) on device(%u,%u,%u)", interface, vendor_id, product_id, sid);
+        else {
+          ret = libusb_release_interface(entry.handle, interface);
+          if (ret < 0) {
+            WARNING("could not release interface(%d) on device(SID: %d)", interface,
+                    entry.serial_id);
+          }
         }
       }
     }
@@ -217,8 +206,8 @@ int USBManager::OpenDevice(uint16_t vendor_id, uint16_t product_id, int sid)
         default: WARNING("unknown speed device opened"); break;
       }
 
-      INFO("bus = %d, address = %3d, serial id = %2u", libusb_get_bus_number(dev), libusb_get_device_address(dev),
-           static_cast<unsigned>(sid_tmp));
+      INFO("bus = %d, address = %3d, serial id = %2u", libusb_get_bus_number(dev),
+           libusb_get_device_address(dev), static_cast<unsigned>(sid_tmp));
 
       libusb_release_interface(handle, interface);
       break;
@@ -263,27 +252,21 @@ void USBManager::PrintOpenDevices() const
   }
 }
 
-int USBManager::IsDeviceOpen(uint16_t vendor_id, uint16_t product_id, int sid) const
+bool USBManager::IsDeviceOpen(uint16_t vendor_id, uint16_t product_id, int sid) const
 {
   std::lock_guard<std::mutex> lock(_mutex);
   for (const auto & entry : _devices) {
-    libusb_device * dev = libusb_get_device(entry.handle);
-    if (!dev) { continue; }
-    libusb_device_descriptor desc{};
-    int r = libusb_get_device_descriptor(dev, &desc);
-    if (r < 0) {
-      WARNING("could not get device descriptor");
-      continue;
-    }
-    if (desc.idVendor == vendor_id && desc.idProduct == product_id &&
-        (sid == NK_SID_ANY || GetSerialId(entry.handle) == sid)) {
-      return 1;
+    if (entry.vendor_id == vendor_id && entry.product_id == product_id) {
+      if (sid == NK_SID_ANY || entry.serial_id == sid) {
+        return true; // Found
+      }
     }
   }
-  return 0;
+  return false;
 }
 
-libusb_device_handle * USBManager::GetDeviceHandle(uint16_t vendor_id, uint16_t product_id, int sid) const
+libusb_device_handle * USBManager::GetDeviceHandle(uint16_t vendor_id, uint16_t product_id,
+                                                   int sid) const
 {
   std::lock_guard<std::mutex> lock(_mutex);
   for (const auto & entry : _devices) {

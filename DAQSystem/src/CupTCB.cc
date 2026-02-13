@@ -3,22 +3,19 @@
 
 #include "DAQSystem/CupTCB.hh"
 
-using namespace std;
-
 ClassImp(CupTCB)
 
-CupTCB * CupTCB::fTCB = nullptr;
-
+// Thread-safe Meyers' Singleton
 CupTCB * CupTCB::Instance()
 {
-  if (!fTCB) { fTCB = new CupTCB(); }
-  return fTCB;
+  static CupTCB instance;
+  return &instance;
 }
 
+// No-op for static singleton, but kept for interface compatibility
 void CupTCB::DeleteInstance()
 {
-  if (fTCB) { delete fTCB; }
-  fTCB = nullptr;
+  // The instance will be destroyed automatically at program exit.
 }
 
 int CupTCB::Open() { return fNKTCB.Open(); }
@@ -30,7 +27,9 @@ void CupTCB::Close()
   fNKTCB.Close();
 }
 
-// tcb
+// -----------------------------------------------------------------------
+// Control Functions
+// -----------------------------------------------------------------------
 void CupTCB::Reset() { fNKTCB.Reset(); }
 
 void CupTCB::ResetTimer() { fNKTCB.ResetTimer(); }
@@ -49,209 +48,266 @@ void CupTCB::TriggerStop()
   fNKTCB.Reset();
 }
 
-void CupTCB::WriteCW(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteCW(mid, ch, data); }
-
-unsigned long CupTCB::ReadCW(unsigned long mid, unsigned long ch) { return fNKTCB.ReadCW(mid, ch); }
-
-// m64adc only
-void CupTCB::WriteGW(unsigned long mid, unsigned long data) { fNKTCB.WriteGW(mid, data); }
-
-unsigned long CupTCB::ReadGW(unsigned long mid) { return fNKTCB.ReadGW(mid); }
-
-// fadc, sadc, amoreadc
-void CupTCB::WriteRL(unsigned long mid, unsigned long data) { fNKTCB.WriteRL(mid, data); }
-
-unsigned long CupTCB::ReadRL(unsigned long mid) { return fNKTCB.ReadRL(mid); }
-
-void CupTCB::WriteDRAMON(unsigned long mid, unsigned long data) { fNKTCB.WriteDRAMON(mid, data); }
-
-unsigned long CupTCB::ReadDRAMON(unsigned long mid) { return fNKTCB.ReadDRAMON(mid); }
-
-void CupTCB::WriteDACOFF(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteDACOFF(mid, ch, data); }
-
-unsigned long CupTCB::ReadDACOFF(unsigned long mid, unsigned long ch) { return fNKTCB.ReadDACOFF(mid, ch); }
-
-void CupTCB::MeasurePED(unsigned long mid, unsigned long ch) { return fNKTCB.MeasurePED(mid, ch); }
-
-unsigned long CupTCB::ReadPED(unsigned long mid, unsigned long ch) { return fNKTCB.ReadPED(mid, ch); }
-
-void CupTCB::WriteDLY(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteDLY(mid, ch, data); }
-
-unsigned long CupTCB::ReadDLY(unsigned long mid, unsigned long ch) { return fNKTCB.ReadDLY(mid, ch); }
-
-void CupTCB::WriteTHR(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteTHR(mid, ch, data); }
-
-unsigned long CupTCB::ReadTHR(unsigned long mid, unsigned long ch) { return fNKTCB.ReadTHR(mid, ch); }
-
-// fadc, sadc
-void CupTCB::WritePOL(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WritePOL(mid, ch, data); }
-
-unsigned long CupTCB::ReadPOL(unsigned long mid, unsigned long ch) { return fNKTCB.ReadPOL(mid, ch); }
-
-void CupTCB::WritePSW(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WritePSW(mid, ch, data); }
-
-unsigned long CupTCB::ReadPSW(unsigned long mid, unsigned long ch) { return fNKTCB.ReadPSW(mid, ch); }
-
-// fadc
-void CupTCB::WriteAMODE(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteAMODE(mid, ch, data); }
-
-unsigned long CupTCB::ReadAMODE(unsigned long mid, unsigned long ch) { return fNKTCB.ReadAMODE(mid, ch); }
-
-void CupTCB::WritePCT(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WritePCT(mid, ch, data); }
-
-unsigned long CupTCB::ReadPCT(unsigned long mid, unsigned long ch) { return fNKTCB.ReadPCT(mid, ch); }
-
-void CupTCB::WritePCI(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WritePCI(mid, ch, data); }
-
-unsigned long CupTCB::ReadPCI(unsigned long mid, unsigned long ch) { return fNKTCB.ReadPCI(mid, ch); }
-
-void CupTCB::WritePWT(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WritePWT(mid, ch, data); }
-
-unsigned long CupTCB::ReadPWT(unsigned long mid, unsigned long ch) { return fNKTCB.ReadPWT(mid, ch); }
-
-void CupTCB::WriteDT(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteDT(mid, ch, data); }
-
-unsigned long CupTCB::ReadDT(unsigned long mid, unsigned long ch) { return fNKTCB.ReadDT(mid, ch); }
-
-void CupTCB::WriteTM(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteTM(mid, ch, data); }
-
-unsigned long CupTCB::ReadTM(unsigned long mid, unsigned long ch) { return fNKTCB.ReadTM(mid, ch); }
-
-void CupTCB::WriteTLT(unsigned long mid, unsigned long data) { fNKTCB.WriteTLT(mid, data); }
-
-unsigned long CupTCB::ReadTLT(unsigned long mid) { return fNKTCB.ReadTLT(mid); }
-
-void CupTCB::WriteSTLT(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WriteSTLT(mid, ch, data); }
-
-unsigned long CupTCB::ReadSTLT(unsigned long mid, unsigned long ch) { return fNKTCB.ReadSTLT(mid, ch); }
-
-void CupTCB::WriteDSR(unsigned long mid, unsigned long data) { fNKTCB.WriteDSR(mid, data); }
-
-unsigned long CupTCB::ReadDSR(unsigned long mid) { return fNKTCB.ReadDSR(mid); }
-
-void CupTCB::AlignFADC(unsigned long mid) { fNKTCB.AlignFADC500(mid); }
-
-void CupTCB::WritePSS(unsigned long mid, unsigned long ch, unsigned long data) { fNKTCB.WritePSS(mid, ch, data); }
-
-unsigned long CupTCB::ReadPSS(unsigned long mid, unsigned long ch) { return fNKTCB.ReadPSS(mid, ch); }
-
-void CupTCB::AlignSADC(unsigned long mid) { fNKTCB.AlignSADC64(mid); }
-
-void CupTCB::AlignGADC(unsigned long mid) { fNKTCB.AlignFADC125(mid); }
-
-// iadc
-void CupTCB::WriteDAQMODE(unsigned long mid, unsigned long data) { fNKTCB.WriteDAQMODE(mid, data); }
-
-unsigned long CupTCB::ReadDAQMODE(unsigned long mid) { return fNKTCB.ReadDAQMODE(mid); }
-
-void CupTCB::WriteHV(unsigned long mid, unsigned long ch, float data) { fNKTCB.WriteHV(mid, ch, data); }
-
-float CupTCB::ReadHV(unsigned long mid, unsigned long ch) { return fNKTCB.ReadHV(mid, ch); }
-
-float CupTCB::ReadTEMP(unsigned long mid, unsigned long ch) { return fNKTCB.ReadTEMP(mid, ch); }
-
-void CupTCB::AlignIADC(unsigned long mid) { fNKTCB.AlignIADC64(mid); }
-
-void CupTCB::WritePTRIG(unsigned long data) { fNKTCB.WritePTRIG(data); }
-
-unsigned long CupTCB::ReadPTRIG() { return fNKTCB.ReadPTRIG(); }
-
-void CupTCB::WriteTRIGENABLE(unsigned long mid, unsigned long data) { fNKTCB.WriteTRIGENABLE(mid, data); }
-
-unsigned long CupTCB::ReadTRIGENABLE(unsigned long mid) { return fNKTCB.ReadTRIGENABLE(mid); }
-
-void CupTCB::WriteMTHRFADC(unsigned long data) { fNKTCB.WriteMTHRFADC500(data); }
-
-unsigned long CupTCB::ReadMTHRFADC() { return fNKTCB.ReadMTHRFADC500(); }
-
-void CupTCB::WritePSCALEFADC(unsigned long data) { fNKTCB.WritePSCALEFADC500(data); }
-
-unsigned long CupTCB::ReadPSCALEFADC() { return fNKTCB.ReadPSCALEFADC500(); }
-
-void CupTCB::WriteMTHRSADCMU(unsigned long data) { fNKTCB.WriteMTHRSADC64MU(data); }
-
-unsigned long CupTCB::ReadMTHRSADCMU() { return fNKTCB.ReadMTHRSADC64MU(); }
-
-void CupTCB::WritePSCALESADCMU(unsigned long data) { fNKTCB.WritePSCALESADC64MU(data); }
-
-unsigned long CupTCB::ReadPSCALESADCMU() { return fNKTCB.ReadPSCALESADC64MU(); }
-
-void CupTCB::WriteMTHRSADCLS(unsigned long data) { fNKTCB.WriteMTHRSADC64LS(data); }
-
-unsigned long CupTCB::ReadMTHRSADCLS() { return fNKTCB.ReadMTHRSADC64LS(); }
-
-void CupTCB::WritePSCALESADCLS(unsigned long data) { fNKTCB.WritePSCALESADC64LS(data); }
-
-unsigned long CupTCB::ReadPSCALESADCLS() { return fNKTCB.ReadPSCALESADC64LS(); }
-
-void CupTCB::WriteMTHRIADC(unsigned long data) { fNKTCB.WriteMTHRIADC64(data); }
-
-unsigned long CupTCB::ReadMTHRIADC() { return fNKTCB.ReadMTHRIADC64(); }
-
-void CupTCB::WritePSCALEIADC(unsigned long data) { fNKTCB.WritePSCALEIADC64(data); }
-
-unsigned long CupTCB::ReadPSCALEIADC() { return fNKTCB.ReadPSCALEIADC64(); }
-
-void CupTCB::WriteEXTOUT(unsigned long data) { fNKTCB.WriteEXTOUT(data); }
-
-unsigned long CupTCB::ReadEXTOUT() { return fNKTCB.ReadEXTOUT(); }
+// -----------------------------------------------------------------------
+// Register Wrappers
+// -----------------------------------------------------------------------
+void CupTCB::WriteCW(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteCW(mid, ch, data);
+}
+uint32_t CupTCB::ReadCW(uint32_t mid, uint32_t ch) { return fNKTCB.ReadCW(mid, ch); }
+
+void CupTCB::WriteGW(uint32_t mid, uint32_t data) { fNKTCB.WriteGW(mid, data); }
+uint32_t CupTCB::ReadGW(uint32_t mid) { return fNKTCB.ReadGW(mid); }
+
+void CupTCB::WriteRL(uint32_t mid, uint32_t data) { fNKTCB.WriteRL(mid, data); }
+uint32_t CupTCB::ReadRL(uint32_t mid) { return fNKTCB.ReadRL(mid); }
+
+void CupTCB::WriteDRAMON(uint32_t mid, uint32_t data) { fNKTCB.WriteDRAMON(mid, data); }
+uint32_t CupTCB::ReadDRAMON(uint32_t mid) { return fNKTCB.ReadDRAMON(mid); }
+
+void CupTCB::WriteDACOFF(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteDACOFF(mid, ch, data);
+}
+uint32_t CupTCB::ReadDACOFF(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadDACOFF(mid, ch);
+}
+
+void CupTCB::MeasurePED(uint32_t mid, uint32_t ch) { fNKTCB.MeasurePED(mid, ch); }
+uint32_t CupTCB::ReadPED(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadPED(mid, ch);
+}
+
+void CupTCB::WriteDLY(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteDLY(mid, ch, data);
+}
+uint32_t CupTCB::ReadDLY(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadDLY(mid, ch);
+}
+
+void CupTCB::WriteTHR(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteTHR(mid, ch, data);
+}
+uint32_t CupTCB::ReadTHR(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadTHR(mid, ch);
+}
+
+void CupTCB::WritePOL(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WritePOL(mid, ch, data);
+}
+uint32_t CupTCB::ReadPOL(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadPOL(mid, ch);
+}
+
+void CupTCB::WritePSW(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WritePSW(mid, ch, data);
+}
+uint32_t CupTCB::ReadPSW(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadPSW(mid, ch);
+}
+
+void CupTCB::WriteAMODE(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteAMODE(mid, ch, data);
+}
+uint32_t CupTCB::ReadAMODE(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadAMODE(mid, ch);
+}
+
+void CupTCB::WritePCT(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WritePCT(mid, ch, data);
+}
+uint32_t CupTCB::ReadPCT(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadPCT(mid, ch);
+}
+
+void CupTCB::WritePCI(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WritePCI(mid, ch, data);
+}
+uint32_t CupTCB::ReadPCI(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadPCI(mid, ch);
+}
+
+void CupTCB::WritePWT(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WritePWT(mid, ch, data);
+}
+uint32_t CupTCB::ReadPWT(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadPWT(mid, ch);
+}
+
+void CupTCB::WriteDT(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteDT(mid, ch, data);
+}
+uint32_t CupTCB::ReadDT(uint32_t mid, uint32_t ch) { return fNKTCB.ReadDT(mid, ch); }
+
+void CupTCB::WriteTM(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteTM(mid, ch, data);
+}
+uint32_t CupTCB::ReadTM(uint32_t mid, uint32_t ch) { return fNKTCB.ReadTM(mid, ch); }
+
+void CupTCB::WriteTLT(uint32_t mid, uint32_t data) { fNKTCB.WriteTLT(mid, data); }
+uint32_t CupTCB::ReadTLT(uint32_t mid) { return fNKTCB.ReadTLT(mid); }
+
+void CupTCB::WriteSTLT(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WriteSTLT(mid, ch, data);
+}
+uint32_t CupTCB::ReadSTLT(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadSTLT(mid, ch);
+}
+
+void CupTCB::WriteDSR(uint32_t mid, uint32_t data) { fNKTCB.WriteDSR(mid, data); }
+uint32_t CupTCB::ReadDSR(uint32_t mid) { return fNKTCB.ReadDSR(mid); }
+
+void CupTCB::WritePSS(uint32_t mid, uint32_t ch, uint32_t data)
+{
+  fNKTCB.WritePSS(mid, ch, data);
+}
+uint32_t CupTCB::ReadPSS(uint32_t mid, uint32_t ch)
+{
+  return fNKTCB.ReadPSS(mid, ch);
+}
+
+// -----------------------------------------------------------------------
+// Alignment
+// -----------------------------------------------------------------------
+void CupTCB::AlignFADC(uint32_t mid) { fNKTCB.AlignFADC500(mid); }
+void CupTCB::AlignSADC(uint32_t mid) { fNKTCB.AlignSADC64(mid); }
+void CupTCB::AlignGADC(uint32_t mid) { fNKTCB.AlignFADC125(mid); }
+void CupTCB::AlignIADC(uint32_t mid) { fNKTCB.AlignIADC64(mid); }
+void CupTCB::AlignDRAM(uint32_t mid) { fNKTCB.AlignDRAM(mid); }
+
+// -----------------------------------------------------------------------
+// IADC Specifics
+// -----------------------------------------------------------------------
+void CupTCB::WriteDAQMODE(uint32_t mid, uint32_t data) { fNKTCB.WriteDAQMODE(mid, data); }
+uint32_t CupTCB::ReadDAQMODE(uint32_t mid) { return fNKTCB.ReadDAQMODE(mid); }
+
+void CupTCB::WriteHV(uint32_t mid, uint32_t ch, float data)
+{
+  fNKTCB.WriteHV(mid, ch, data);
+}
+float CupTCB::ReadHV(uint32_t mid, uint32_t ch) { return fNKTCB.ReadHV(mid, ch); }
+float CupTCB::ReadTEMP(uint32_t mid, uint32_t ch) { return fNKTCB.ReadTEMP(mid, ch); }
+
+// -----------------------------------------------------------------------
+// Trigger Configuration
+// -----------------------------------------------------------------------
+void CupTCB::WritePTRIG(uint32_t data) { fNKTCB.WritePTRIG(data); }
+uint32_t CupTCB::ReadPTRIG() { return fNKTCB.ReadPTRIG(); }
+
+void CupTCB::WriteTRIGENABLE(uint32_t mid, uint32_t data)
+{
+  fNKTCB.WriteTRIGENABLE(mid, data);
+}
+uint32_t CupTCB::ReadTRIGENABLE(uint32_t mid) { return fNKTCB.ReadTRIGENABLE(mid); }
+
+void CupTCB::WriteMTHRFADC(uint32_t data) { fNKTCB.WriteMTHRFADC500(data); }
+uint32_t CupTCB::ReadMTHRFADC() { return fNKTCB.ReadMTHRFADC500(); }
+
+void CupTCB::WritePSCALEFADC(uint32_t data) { fNKTCB.WritePSCALEFADC500(data); }
+uint32_t CupTCB::ReadPSCALEFADC() { return fNKTCB.ReadPSCALEFADC500(); }
+
+void CupTCB::WriteMTHRSADCMU(uint32_t data) { fNKTCB.WriteMTHRSADC64MU(data); }
+uint32_t CupTCB::ReadMTHRSADCMU() { return fNKTCB.ReadMTHRSADC64MU(); }
+
+void CupTCB::WritePSCALESADCMU(uint32_t data) { fNKTCB.WritePSCALESADC64MU(data); }
+uint32_t CupTCB::ReadPSCALESADCMU() { return fNKTCB.ReadPSCALESADC64MU(); }
+
+void CupTCB::WriteMTHRSADCLS(uint32_t data) { fNKTCB.WriteMTHRSADC64LS(data); }
+uint32_t CupTCB::ReadMTHRSADCLS() { return fNKTCB.ReadMTHRSADC64LS(); }
+
+void CupTCB::WritePSCALESADCLS(uint32_t data) { fNKTCB.WritePSCALESADC64LS(data); }
+uint32_t CupTCB::ReadPSCALESADCLS() { return fNKTCB.ReadPSCALESADC64LS(); }
+
+void CupTCB::WriteMTHRIADC(uint32_t data) { fNKTCB.WriteMTHRIADC64(data); }
+uint32_t CupTCB::ReadMTHRIADC() { return fNKTCB.ReadMTHRIADC64(); }
+
+void CupTCB::WritePSCALEIADC(uint32_t data) { fNKTCB.WritePSCALEIADC64(data); }
+uint32_t CupTCB::ReadPSCALEIADC() { return fNKTCB.ReadPSCALEIADC64(); }
+
+void CupTCB::WriteEXTOUT(uint32_t data) { fNKTCB.WriteEXTOUT(data); }
+uint32_t CupTCB::ReadEXTOUT() { return fNKTCB.ReadEXTOUT(); }
+
+void CupTCB::WriteGATEDLY(uint32_t data) { fNKTCB.WriteGATEDLY(data); }
+uint32_t CupTCB::ReadGATEDLY() { return fNKTCB.ReadGATEDLY(); }
+
+void CupTCB::WriteGATEWIDTH(uint32_t data) { fNKTCB.WriteGATEWIDTH(data); }
+uint32_t CupTCB::ReadGATEWIDTH() { return fNKTCB.ReadGATEWIDTH(); }
+
+void CupTCB::WriteEXTOUTWIDTH(uint32_t data) { fNKTCB.WriteEXTOUTWIDTH(data); }
+uint32_t CupTCB::ReadEXTOUTWIDTH() { return fNKTCB.ReadEXTOUTWIDTH(); }
 
 void CupTCB::SendTRIG() { fNKTCB.SendTRIG(); }
 
-void CupTCB::ReadLNSTAT(unsigned long * data) { fNKTCB.ReadLNSTAT(data); }
+void CupTCB::ReadLNSTAT(uint32_t * data) { fNKTCB.ReadLNSTAT(data); }
+void CupTCB::ReadMIDS(uint32_t * data) { fNKTCB.ReadMIDS(data); }
 
-void CupTCB::ReadMIDS(unsigned long * data) { fNKTCB.ReadMIDS(data); }
-
-unsigned long CupTCB::ReadBCount(unsigned long mid)
+// -----------------------------------------------------------------------
+// Data Readout & Mutex Protected Area
+// -----------------------------------------------------------------------
+uint32_t CupTCB::ReadBCount(uint32_t mid)
 {
   std::lock_guard<std::mutex> lock(fMutex);
   return fNKTCB.ReadBCount(mid);
 }
 
-int CupTCB::ReadData(unsigned long mid, unsigned long bcount, unsigned char * data)
+int CupTCB::ReadData(uint32_t mid, uint32_t bcount, unsigned char * data)
 {
   std::lock_guard<std::mutex> lock(fMutex);
   return fNKTCB.ReadData(mid, bcount, data);
 }
 
-void CupTCB::WriteGATEDLY(unsigned long data) { fNKTCB.WriteGATEDLY(data); }
-
-unsigned long CupTCB::ReadGATEDLY() { return fNKTCB.ReadGATEDLY(); }
-
-void CupTCB::WriteGATEWIDTH(unsigned long data) { fNKTCB.WriteGATEWIDTH(data); }
-
-unsigned long CupTCB::ReadGATEWIDTH() { return fNKTCB.ReadGATEWIDTH(); }
-
-void CupTCB::WriteEXTOUTWIDTH(unsigned long data) { fNKTCB.WriteEXTOUTWIDTH(data); }
-
-unsigned long CupTCB::ReadEXTOUTWIDTH() { return fNKTCB.ReadEXTOUTWIDTH(); }
-
-void CupTCB::AlignDRAM(unsigned long mid) { fNKTCB.AlignDRAM(mid); }
-
-void CupTCB::WriteTRGSWFADC(unsigned long fadc, unsigned long sadcmu, unsigned long sadcls, unsigned long iadc)
+// -----------------------------------------------------------------------
+// Trigger Switches (Fixed Copy/Paste Bug)
+// -----------------------------------------------------------------------
+void CupTCB::WriteTRGSWFADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                            uint32_t iadc)
 {
   fNKTCB.WriteTrigSwitchFADC500(fadc, sadcmu, sadcls, iadc);
 }
 
-void CupTCB::WriteTRGSWSADCMU(unsigned long fadc, unsigned long sadcmu, unsigned long sadcls, unsigned long iadc)
+void CupTCB::WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                              uint32_t iadc)
 {
   fNKTCB.WriteTrigSwitchSADC64MU(fadc, sadcmu, sadcls, iadc);
 }
 
-void CupTCB::WriteTRGSWSADCLS(unsigned long fadc, unsigned long sadcmu, unsigned long sadcls, unsigned long iadc)
+void CupTCB::WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                              uint32_t iadc)
 {
-  fNKTCB.WriteTrigSwitchFADC500(fadc, sadcmu, sadcls, iadc);
+  // BUG FIX: Was calling WriteTrigSwitchFADC500, now calls WriteTrigSwitchSADC64LS
+  fNKTCB.WriteTrigSwitchSADC64LS(fadc, sadcmu, sadcls, iadc);
 }
 
-void CupTCB::WriteTRGSWIADC(unsigned long fadc, unsigned long sadcmu, unsigned long sadcls, unsigned long iadc)
+void CupTCB::WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                            uint32_t iadc)
 {
   fNKTCB.WriteTrigSwitchIADC64(fadc, sadcmu, sadcls, iadc);
 }
 
-unsigned long CupTCB::ReadTRGSWFADC() { return fNKTCB.ReadSwitchFADC500(); }
-
-unsigned long CupTCB::ReadTRGSWSADCMU() { return fNKTCB.ReadSwitchSADC64MU(); }
-
-unsigned long CupTCB::ReadTRGSWSADCLS() { return fNKTCB.ReadSwitchSADC64LS(); }
-
-unsigned long CupTCB::ReadTRGSWIADC() { return fNKTCB.ReadSwitchIADC64(); }
+uint32_t CupTCB::ReadTRGSWFADC() { return fNKTCB.ReadSwitchFADC500(); }
+uint32_t CupTCB::ReadTRGSWSADCMU() { return fNKTCB.ReadSwitchSADC64MU(); }
+uint32_t CupTCB::ReadTRGSWSADCLS() { return fNKTCB.ReadSwitchSADC64LS(); }
+uint32_t CupTCB::ReadTRGSWIADC() { return fNKTCB.ReadSwitchIADC64(); }

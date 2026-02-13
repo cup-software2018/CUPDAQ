@@ -1,7 +1,9 @@
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -10,18 +12,58 @@
 
 namespace {
 
-constexpr std::uint16_t kNKFADC500S_VENDOR_ID = 0x0547;
-constexpr std::uint16_t kNKFADC500S_PRODUCT_ID = 0x1502;
+constexpr std::uint16_t kVENDOR_ID = 0x0547;
+constexpr std::uint16_t kPRODUCT_ID = 0x1502;
 
-inline std::uint32_t RegChOffset(std::uint32_t base, unsigned long ch) { return base + (((ch - 1UL) & 0xFFUL) << 16); }
+// Register Addresses
+constexpr uint32_t kAddr_RUN = 0x20000000u;
+constexpr uint32_t kAddr_CW = 0x20000001u;
+constexpr uint32_t kAddr_RL = 0x20000002u;
+constexpr uint32_t kAddr_DRAMON = 0x20000003u;
+constexpr uint32_t kAddr_DACOFF = 0x20000004u;
+constexpr uint32_t kAddr_PED_CMD = 0x20000005u;
+constexpr uint32_t kAddr_PED_READ = 0x20000006u;
+constexpr uint32_t kAddr_DLY = 0x20000007u;
+constexpr uint32_t kAddr_THR = 0x20000008u;
+constexpr uint32_t kAddr_POL = 0x20000009u;
+constexpr uint32_t kAddr_PSW = 0x2000000Au;
+constexpr uint32_t kAddr_AMODE = 0x2000000Bu;
+constexpr uint32_t kAddr_PCT = 0x2000000Cu;
+constexpr uint32_t kAddr_PCI = 0x2000000Du;
+constexpr uint32_t kAddr_PWT = 0x2000000Eu;
+constexpr uint32_t kAddr_DT = 0x2000000Fu;
 
-inline std::uint32_t RegChOffsetZeroBase(std::uint32_t base, unsigned long ch) { return base + ((ch & 0xFFUL) << 16); }
+constexpr uint32_t kAddr_BCOUNT = 0x20000010u;
+constexpr uint32_t kAddr_PTRIG = 0x20000011u;
+constexpr uint32_t kAddr_TRIG_CMD = 0x20000012u;
+constexpr uint32_t kAddr_TRIG_ENABLE = 0x20000013u;
+constexpr uint32_t kAddr_TM = 0x20000014u;
+constexpr uint32_t kAddr_TLT = 0x20000015u;
+constexpr uint32_t kAddr_ZEROSUP = 0x20000016u;
+constexpr uint32_t kAddr_ADCRST = 0x20000017u;
+constexpr uint32_t kAddr_ADCCAL = 0x20000018u;
+constexpr uint32_t kAddr_ADCDLY = 0x20000019u;
+constexpr uint32_t kAddr_ADCALIGN = 0x2000001Au; // Also ADCSTAT
+constexpr uint32_t kAddr_DRAMDLY = 0x2000001Bu;
+constexpr uint32_t kAddr_DRAMBITS = 0x2000001Cu;
+constexpr uint32_t kAddr_DRAMTEST = 0x2000001Du;
+constexpr uint32_t kAddr_PSCALE = 0x2000001Eu;
+constexpr uint32_t kAddr_DSR = 0x2000001Fu;
 
+constexpr uint32_t kAddr_DATA = 0x40000000u;
+
+// Helper for channel address calculation: Base + ((ch-1) << 16)
+inline uint32_t GetChAddr(uint32_t base, uint32_t ch) { return base + (((ch - 1u) & 0xFFu) << 16); }
+
+// For zero-based channel indices (DRAM operations)
+inline uint32_t GetChAddrZB(uint32_t base, uint32_t ch) { return base + ((ch & 0xFFu) << 16); }
+
+void SleepMs(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 } // namespace
 
 NKFADC500S::NKFADC500S(int sid)
   : _sid(sid),
-    _usb(kNKFADC500S_VENDOR_ID, kNKFADC500S_PRODUCT_ID, sid)
+    _usb(kVENDOR_ID, kPRODUCT_ID, sid)
 {
 }
 
@@ -30,7 +72,7 @@ NKFADC500S::~NKFADC500S() { Close(); }
 void NKFADC500S::SetSID(int sid)
 {
   _sid = sid;
-  _usb.Set(kNKFADC500S_VENDOR_ID, kNKFADC500S_PRODUCT_ID, _sid);
+  _usb.Set(kVENDOR_ID, kPRODUCT_ID, _sid);
 }
 
 int NKFADC500S::Open()
@@ -47,7 +89,6 @@ int NKFADC500S::Open()
     _usb.Close();
     return status;
   }
-
   return 0;
 }
 
@@ -57,346 +98,241 @@ void NKFADC500S::Close()
   _usb.Close();
 }
 
-void NKFADC500S::Reset() const { _usb.Write(0x20000000u, 1u << 2); }
+void NKFADC500S::Reset() const { _usb.Write(kAddr_RUN, 1u << 2); }
+void NKFADC500S::ResetTimer() const { _usb.Write(kAddr_RUN, 1u); }
+void NKFADC500S::Start() const { _usb.Write(kAddr_RUN, 1u << 3); }
+void NKFADC500S::Stop() const { _usb.Write(kAddr_RUN, 0u); }
 
-void NKFADC500S::ResetTimer() const { _usb.Write(0x20000000u, 1u); }
+uint32_t NKFADC500S::ReadRun() const { return _usb.ReadReg(kAddr_RUN); }
 
-void NKFADC500S::Start() const { _usb.Write(0x20000000u, 1u << 3); }
-
-void NKFADC500S::Stop() const { _usb.Write(0x20000000u, 0u << 3); }
-
-unsigned long NKFADC500S::ReadRun() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000000u)); }
-
-void NKFADC500S::WriteCW(unsigned long ch, unsigned long data) const
+void NKFADC500S::WriteCW(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000001u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
+  _usb.Write(GetChAddr(kAddr_CW, ch), data);
 }
+uint32_t NKFADC500S::ReadCW(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_CW, ch)); }
 
-unsigned long NKFADC500S::ReadCW(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000001u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
+void NKFADC500S::WriteRL(uint32_t data) const { _usb.Write(kAddr_RL, data); }
+uint32_t NKFADC500S::ReadRL() const { return _usb.ReadReg(kAddr_RL); }
 
-void NKFADC500S::WriteRL(unsigned long data) const { _usb.Write(0x20000002u, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC500S::ReadRL() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000002u)); }
-
-void NKFADC500S::WriteDRAMON(unsigned long data) const
+void NKFADC500S::WriteDRAMON(uint32_t data) const
 {
   if (data) {
-    unsigned int status = _usb.ReadReg(0x20000003u);
-    if (status) { _usb.Write(0x20000003u, 0u); }
+    uint32_t status = _usb.ReadReg(kAddr_DRAMON);
+    if (status) { _usb.Write(kAddr_DRAMON, 0u); }
 
-    _usb.Write(0x20000003u, 1u);
+    _usb.Write(kAddr_DRAMON, 1u);
 
-    status = 0;
-    while (!status) {
-      status = _usb.ReadReg(0x20000003u);
+    // Added timeout to avoid infinite loop
+    int timeout = 1000;
+    while (_usb.ReadReg(kAddr_DRAMON) == 0 && timeout > 0) {
+      timeout--;
     }
+    if (timeout == 0) ERROR("NKFADC500S: DRAMON write timeout");
   }
   else {
-    _usb.Write(0x20000003u, 0u);
+    _usb.Write(kAddr_DRAMON, 0u);
   }
 }
 
-unsigned long NKFADC500S::ReadDRAMON() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000003u)); }
+uint32_t NKFADC500S::ReadDRAMON() const { return _usb.ReadReg(kAddr_DRAMON); }
 
-void NKFADC500S::WriteDACOFF(unsigned long ch, unsigned long data) const
+void NKFADC500S::WriteDACOFF(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000004u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
+  _usb.Write(GetChAddr(kAddr_DACOFF, ch), data);
+}
+uint32_t NKFADC500S::ReadDACOFF(uint32_t ch) const
+{
+  return _usb.ReadReg(GetChAddr(kAddr_DACOFF, ch));
 }
 
-unsigned long NKFADC500S::ReadDACOFF(unsigned long ch) const
+void NKFADC500S::MeasurePED(uint32_t ch) const { _usb.Write(GetChAddr(kAddr_PED_CMD, ch), 0u); }
+uint32_t NKFADC500S::ReadPED(uint32_t ch) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000004u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
+  return _usb.ReadReg(GetChAddr(kAddr_PED_READ, ch));
 }
 
-void NKFADC500S::MeasurePED(unsigned long ch) const
+void NKFADC500S::WriteDLY(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000005u, ch);
-  _usb.Write(addr, 0u);
+  uint32_t value = ((data / 1000u) << 10) | (data % 1000u);
+  _usb.Write(GetChAddr(kAddr_DLY, ch), value);
 }
 
-unsigned long NKFADC500S::ReadPED(unsigned long ch) const
+uint32_t NKFADC500S::ReadDLY(uint32_t ch) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000006u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
+  uint32_t value = _usb.ReadReg(GetChAddr(kAddr_DLY, ch));
+  return (value >> 10) * 1000u + (value & 0x3FFu);
 }
 
-void NKFADC500S::WriteDLY(unsigned long ch, unsigned long data) const
+void NKFADC500S::WriteTHR(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000007u, ch);
-  const unsigned long value = ((data / 1000UL) << 10) | (data % 1000UL);
-  _usb.Write(addr, static_cast<std::uint32_t>(value));
+  _usb.Write(GetChAddr(kAddr_THR, ch), data);
+}
+uint32_t NKFADC500S::ReadTHR(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_THR, ch)); }
+
+void NKFADC500S::WritePOL(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_POL, ch), data);
+}
+uint32_t NKFADC500S::ReadPOL(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_POL, ch)); }
+
+void NKFADC500S::WritePSW(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_PSW, ch), data);
+}
+uint32_t NKFADC500S::ReadPSW(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PSW, ch)); }
+
+void NKFADC500S::WriteAMODE(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_AMODE, ch), data);
+}
+uint32_t NKFADC500S::ReadAMODE(uint32_t ch) const
+{
+  return _usb.ReadReg(GetChAddr(kAddr_AMODE, ch));
 }
 
-unsigned long NKFADC500S::ReadDLY(unsigned long ch) const
+void NKFADC500S::WritePCT(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000007u, ch);
-  const unsigned long value = static_cast<unsigned long>(_usb.ReadReg(addr));
-  const unsigned long data = (value >> 10) * 1000UL + (value & 0x3FFUL);
-  return data;
+  _usb.Write(GetChAddr(kAddr_PCT, ch), data);
+}
+uint32_t NKFADC500S::ReadPCT(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PCT, ch)); }
+
+void NKFADC500S::WritePCI(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_PCI, ch), data);
+}
+uint32_t NKFADC500S::ReadPCI(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PCI, ch)); }
+
+void NKFADC500S::WritePWT(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_PWT, ch), data);
+}
+uint32_t NKFADC500S::ReadPWT(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PWT, ch)); }
+
+void NKFADC500S::WriteDT(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_DT, ch), data);
+}
+uint32_t NKFADC500S::ReadDT(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_DT, ch)); }
+
+void NKFADC500S::WritePTRIG(uint32_t data) const { _usb.Write(kAddr_PTRIG, data); }
+uint32_t NKFADC500S::ReadPTRIG() const { return _usb.ReadReg(kAddr_PTRIG); }
+
+void NKFADC500S::SendTRIG() const { _usb.Write(kAddr_TRIG_CMD, 0u); }
+
+void NKFADC500S::WriteTRIGENABLE(uint32_t data) const { _usb.Write(kAddr_TRIG_ENABLE, data); }
+uint32_t NKFADC500S::ReadTRIGENABLE() const { return _usb.ReadReg(kAddr_TRIG_ENABLE); }
+
+void NKFADC500S::WriteTM(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_TM, ch), data);
+}
+uint32_t NKFADC500S::ReadTM(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_TM, ch)); }
+
+void NKFADC500S::WriteTLT(uint32_t data) const { _usb.Write(kAddr_TLT, data); }
+uint32_t NKFADC500S::ReadTLT() const { return _usb.ReadReg(kAddr_TLT); }
+
+void NKFADC500S::WriteZEROSUP(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_ZEROSUP, ch), data);
+}
+uint32_t NKFADC500S::ReadZEROSUP(uint32_t ch) const
+{
+  return _usb.ReadReg(GetChAddr(kAddr_ZEROSUP, ch));
 }
 
-void NKFADC500S::WriteTHR(unsigned long ch, unsigned long data) const
+void NKFADC500S::SendADCRST() const { _usb.Write(kAddr_ADCRST, 0u); }
+void NKFADC500S::SendADCCAL() const { _usb.Write(kAddr_ADCCAL, 0u); }
+
+void NKFADC500S::WriteADCDLY(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000008u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
+  _usb.Write(GetChAddr(kAddr_ADCDLY, ch), data);
+}
+void NKFADC500S::WriteADCALIGN(uint32_t data) const { _usb.Write(kAddr_ADCALIGN, data); }
+uint32_t NKFADC500S::ReadADCSTAT() const { return _usb.ReadReg(kAddr_ADCALIGN); }
+
+void NKFADC500S::WriteDRAMDLY(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddrZB(kAddr_DRAMDLY, ch), data);
+}
+void NKFADC500S::WriteDRAMBITSLIP(uint32_t ch) const
+{
+  _usb.Write(GetChAddrZB(kAddr_DRAMBITS, ch), 0u);
 }
 
-unsigned long NKFADC500S::ReadTHR(unsigned long ch) const
+void NKFADC500S::WriteDRAMTEST(uint32_t data) const { _usb.Write(kAddr_DRAMTEST, data); }
+uint32_t NKFADC500S::ReadDRAMTEST(uint32_t ch) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000008u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
+  return _usb.ReadReg(GetChAddrZB(kAddr_DRAMTEST, ch));
 }
 
-void NKFADC500S::WritePOL(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000009u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
+void NKFADC500S::WritePSCALE(uint32_t data) const { _usb.Write(kAddr_PSCALE, data); }
+uint32_t NKFADC500S::ReadPSCALE() const { return _usb.ReadReg(kAddr_PSCALE); }
 
-unsigned long NKFADC500S::ReadPOL(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000009u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
+void NKFADC500S::WriteDSR(uint32_t data) const { _usb.Write(kAddr_DSR, data); }
+uint32_t NKFADC500S::ReadDSR() const { return _usb.ReadReg(kAddr_DSR); }
 
-void NKFADC500S::WritePSW(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Au, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadPSW(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Au, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC500S::WriteAMODE(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Bu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadAMODE(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Bu, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC500S::WritePCT(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Cu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadPCT(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Cu, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC500S::WritePCI(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Du, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadPCI(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Du, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC500S::WritePWT(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Eu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadPWT(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Eu, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC500S::WriteDT(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Fu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadDT(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Fu, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-int NKFADC500S::ReadBCount() const { return static_cast<int>(_usb.ReadReg(0x20000010u)); }
-
-void NKFADC500S::WritePTRIG(unsigned long data) const { _usb.Write(0x20000011u, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC500S::ReadPTRIG() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000011u)); }
-
-void NKFADC500S::SendTRIG() const { _usb.Write(0x20000012u, 0u); }
-
-void NKFADC500S::WriteTRIGENABLE(unsigned long data) const
-{
-  _usb.Write(0x20000013u, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadTRIGENABLE() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000013u)); }
-
-void NKFADC500S::WriteTM(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000014u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadTM(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000014u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC500S::WriteTLT(unsigned long data) const { _usb.Write(0x20000015u, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC500S::ReadTLT() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000015u)); }
-
-void NKFADC500S::WriteZEROSUP(unsigned long, unsigned long data) const
-{
-  _usb.Write(0x20000016u, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC500S::ReadZEROSUP(unsigned long) const
-{
-  return static_cast<unsigned long>(_usb.ReadReg(0x20000016u));
-}
-
-void NKFADC500S::SendADCRST() const { _usb.Write(0x20000017u, 0u); }
-
-void NKFADC500S::SendADCCAL() const { _usb.Write(0x20000018u, 0u); }
-
-void NKFADC500S::WriteADCDLY(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000019u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-void NKFADC500S::WriteADCALIGN(unsigned long data) const { _usb.Write(0x2000001Au, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC500S::ReadADCSTAT() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Au)); }
-
-void NKFADC500S::WriteDRAMDLY(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Bu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-void NKFADC500S::WriteDRAMBITSLIP(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Cu, ch);
-  _usb.Write(addr, 0u);
-}
-
-void NKFADC500S::WriteDRAMTEST(unsigned long data) const { _usb.Write(0x2000001Du, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC500S::ReadDRAMTEST(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Du, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC500S::WritePSCALE(unsigned long data) const { _usb.Write(0x2000001Eu, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC500S::ReadPSCALE() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Eu)); }
-
-void NKFADC500S::WriteDSR(unsigned long data) const { _usb.Write(0x2000001Fu, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC500S::ReadDSR() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Fu)); }
+int NKFADC500S::ReadBCount() const { return static_cast<int>(_usb.ReadReg(kAddr_BCOUNT)); }
 
 int NKFADC500S::ReadData(int bcount, unsigned char * data, unsigned int timeout) const
 {
   if (bcount <= 0 || data == nullptr) {
-    ERROR("NKFADC500S [sid=%d]: invalid arguments (bcount=%d, data=%p)", _sid, bcount, static_cast<void *>(data));
+    ERROR("NKFADC500S [sid=%d]: invalid ReadData arguments", _sid);
     return -1;
   }
-
-  const int count = bcount * 256;
-  return _usb.Read(static_cast<std::uint32_t>(count), 0x40000000u, data, timeout);
+  uint32_t count = static_cast<uint32_t>(bcount) * 256;
+  return _usb.Read(count, kAddr_DATA, data, timeout);
 }
 
 void NKFADC500S::FlushData() const
 {
   int bcount = ReadBCount();
-  if (bcount <= 0) { return; }
+  if (bcount <= 0) return;
 
-  std::vector<unsigned char> buffer(10485760);
+  constexpr int kChunkSize = 10240 * 256; // 2.6 MB
+  std::vector<unsigned char> buffer(kChunkSize);
 
-  const unsigned long total = static_cast<unsigned long>(bcount);
-  const unsigned long chunk = total / 10240UL;
-  const unsigned long slice = total % 10240UL;
+  uint32_t total_bytes = static_cast<uint32_t>(bcount) * 256;
+  uint32_t bytes_read = 0;
 
-  for (unsigned long i = 0; i < chunk; ++i) {
-    ReadData(10240, buffer.data());
+  while (bytes_read < total_bytes) {
+    uint32_t to_read = std::min(static_cast<uint32_t>(buffer.size()), total_bytes - bytes_read);
+    _usb.Read(to_read, kAddr_DATA, buffer.data());
+    bytes_read += to_read;
   }
-
-  if (slice) { ReadData(static_cast<int>(slice), buffer.data()); }
 }
 
 void NKFADC500S::AlignADC() const
 {
-  unsigned long ch;
-  unsigned long dly;
-  unsigned long value;
-  int count;
-  int sum;
-  int center;
-  unsigned long gdly;
-  int flag;
-
   SendADCRST();
-  usleep(500000);
+  SleepMs(500);
   SendADCCAL();
   WriteADCALIGN(1);
 
-  for (ch = 1; ch <= 4; ++ch) {
-    count = 0;
-    sum = 0;
-    flag = 0;
+  for (uint32_t ch = 1; ch <= 4; ++ch) {
+    int count = 0;
+    int sum = 0;
+    bool flag = false;
 
-    for (dly = 0; dly < 32; ++dly) {
+    // Scan Delay
+    for (uint32_t dly = 0; dly < 32; ++dly) {
       WriteADCDLY(ch, dly);
-      value = (ReadADCSTAT() >> (ch - 1)) & 0x1UL;
+      uint32_t value = (ReadADCSTAT() >> (ch - 1)) & 0x1u;
 
       if (!value) {
-        flag = 1;
+        flag = true;
         ++count;
-        sum += static_cast<int>(dly);
+        sum += dly;
       }
-      else {
-        if (flag) { dly = 32; }
+      else if (flag) {
+        break; // End of valid window
       }
     }
 
-    if (count > 0) { center = sum / count; }
-    else {
-      center = 0;
-    }
-
-    if (center < 11) { gdly = static_cast<unsigned long>(center + 11); }
-    else {
-      gdly = static_cast<unsigned long>(center - 11);
-    }
+    uint32_t center = count ? (sum / count) : 0;
+    uint32_t gdly = (center < 11) ? (center + 11) : (center - 11);
 
     WriteADCDLY(ch, gdly);
-    INFO("NKFADC500S ADC(%lu) calibration delay = %lu", ch, gdly);
+    INFO("NKFADC500S ADC(%u) calibration delay = %u", ch, gdly);
   }
 
   WriteADCALIGN(0);
@@ -405,83 +341,64 @@ void NKFADC500S::AlignADC() const
 
 void NKFADC500S::AlignDRAM() const
 {
-  unsigned long ch;
-  unsigned long dly;
-  unsigned long value;
-  int flag;
-  int count;
-  int sum;
-  int aflag;
-  unsigned long gdly;
-  int bitslip;
-
   WriteDRAMON(1);
   WriteDRAMTEST(1);
   SendADCCAL();
   WriteDRAMTEST(2);
 
-  for (ch = 0; ch < 8; ++ch) {
-    count = 0;
-    sum = 0;
-    flag = 0;
+  for (uint32_t ch = 0; ch < 8; ++ch) {
+    int count = 0;
+    int sum = 0;
+    bool flag = false;
 
-    for (dly = 0; dly < 32; ++dly) {
+    // 1. Scan Delay
+    for (uint32_t dly = 0; dly < 32; ++dly) {
       WriteDRAMDLY(ch, dly);
-
       WriteDRAMTEST(3);
-      value = ReadDRAMTEST(ch);
+      uint32_t value = ReadDRAMTEST(ch);
 
-      aflag = 0;
-      if (value == 0xFFAA5500UL) { aflag = 1; }
-      else if (value == 0xAA5500FFUL) {
-        aflag = 1;
-      }
-      else if (value == 0x5500FFAAUL) {
-        aflag = 1;
-      }
-      else if (value == 0x00FFAA55UL) {
-        aflag = 1;
-      }
+      // Check alignment pattern
+      bool pattern_ok = (value == 0xFFAA5500u || value == 0xAA5500FFu || value == 0x5500FFAAu ||
+                         value == 0x00FFAA55u);
 
-      if (aflag) {
+      if (pattern_ok) {
         ++count;
-        sum += static_cast<int>(dly);
-        if (count > 4) { flag = 1; }
+        sum += dly;
+        if (count > 4) flag = true;
+      }
+      else if (flag) {
+        break;
       }
       else {
-        if (flag) { dly = 32; }
-        else {
-          count = 0;
-          sum = 0;
-        }
+        count = 0;
+        sum = 0;
       }
     }
 
-    if (count > 0) { gdly = static_cast<unsigned long>(sum / count); }
-    else {
-      gdly = 9;
-    }
-
+    uint32_t gdly = count ? (sum / count) : 9;
     WriteDRAMDLY(ch, gdly);
 
-    aflag = 0;
-    for (bitslip = 0; bitslip < 4; ++bitslip) {
-      WriteDRAMTEST(3);
-      value = ReadDRAMTEST(ch);
+    // 2. Scan Bitslip
+    bool aligned = false;
+    uint32_t gbitslip = 0;
 
-      if (value == 0xFFAA5500UL) {
-        aflag = 1;
-        bitslip = 4;
+    for (uint32_t bitslip = 0; bitslip < 4; ++bitslip) {
+      WriteDRAMTEST(3);
+      uint32_t value = ReadDRAMTEST(ch);
+
+      if (value == 0xFFAA5500u) {
+        aligned = true;
+        gbitslip = bitslip;
+        break;
       }
       else {
-        aflag = 0;
         WriteDRAMBITSLIP(ch);
       }
     }
 
-    if (aflag) { INFO("NKFADC500S DRAM(%lu) is aligned, delay = %lu", ch, gdly); }
+    if (aligned) { INFO("NKFADC500S DRAM(%u) aligned: delay=%u, bitslip=%u", ch, gdly, gbitslip); }
     else {
-      INFO("NKFADC500S: fail to align DRAM(%lu)!", ch);
+      INFO("NKFADC500S: DRAM(%u) alignment FAILED", ch);
     }
   }
 

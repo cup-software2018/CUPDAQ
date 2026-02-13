@@ -1,4 +1,3 @@
-// Notice/USBManager.hh
 #pragma once
 
 #include <cstdint>
@@ -18,7 +17,7 @@ public:
   int ReleaseInterface(uint16_t vendor_id, uint16_t product_id, int sid, int interface);
   void CloseDevice(uint16_t vendor_id, uint16_t product_id, int sid);
   void PrintOpenDevices() const;
-  int IsDeviceOpen(uint16_t vendor_id, uint16_t product_id, int sid) const;
+  bool IsDeviceOpen(uint16_t vendor_id, uint16_t product_id, int sid) const;
   libusb_device_handle * GetDeviceHandle(uint16_t vendor_id, uint16_t product_id, int sid) const;
 
   libusb_context * Context() const;
@@ -40,7 +39,8 @@ private:
   void AddDevice(libusb_device_handle * handle, uint16_t vendor_id, uint16_t product_id, int sid);
   void RemoveDevice(libusb_device_handle * handle);
   void RemoveDevice(uint16_t vendor_id, uint16_t product_id, int sid);
-  int HandleInterface(uint16_t vendor_id, uint16_t product_id, int sid, int interface, bool claim) const;
+  int HandleInterface(uint16_t vendor_id, uint16_t product_id, int sid, int interface,
+                      bool claim) const;
 
   libusb_context * _ctx;
   mutable std::mutex _mutex;

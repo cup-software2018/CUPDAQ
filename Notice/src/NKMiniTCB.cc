@@ -1,20 +1,56 @@
 #include <arpa/inet.h>
+#include <chrono>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <thread>
 #include <unistd.h>
 
 #include "DAQUtils/ELog.hh"
 #include "Notice/NKMiniTCB.hh"
+
+namespace {
+constexpr int kPort = 5000;
+
+// MiniTCB Command Codes
+constexpr char kCmdWrite = 11;
+constexpr char kCmdRead = 12;
+
+// Indirect Module Access Registers
+constexpr uint32_t kRegInd_Mid = 0x17;
+constexpr uint32_t kRegInd_Addr0 = 0x18;
+constexpr uint32_t kRegInd_Addr1 = 0x19;
+constexpr uint32_t kRegInd_Addr2 = 0x1A;
+constexpr uint32_t kRegInd_Addr3 = 0x1B;
+constexpr uint32_t kRegInd_Data0 = 0x1C;
+constexpr uint32_t kRegInd_Data1 = 0x1D;
+constexpr uint32_t kRegInd_Data2 = 0x1E;
+constexpr uint32_t kRegInd_Data3 = 0x1F;
+constexpr uint32_t kRegInd_Write = 0x15;
+constexpr uint32_t kRegInd_Read = 0x16;
+
+// Helper for address calculation
+inline uint32_t GetModuleRegAddr(uint32_t base, uint32_t ch)
+{
+  return base + (((ch - 1u) & 0xFFu) << 16);
+}
+
+inline uint32_t GetModuleRegAddrZB(uint32_t base, uint32_t ch)
+{
+  return base + ((ch & 0xFFu) << 16);
+}
+
+void SleepMs(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
+} // namespace
 
 NKMiniTCB::~NKMiniTCB() { Close(); }
 
 int NKMiniTCB::Open()
 {
   if (_ipaddr.empty()) {
-    ERROR("IP address is empty");
+    ERROR("NKMiniTCB: IP address is empty");
     return -1;
   }
 
@@ -23,19 +59,26 @@ int NKMiniTCB::Open()
   sockaddr_in serv_addr{};
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = inet_addr(_ipaddr.c_str());
-  serv_addr.sin_port = htons(5000);
+  serv_addr.sin_port = htons(kPort);
 
   int handle = ::socket(AF_INET, SOCK_STREAM, 0);
   if (handle < 0) {
-    ERROR("can't open socket");
+    ERROR("NKMiniTCB: can't open socket");
     return -1;
   }
 
   const int disable = 1;
-  ::setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char *>(&disable), sizeof(disable));
+  ::setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char *>(&disable),
+               sizeof(disable));
+
+  // Set receive timeout
+  struct timeval tv;
+  tv.tv_sec = 2; // 2 seconds timeout
+  tv.tv_usec = 0;
+  ::setsockopt(handle, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
 
   if (::connect(handle, reinterpret_cast<sockaddr *>(&serv_addr), sizeof(serv_addr)) < 0) {
-    ERROR("can't connect to server (ip=%s, port=5000)", _ipaddr.c_str());
+    ERROR("NKMiniTCB: can't connect to server (ip=%s, port=%d)", _ipaddr.c_str(), kPort);
     ::close(handle);
     return -2;
   }
@@ -52,20 +95,21 @@ void NKMiniTCB::Close()
   }
 }
 
-int NKMiniTCB::Transmit(char * buf, int len) const
+int NKMiniTCB::Transmit(const char * buf, int len) const
 {
   int bytes_more = len;
   int bytes_xferd = 0;
 
   while (bytes_more > 0) {
-    char * idxPtr = buf + bytes_xferd;
-    int result = static_cast<int>(::write(_tcpHandle, idxPtr, static_cast<size_t>(bytes_more)));
+    const char * idxPtr = buf + bytes_xferd;
+    ssize_t result = ::write(_tcpHandle, idxPtr, static_cast<size_t>(bytes_more));
+
     if (result < 0) {
-      ERROR("transmit failed, remaining=%d", bytes_more);
+      ERROR("NKMiniTCB: transmit failed, remaining=%d", bytes_more);
       return -1;
     }
-    bytes_xferd += result;
-    bytes_more -= result;
+    bytes_xferd += static_cast<int>(result);
+    bytes_more -= static_cast<int>(result);
   }
 
   return 0;
@@ -73,7 +117,7 @@ int NKMiniTCB::Transmit(char * buf, int len) const
 
 int NKMiniTCB::Receive(char * buf, int len) const
 {
-  if (buf == nullptr) { return -1; }
+  if (buf == nullptr) return -1;
 
   int buf_count = 0;
   int space_left = len;
@@ -85,17 +129,23 @@ int NKMiniTCB::Receive(char * buf, int len) const
       int bytes_more = space_left;
       int chunk = (bytes_more > 2048) ? 2048 : bytes_more;
 
-      int result = static_cast<int>(::read(_tcpHandle, idxPtr, static_cast<size_t>(chunk)));
+      ssize_t result = ::read(_tcpHandle, idxPtr, static_cast<size_t>(chunk));
+
       if (result < 0) {
-        ERROR("unable to receive data from the server");
+        ERROR("NKMiniTCB: unable to receive data");
+        return -1;
+      }
+      if (result == 0) {
+        ERROR("NKMiniTCB: connection closed by server");
         return -1;
       }
 
-      accum += result;
-      if ((accum + buf_count) >= len) { break; }
+      accum += static_cast<int>(result);
+      if ((accum + buf_count) >= len) break;
 
+      // Partial read loop condition (optional logic preserved)
       if (result < chunk) {
-        INFO("wanted %d got %d", bytes_more, result);
+        // INFO("wanted %d got %d", bytes_more, result);
         return accum + buf_count;
       }
     }
@@ -107,298 +157,253 @@ int NKMiniTCB::Receive(char * buf, int len) const
   return buf_count;
 }
 
-void NKMiniTCB::Write(unsigned long address, unsigned long data) const
+void NKMiniTCB::Write(uint32_t address, uint32_t data) const
 {
   char tcpBuf[3];
-  tcpBuf[0] = 11;
+  tcpBuf[0] = kCmdWrite;
   tcpBuf[1] = static_cast<char>(address & 0xFFu);
   tcpBuf[2] = static_cast<char>(data & 0xFFu);
 
-  Transmit(tcpBuf, 3);
+  if (Transmit(tcpBuf, 3) < 0) return;
+
   char ack[1];
-  Receive(ack, 1);
+  Receive(ack, 1); // Wait for ACK
 }
 
-unsigned long NKMiniTCB::Read(unsigned long address) const
+uint32_t NKMiniTCB::Read(uint32_t address) const
 {
   char tcpBuf[2];
-  tcpBuf[0] = 12;
+  tcpBuf[0] = kCmdRead;
   tcpBuf[1] = static_cast<char>(address & 0xFFu);
 
-  Transmit(tcpBuf, 2);
+  if (Transmit(tcpBuf, 2) < 0) return 0xFFFFFFFF;
+
   char resp[1];
-  Receive(resp, 1);
+  if (Receive(resp, 1) < 0) return 0xFFFFFFFF;
 
-  unsigned long data = static_cast<unsigned long>(resp[0] & 0xFF);
+  return static_cast<uint32_t>(resp[0] & 0xFFu);
+}
+
+void NKMiniTCB::WriteModule(uint32_t mid, uint32_t address, uint32_t data) const
+{
+  Write(kRegInd_Mid, mid);
+
+  Write(kRegInd_Addr0, address & 0xFFu);
+  Write(kRegInd_Addr1, (address >> 8) & 0xFFu);
+  Write(kRegInd_Addr2, (address >> 16) & 0xFFu);
+  Write(kRegInd_Addr3, (address >> 24) & 0xFFu);
+
+  Write(kRegInd_Data0, data & 0xFFu);
+  Write(kRegInd_Data1, (data >> 8) & 0xFFu);
+  Write(kRegInd_Data2, (data >> 16) & 0xFFu);
+  Write(kRegInd_Data3, (data >> 24) & 0xFFu);
+
+  Write(kRegInd_Write, 0); // Trigger Write
+}
+
+uint32_t NKMiniTCB::ReadModule(uint32_t mid, uint32_t address) const
+{
+  Write(kRegInd_Mid, mid);
+
+  Write(kRegInd_Addr0, address & 0xFFu);
+  Write(kRegInd_Addr1, (address >> 8) & 0xFFu);
+  Write(kRegInd_Addr2, (address >> 16) & 0xFFu);
+  Write(kRegInd_Addr3, (address >> 24) & 0xFFu);
+
+  Write(kRegInd_Read, 0); // Trigger Read
+
+  uint32_t data = 0;
+  data |= Read(kRegInd_Data0);
+  data |= (Read(kRegInd_Data1) << 8);
+  data |= (Read(kRegInd_Data2) << 16);
+  data |= (Read(kRegInd_Data3) << 24);
+
   return data;
 }
 
-void NKMiniTCB::WriteModule(unsigned long mid, unsigned long address, unsigned long data) const
-{
-  Write(0x17, mid);
-
-  Write(0x18, address & 0xFFu);
-  Write(0x19, (address >> 8) & 0xFFu);
-  Write(0x1A, (address >> 16) & 0xFFu);
-  Write(0x1B, (address >> 24) & 0xFFu);
-
-  Write(0x1C, data & 0xFFu);
-  Write(0x1D, (data >> 8) & 0xFFu);
-  Write(0x1E, (data >> 16) & 0xFFu);
-  Write(0x1F, (data >> 24) & 0xFFu);
-
-  Write(0x15, 0);
-}
-
-unsigned long NKMiniTCB::ReadModule(unsigned long mid, unsigned long address) const
-{
-  Write(0x17, mid);
-
-  Write(0x18, address & 0xFFu);
-  Write(0x19, (address >> 8) & 0xFFu);
-  Write(0x1A, (address >> 16) & 0xFFu);
-  Write(0x1B, (address >> 24) & 0xFFu);
-
-  Write(0x16, 0);
-
-  unsigned long data = Read(0x1C);
-  unsigned long value = Read(0x1D);
-  data += (value << 8);
-  value = Read(0x1E);
-  data += (value << 16);
-  value = Read(0x1F);
-  data += (value << 24);
-
-  return data;
-}
-
+// -------------------------------------------------------------------------
+// Control Wrappers
+// -------------------------------------------------------------------------
 void NKMiniTCB::Reset() { Write(0x00, 4); }
-
 void NKMiniTCB::ResetTimer() { Write(0x00, 1); }
-
 void NKMiniTCB::Start() { Write(0x00, 8); }
-
 void NKMiniTCB::Stop() { Write(0x00, 0); }
 
-unsigned long NKMiniTCB::ReadRUN(unsigned long mid) const
+uint32_t NKMiniTCB::ReadRUN(uint32_t mid) const
 {
-  if (mid) { return ReadModule(mid, 0x20000000); }
+  if (mid) return ReadModule(mid, 0x20000000u);
   return Read(0x00);
 }
 
-void NKMiniTCB::WriteCW(unsigned long mid, unsigned long ch, unsigned long data) const
+// -------------------------------------------------------------------------
+// Register Accessors
+// -------------------------------------------------------------------------
+
+void NKMiniTCB::WriteCW(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  if (mid > 0) {
-    unsigned long addr = 0x20000001 + (((ch - 1) & 0xFFu) << 16);
-    WriteModule(mid, addr, data);
-  }
+  if (mid > 0) WriteModule(mid, GetModuleRegAddr(0x20000001u, ch), data);
   else {
     Write(0x02, data & 0xFFu);
     Write(0x03, (data >> 8) & 0xFFu);
   }
 }
 
-unsigned long NKMiniTCB::ReadCW(unsigned long mid, unsigned long ch) const
+uint32_t NKMiniTCB::ReadCW(uint32_t mid, uint32_t ch) const
 {
-  if (mid > 0) {
-    unsigned long addr = 0x20000001 + (((ch - 1) & 0xFFu) << 16);
-    return ReadModule(mid, addr);
-  }
+  if (mid > 0) return ReadModule(mid, GetModuleRegAddr(0x20000001u, ch));
 
-  unsigned long data = Read(0x02);
-  unsigned long temp = Read(0x03);
-  data += (temp << 8);
+  uint32_t data = Read(0x02);
+  data |= (Read(0x03) << 8);
   return data;
 }
 
-void NKMiniTCB::WriteGW(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteGW(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  if (mid > 0) {
-    unsigned long addr = 0x20000002 + (((ch - 1) & 0xFFu) << 16);
-    WriteModule(mid, addr, data);
-  }
+  if (mid > 0) WriteModule(mid, GetModuleRegAddr(0x20000002u, ch), data);
   else {
     Write(0x02, data & 0xFFu);
     Write(0x03, (data >> 8) & 0xFFu);
   }
 }
 
-unsigned long NKMiniTCB::ReadGW(unsigned long mid, unsigned long ch) const
+uint32_t NKMiniTCB::ReadGW(uint32_t mid, uint32_t ch) const
 {
-  if (mid > 0) {
-    unsigned long addr = 0x20000002 + (((ch - 1) & 0xFFu) << 16);
-    return ReadModule(mid, addr);
-  }
+  if (mid > 0) return ReadModule(mid, GetModuleRegAddr(0x20000002u, ch));
 
-  unsigned long data = Read(0x02);
-  unsigned long temp = Read(0x03);
-  data += (temp << 8);
+  uint32_t data = Read(0x02);
+  data |= (Read(0x03) << 8);
   return data;
 }
 
-void NKMiniTCB::WriteRL(unsigned long mid, unsigned long data) const { WriteModule(mid, 0x20000002, data); }
+void NKMiniTCB::WriteRL(uint32_t mid, uint32_t data) const { WriteModule(mid, 0x20000002u, data); }
+uint32_t NKMiniTCB::ReadRL(uint32_t mid) const { return ReadModule(mid, 0x20000002u); }
 
-unsigned long NKMiniTCB::ReadRL(unsigned long mid) const { return ReadModule(mid, 0x20000002); }
-
-void NKMiniTCB::WriteDRAMON(unsigned long mid, unsigned long data) const
+void NKMiniTCB::WriteDRAMON(uint32_t mid, uint32_t data) const
 {
   if (data) {
-    unsigned long status = ReadModule(mid, 0x20000003);
-    if (status) { WriteModule(mid, 0x20000003, 0); }
-    WriteModule(mid, 0x20000003, 1);
-    status = 0;
-    while (!status) {
-      status = ReadModule(mid, 0x20000003);
+    uint32_t status = ReadModule(mid, 0x20000003u);
+    if (status) WriteModule(mid, 0x20000003u, 0);
+    WriteModule(mid, 0x20000003u, 1);
+
+    // Timeout applied
+    int timeout = 1000;
+    while (ReadModule(mid, 0x20000003u) == 0 && timeout > 0) {
+      timeout--;
     }
+    if (timeout == 0) ERROR("NKMiniTCB: WriteDRAMON timeout mid=%u", mid);
   }
   else {
-    WriteModule(mid, 0x20000003, 0);
+    WriteModule(mid, 0x20000003u, 0);
   }
 }
 
-unsigned long NKMiniTCB::ReadDRAMON(unsigned long mid) const { return ReadModule(mid, 0x20000003); }
+uint32_t NKMiniTCB::ReadDRAMON(uint32_t mid) const { return ReadModule(mid, 0x20000003u); }
 
-void NKMiniTCB::WriteDACOFF(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteDACOFF(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000004 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x20000004u, ch), data);
+}
+uint32_t NKMiniTCB::ReadDACOFF(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000004u, ch));
 }
 
-unsigned long NKMiniTCB::ReadDACOFF(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::MeasurePED(uint32_t mid, uint32_t ch) const
 {
-  unsigned long addr = 0x20000004 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x20000005u, ch), 0);
+}
+uint32_t NKMiniTCB::ReadPED(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000006u, ch));
 }
 
-void NKMiniTCB::MeasurePED(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WriteDLY(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000005 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, 0);
+  uint32_t value = ((data / 1000u) << 10) | (data % 1000u);
+  WriteModule(mid, GetModuleRegAddr(0x20000007u, ch), value);
+}
+uint32_t NKMiniTCB::ReadDLY(uint32_t mid, uint32_t ch) const
+{
+  uint32_t value = ReadModule(mid, GetModuleRegAddr(0x20000007u, ch));
+  return (value >> 10) * 1000u + (value & 0x3FFu);
 }
 
-unsigned long NKMiniTCB::ReadPED(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WriteAMOREDLY(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000006 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x20000007u, ch), data);
+}
+uint32_t NKMiniTCB::ReadAMOREDLY(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000007u, ch));
 }
 
-void NKMiniTCB::WriteDLY(unsigned long mid, unsigned long ch, unsigned long data) const
+// Simple wrappers using helper
+void NKMiniTCB::WriteTHR(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000007 + (((ch - 1) & 0xFFu) << 16);
-  unsigned long value = ((data / 1000) << 10) | (data % 1000);
-  WriteModule(mid, addr, value);
+  WriteModule(mid, GetModuleRegAddr(0x20000008u, ch), data);
+}
+uint32_t NKMiniTCB::ReadTHR(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000008u, ch));
 }
 
-unsigned long NKMiniTCB::ReadDLY(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WritePOL(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000007 + (((ch - 1) & 0xFFu) << 16);
-  unsigned long value = ReadModule(mid, addr);
-  unsigned long data = (value >> 10) * 1000 + (value & 0x3FFu);
-  return data;
+  WriteModule(mid, GetModuleRegAddr(0x20000009u, ch), data);
+}
+uint32_t NKMiniTCB::ReadPOL(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000009u, ch));
 }
 
-void NKMiniTCB::WriteAMOREDLY(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WritePSW(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000007 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x2000000Au, ch), data);
+}
+uint32_t NKMiniTCB::ReadPSW(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x2000000Au, ch));
 }
 
-unsigned long NKMiniTCB::ReadAMOREDLY(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WriteAMODE(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000007 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x2000000Bu, ch), data);
+}
+uint32_t NKMiniTCB::ReadAMODE(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x2000000Bu, ch));
 }
 
-void NKMiniTCB::WriteTHR(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WritePCT(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000008 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x2000000Cu, ch), data);
+}
+uint32_t NKMiniTCB::ReadPCT(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x2000000Cu, ch));
 }
 
-unsigned long NKMiniTCB::ReadTHR(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WritePCI(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000008 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x2000000Du, ch), data);
+}
+uint32_t NKMiniTCB::ReadPCI(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x2000000Du, ch));
 }
 
-void NKMiniTCB::WritePOL(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WritePWT(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000009 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x2000000Eu, ch), data);
+}
+uint32_t NKMiniTCB::ReadPWT(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x2000000Eu, ch));
 }
 
-unsigned long NKMiniTCB::ReadPOL(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WriteDT(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000009 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WritePSW(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x2000000A + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadPSW(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x2000000A + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WriteAMODE(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x2000000B + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadAMODE(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x2000000B + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WritePCT(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x2000000C + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadPCT(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x2000000C + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WritePCI(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x2000000D + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadPCI(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x2000000D + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WritePWT(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x2000000E + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadPWT(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x2000000E + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WriteDT(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  if (mid > 0) {
-    unsigned long addr = 0x2000000F + (((ch - 1) & 0xFFu) << 16);
-    WriteModule(mid, addr, data);
-  }
+  if (mid > 0) WriteModule(mid, GetModuleRegAddr(0x2000000Fu, ch), data);
   else {
     Write(0x01, data & 0xFFu);
     Write(0x0B, (data >> 8) & 0xFFu);
@@ -406,440 +411,376 @@ void NKMiniTCB::WriteDT(unsigned long mid, unsigned long ch, unsigned long data)
   }
 }
 
-unsigned long NKMiniTCB::ReadDT(unsigned long mid, unsigned long ch) const
+uint32_t NKMiniTCB::ReadDT(uint32_t mid, uint32_t ch) const
 {
-  if (mid > 0) {
-    unsigned long addr = 0x2000000F + (((ch - 1) & 0xFFu) << 16);
-    return ReadModule(mid, addr);
-  }
+  if (mid > 0) return ReadModule(mid, GetModuleRegAddr(0x2000000Fu, ch));
 
-  unsigned long data = Read(0x01);
-  unsigned long temp = Read(0x0B);
-  data += (temp << 8);
-  temp = Read(0x0D);
-  data += (temp << 16);
+  uint32_t data = Read(0x01);
+  data |= (Read(0x0B) << 8);
+  data |= (Read(0x0D) << 16);
   return data;
 }
 
-void NKMiniTCB::WriteTM(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteTM(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000014 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x20000014u, ch), data);
+}
+uint32_t NKMiniTCB::ReadTM(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000014u, ch));
 }
 
-unsigned long NKMiniTCB::ReadTM(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WriteTLT(uint32_t mid, uint32_t data) const { WriteModule(mid, 0x20000015u, data); }
+uint32_t NKMiniTCB::ReadTLT(uint32_t mid) const { return ReadModule(mid, 0x20000015u); }
+
+void NKMiniTCB::WriteSTLT(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000014 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x20000015u, ch), data);
+}
+uint32_t NKMiniTCB::ReadSTLT(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000015u, ch));
 }
 
-void NKMiniTCB::WriteTLT(unsigned long mid, unsigned long data) const { WriteModule(mid, 0x20000015, data); }
-
-unsigned long NKMiniTCB::ReadTLT(unsigned long mid) const { return ReadModule(mid, 0x20000015); }
-
-void NKMiniTCB::WriteSTLT(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteZEROSUP(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000015 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x20000016u, ch), data);
+}
+uint32_t NKMiniTCB::ReadZEROSUP(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000016u, ch));
 }
 
-unsigned long NKMiniTCB::ReadSTLT(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::SendADCRST(uint32_t mid) const { WriteModule(mid, 0x20000017u, 0); }
+void NKMiniTCB::SendADCCAL(uint32_t mid) const { WriteModule(mid, 0x20000018u, 0); }
+
+void NKMiniTCB::WriteADCDLY(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000015 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x20000019u, ch), data);
+}
+void NKMiniTCB::WriteADCALIGN(uint32_t mid, uint32_t data) const
+{
+  WriteModule(mid, 0x2000001Au, data);
+}
+uint32_t NKMiniTCB::ReadADCSTAT(uint32_t mid) const { return ReadModule(mid, 0x2000001Au); }
+
+void NKMiniTCB::WriteBITSLIP(uint32_t mid, uint32_t ch, uint32_t data) const
+{
+  WriteModule(mid, GetModuleRegAddr(0x2000001Bu, ch), data);
 }
 
-void NKMiniTCB::WriteZEROSUP(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteFMUX(uint32_t mid, uint32_t ch) const
 {
-  unsigned long addr = 0x20000016 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, 0x2000001Cu, ch - 1u);
 }
+uint32_t NKMiniTCB::ReadFMUX(uint32_t mid) const { return ReadModule(mid, 0x2000001Cu); }
 
-unsigned long NKMiniTCB::ReadZEROSUP(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::ArmFADC(uint32_t mid) const { WriteModule(mid, 0x2000001Du, 0); }
+uint32_t NKMiniTCB::ReadFREADY(uint32_t mid) const { return ReadModule(mid, 0x2000001Du); }
+
+void NKMiniTCB::WriteZSFD(uint32_t mid, uint32_t data) const
 {
-  unsigned long addr = 0x20000016 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, 0x2000001Eu, data);
 }
+uint32_t NKMiniTCB::ReadZSFD(uint32_t mid) const { return ReadModule(mid, 0x2000001Eu); }
 
-void NKMiniTCB::SendADCRST(unsigned long mid) const { WriteModule(mid, 0x20000017, 0); }
+void NKMiniTCB::WriteDSR(uint32_t mid, uint32_t data) const { WriteModule(mid, 0x2000001Fu, data); }
+uint32_t NKMiniTCB::ReadDSR(uint32_t mid) const { return ReadModule(mid, 0x2000001Fu); }
 
-void NKMiniTCB::SendADCCAL(unsigned long mid) const { WriteModule(mid, 0x20000018, 0); }
-
-void NKMiniTCB::WriteADCDLY(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::ReadFADCBUF(uint32_t mid, uint32_t * data) const
 {
-  unsigned long addr = 0x20000019 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-void NKMiniTCB::WriteADCALIGN(unsigned long mid, unsigned long data) const { WriteModule(mid, 0x2000001A, data); }
-
-unsigned long NKMiniTCB::ReadADCSTAT(unsigned long mid) const { return ReadModule(mid, 0x2000001A); }
-
-void NKMiniTCB::WriteBITSLIP(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x2000001B + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-void NKMiniTCB::WriteFMUX(unsigned long mid, unsigned long ch) const { WriteModule(mid, 0x2000001C, ch - 1); }
-
-unsigned long NKMiniTCB::ReadFMUX(unsigned long mid) const { return ReadModule(mid, 0x2000001C); }
-
-void NKMiniTCB::ArmFADC(unsigned long mid) const { WriteModule(mid, 0x2000001D, 0); }
-
-unsigned long NKMiniTCB::ReadFREADY(unsigned long mid) const { return ReadModule(mid, 0x2000001D); }
-
-void NKMiniTCB::WriteZSFD(unsigned long mid, unsigned long data) const { WriteModule(mid, 0x2000001E, data); }
-
-unsigned long NKMiniTCB::ReadZSFD(unsigned long mid) const { return ReadModule(mid, 0x2000001E); }
-
-void NKMiniTCB::WriteDSR(unsigned long mid, unsigned long data) const { WriteModule(mid, 0x2000001F, data); }
-
-unsigned long NKMiniTCB::ReadDSR(unsigned long mid) const { return ReadModule(mid, 0x2000001F); }
-
-void NKMiniTCB::ReadFADCBUF(unsigned long mid, unsigned long * data) const
-{
-  unsigned long addr = 0x20008000;
-  for (unsigned long i = 0; i < 2048; i++) {
+  uint32_t addr = 0x20008000u;
+  for (uint32_t i = 0; i < 2048u; ++i) {
     data[i] = ReadModule(mid, addr + i);
   }
 }
 
-void NKMiniTCB::AlignFADC500(unsigned long mid) const
+void NKMiniTCB::AlignFADC500(uint32_t mid) const
 {
   SendADCRST(mid);
-  usleep(500000);
+  SleepMs(500);
   SendADCCAL(mid);
   WriteADCALIGN(mid, 1);
 
-  for (unsigned long ch = 1; ch <= 4; ch++) {
+  for (uint32_t ch = 1; ch <= 4; ++ch) {
     int count = 0;
     int sum = 0;
-    int flag = 0;
+    bool flag = false;
 
-    for (unsigned long dly = 0; dly < 32; dly++) {
+    for (uint32_t dly = 0; dly < 32; ++dly) {
       WriteADCDLY(mid, ch, dly);
-      unsigned long value = (ReadADCSTAT(mid) >> (ch - 1)) & 0x1u;
+      uint32_t value = (ReadADCSTAT(mid) >> (ch - 1)) & 0x1u;
 
       if (!value) {
-        flag = 1;
-        count += 1;
-        sum += static_cast<int>(dly);
+        flag = true;
+        count++;
+        sum += dly;
       }
-      else {
-        if (flag) { dly = 32; }
+      else if (flag) {
+        break;
       }
     }
 
-    int center = (count != 0) ? (sum / count) : 0;
-    unsigned long gdly =
-        (center < 11) ? static_cast<unsigned long>(center + 11) : static_cast<unsigned long>(center - 11);
+    uint32_t gdly = count ? (sum / count) : 0;
+    // Adjustment logic preserved from original
+    gdly = (gdly < 11) ? (gdly + 11) : (gdly - 11);
 
     WriteADCDLY(mid, ch, gdly);
-    INFO("ch%lu calibration delay = %lu", ch, gdly);
+    INFO("NKMiniTCB: ch%u calibration delay = %u", ch, gdly);
   }
 
   WriteADCALIGN(mid, 0);
   SendADCCAL(mid);
 }
 
-void NKMiniTCB::AlignSADC64(unsigned long mid) const
+void NKMiniTCB::AlignSADC64(uint32_t mid) const
 {
   SendADCRST(mid);
-  usleep(500000);
+  SleepMs(500);
   SendADCCAL(mid);
 
-  for (unsigned long ch = 1; ch <= 4; ch++) {
+  for (uint32_t ch = 1; ch <= 4; ++ch) {
     int count = 0;
     int sum = 0;
-    int flag = 0;
-    unsigned long gbitslip = 0;
+    bool flag = false;
 
+    // Initialization Sequence
     WriteADCALIGN(mid, 0x030002);
-    usleep(100);
+    SleepMs(1);
     WriteADCALIGN(mid, 0x010010);
-    usleep(100);
+    SleepMs(1);
     WriteADCALIGN(mid, 0xC78001);
-    usleep(100);
+    SleepMs(1);
     WriteADCALIGN(mid, 0xDE01C0);
-    usleep(100);
+    SleepMs(1);
 
     WriteADCALIGN(mid, 0x450001);
     WriteBITSLIP(mid, ch, 0);
 
-    for (unsigned long dly = 0; dly < 32; dly++) {
+    for (uint32_t dly = 0; dly < 32; ++dly) {
       WriteADCDLY(mid, ch, dly);
-      unsigned long value = (ReadADCSTAT(mid) >> (ch - 1)) & 0x1u;
+      uint32_t value = (ReadADCSTAT(mid) >> (ch - 1)) & 0x1u;
 
       if (!value) {
-        flag = 1;
-        count += 1;
-        sum += static_cast<int>(dly);
+        flag = true;
+        count++;
+        sum += dly;
       }
-      else {
-        if (flag) { dly = 32; }
+      else if (flag) {
+        break;
       }
     }
 
-    int center = (count != 0) ? (sum / count) : 0;
-    unsigned long gdly = (center < 9) ? static_cast<unsigned long>(center + 9) : static_cast<unsigned long>(center - 9);
-
+    uint32_t gdly = count ? (sum / count) : 0;
+    gdly = (gdly < 9) ? (gdly + 9) : (gdly - 9);
     WriteADCDLY(mid, ch, gdly);
 
     WriteADCALIGN(mid, 0x450002);
-    usleep(100);
+    SleepMs(1);
 
-    for (unsigned long bitslip = 0; bitslip < 12; bitslip++) {
+    uint32_t gbitslip = 0;
+    for (uint32_t bitslip = 0; bitslip < 12; ++bitslip) {
       WriteBITSLIP(mid, ch, bitslip);
-      unsigned long value = (ReadADCSTAT(mid) >> ((ch - 1) + 4)) & 0x1u;
+      uint32_t value = (ReadADCSTAT(mid) >> (ch + 3)) & 0x1u; // (ch-1)+4
       if (value) {
         gbitslip = bitslip;
-        bitslip = 12;
+        break;
       }
     }
 
     WriteBITSLIP(mid, ch, gbitslip);
-    INFO("ch%lu calibration delay = %lu, bitslip = %lu", ch, gdly, gbitslip);
+    INFO("NKMiniTCB: ch%u aligned, delay=%u, bitslip=%u", ch, gdly, gbitslip);
   }
 
   WriteADCALIGN(mid, 0x450000);
-  usleep(100);
+  SleepMs(1);
   SendADCCAL(mid);
 }
 
-void NKMiniTCB::WritePSS(unsigned long mid, unsigned long ch, unsigned long data) const
+// ... Simple wrappers ...
+void NKMiniTCB::WritePSS(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000010 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x20000010u, ch), data);
+}
+uint32_t NKMiniTCB::ReadPSS(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000010u, ch));
 }
 
-unsigned long NKMiniTCB::ReadPSS(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WriteRT(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000010 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x20000011u, ch), data);
+}
+uint32_t NKMiniTCB::ReadRT(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000011u, ch));
 }
 
-void NKMiniTCB::WriteRT(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteSR(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000011 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x20000012u, ch), data);
+}
+uint32_t NKMiniTCB::ReadSR(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000012u, ch));
 }
 
-unsigned long NKMiniTCB::ReadRT(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WriteDACGAIN(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000011 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x20000013u, ch), data);
+}
+uint32_t NKMiniTCB::ReadDACGAIN(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000013u, ch));
 }
 
-void NKMiniTCB::WriteSR(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteST(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000012 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddr(0x20000020u, ch), data);
+}
+uint32_t NKMiniTCB::ReadST(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000020u, ch));
 }
 
-unsigned long NKMiniTCB::ReadSR(unsigned long mid, unsigned long ch) const
+void NKMiniTCB::WritePT(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000012 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
+  WriteModule(mid, GetModuleRegAddr(0x20000021u, ch), data);
+}
+uint32_t NKMiniTCB::ReadPT(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddr(0x20000021u, ch));
 }
 
-void NKMiniTCB::WriteDACGAIN(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x20000013 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadDACGAIN(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x20000013 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WriteST(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x20000020 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadST(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x20000020 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WritePT(unsigned long mid, unsigned long ch, unsigned long data) const
-{
-  unsigned long addr = 0x20000021 + (((ch - 1) & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
-}
-
-unsigned long NKMiniTCB::ReadPT(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x20000021 + (((ch - 1) & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::WriteRUNNO(unsigned long data) const
+void NKMiniTCB::WriteRUNNO(uint32_t data) const
 {
   Write(0x04, data & 0xFFu);
   Write(0x05, (data >> 8) & 0xFFu);
 }
 
-unsigned long NKMiniTCB::ReadRUNNO() const
+uint32_t NKMiniTCB::ReadRUNNO() const
 {
-  unsigned long data = Read(0x04);
-  unsigned long temp = Read(0x05);
-  data += (temp << 8);
+  uint32_t data = Read(0x04);
+  data |= (Read(0x05) << 8);
   return data;
 }
 
 void NKMiniTCB::SendTRIG() const { Write(0x06, 0); }
 
-unsigned long NKMiniTCB::ReadLNSTAT() const { return Read(0x10); }
+uint32_t NKMiniTCB::ReadLNSTAT() const { return Read(0x10); }
 
-unsigned long NKMiniTCB::ReadMIDS(unsigned long ch) const
-{
-  unsigned long addr = 0x10 + ch;
-  return Read(addr);
-}
+uint32_t NKMiniTCB::ReadMIDS(uint32_t ch) const { return Read(0x10 + ch); }
 
-void NKMiniTCB::WritePTRIG(unsigned long data) const
+void NKMiniTCB::WritePTRIG(uint32_t data) const
 {
   Write(0x08, data & 0xFFu);
   Write(0x09, (data >> 8) & 0xFFu);
 }
 
-unsigned long NKMiniTCB::ReadPTRIG() const
+uint32_t NKMiniTCB::ReadPTRIG() const
 {
-  unsigned long data = Read(0x08);
-  unsigned long temp = Read(0x09);
-  data += (temp << 8);
+  uint32_t data = Read(0x08);
+  data |= (Read(0x09) << 8);
   return data;
 }
 
-void NKMiniTCB::WriteTRIGENABLE(unsigned long mid, unsigned long data) const
+void NKMiniTCB::WriteTRIGENABLE(uint32_t mid, uint32_t data) const
 {
-  if (mid) { WriteModule(mid, 0x20000030, data); }
-  else {
-    Write(0x0A, data & 0xFFu);
-  }
+  if (mid) WriteModule(mid, 0x20000030u, data);
+  else Write(0x0A, data & 0xFFu);
 }
 
-unsigned long NKMiniTCB::ReadTRIGENABLE(unsigned long mid) const
+uint32_t NKMiniTCB::ReadTRIGENABLE(uint32_t mid) const
 {
-  if (mid) { return ReadModule(mid, 0x20000030); }
+  if (mid) return ReadModule(mid, 0x20000030u);
   return Read(0x0A);
 }
 
-void NKMiniTCB::WriteMTHR(unsigned long data) const { Write(0x0C, data & 0xFFu); }
+void NKMiniTCB::WriteMTHR(uint32_t data) const { Write(0x0C, data & 0xFFu); }
+uint32_t NKMiniTCB::ReadMTHR() const { return Read(0x0C); }
 
-unsigned long NKMiniTCB::ReadMTHR() const { return Read(0x0C); }
-
-void NKMiniTCB::WritePSCALE(unsigned long data) const
+void NKMiniTCB::WritePSCALE(uint32_t data) const
 {
   Write(0x0E, data & 0xFFu);
   Write(0x0F, (data >> 8) & 0xFFu);
 }
 
-unsigned long NKMiniTCB::ReadPSCALE() const
+uint32_t NKMiniTCB::ReadPSCALE() const
 {
-  unsigned long data = Read(0x0E);
-  unsigned long temp = Read(0x0F);
-  data += (temp << 8);
+  uint32_t data = Read(0x0E);
+  data |= (Read(0x0F) << 8);
   return data;
 }
 
-void NKMiniTCB::WriteDRAMDLY(unsigned long mid, unsigned long ch, unsigned long data) const
+void NKMiniTCB::WriteDRAMDLY(uint32_t mid, uint32_t ch, uint32_t data) const
 {
-  unsigned long addr = 0x20000022 + ((ch & 0xFFu) << 16);
-  WriteModule(mid, addr, data);
+  WriteModule(mid, GetModuleRegAddrZB(0x20000022u, ch), data);
+}
+void NKMiniTCB::WriteDRAMBITSLIP(uint32_t mid, uint32_t ch) const
+{
+  WriteModule(mid, GetModuleRegAddrZB(0x20000023u, ch), 0);
+}
+void NKMiniTCB::WriteDRAMTEST(uint32_t mid, uint32_t data) const
+{
+  WriteModule(mid, 0x20000024u, data);
+}
+uint32_t NKMiniTCB::ReadDRAMTEST(uint32_t mid, uint32_t ch) const
+{
+  return ReadModule(mid, GetModuleRegAddrZB(0x20000024u, ch));
 }
 
-void NKMiniTCB::WriteDRAMBITSLIP(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x20000023 + ((ch & 0xFFu) << 16);
-  WriteModule(mid, addr, 0);
-}
-
-void NKMiniTCB::WriteDRAMTEST(unsigned long mid, unsigned long data) const { WriteModule(mid, 0x20000024, data); }
-
-unsigned long NKMiniTCB::ReadDRAMTEST(unsigned long mid, unsigned long ch) const
-{
-  unsigned long addr = 0x20000024 + ((ch & 0xFFu) << 16);
-  return ReadModule(mid, addr);
-}
-
-void NKMiniTCB::AlignDRAM(unsigned long mid) const
+void NKMiniTCB::AlignDRAM(uint32_t mid) const
 {
   WriteDRAMON(mid, 1);
   WriteDRAMTEST(mid, 1);
   SendADCCAL(mid);
   WriteDRAMTEST(mid, 2);
 
-  for (unsigned long ch = 0; ch < 8; ch++) {
+  for (uint32_t ch = 0; ch < 8; ++ch) {
     int count = 0;
     int sum = 0;
-    int flag = 0;
-    int aflag = 0;
-    unsigned long gdly = 0;
+    bool flag = false;
 
-    for (unsigned long dly = 0; dly < 32; dly++) {
+    // Scan Delay
+    for (uint32_t dly = 0; dly < 32; ++dly) {
       WriteDRAMDLY(mid, ch, dly);
       WriteDRAMTEST(mid, 3);
-      unsigned long value = ReadDRAMTEST(mid, ch);
+      uint32_t value = ReadDRAMTEST(mid, ch);
 
-      aflag = 0;
-      if (value == 0xFFAA5500u) { aflag = 1; }
-      else if (value == 0xAA5500FFu) {
-        aflag = 1;
-      }
-      else if (value == 0x5500FFAAu) {
-        aflag = 1;
-      }
-      else if (value == 0x00FFAA55u) {
-        aflag = 1;
-      }
+      bool pattern_ok = (value == 0xFFAA5500u || value == 0xAA5500FFu || value == 0x5500FFAAu ||
+                         value == 0x00FFAA55u);
 
-      if (aflag) {
-        count += 1;
-        sum += static_cast<int>(dly);
-        if (count > 4) { flag = 1; }
+      if (pattern_ok) {
+        flag = true;
+        count++;
+        sum += dly;
       }
-      else {
-        if (flag) { dly = 32; }
-        else {
-          count = 0;
-          sum = 0;
-        }
+      else if (flag) {
+        break;
       }
     }
 
-    if (count) { gdly = static_cast<unsigned long>(sum / count); }
-    else {
-      gdly = 9;
-    }
-
+    uint32_t gdly = count ? (sum / count) : 9;
     WriteDRAMDLY(mid, ch, gdly);
 
-    int bitslip = 0;
-    aflag = 0;
-    for (bitslip = 0; bitslip < 4; bitslip++) {
+    // Scan Bitslip
+    bool aligned = false;
+    for (uint32_t bitslip = 0; bitslip < 4; ++bitslip) {
       WriteDRAMTEST(mid, 3);
-      unsigned long value = ReadDRAMTEST(mid, ch);
+      uint32_t value = ReadDRAMTEST(mid, ch);
 
       if (value == 0xFFAA5500u) {
-        aflag = 1;
+        aligned = true;
         break;
       }
       else {
-        aflag = 0;
         WriteDRAMBITSLIP(mid, ch);
       }
     }
 
-    if (aflag) { INFO("DRAM(%lu) is aligned, delay = %lu", ch, gdly); }
+    if (aligned) { INFO("NKMiniTCB: DRAM(%u) aligned, delay=%u", ch, gdly); }
     else {
-      ERROR("fail to align DRAM(%lu)", ch);
+      ERROR("NKMiniTCB: DRAM(%u) alignment FAILED", ch);
     }
   }
 
