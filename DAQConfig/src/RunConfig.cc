@@ -33,6 +33,8 @@ bool RunConfig::ReadConfig(const char * name)
     ConfigGADCS(node);
     ConfigMADCS(node);
 
+    INFO("reading config %s is done", name);
+
     return true;
   }
   catch (const YAML::BadFile & e) {
@@ -368,7 +370,11 @@ void RunConfig::ConfigFADCS(YAML::Node ymlnode)
 
   if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-  if (node["SID"]) conf->SetSID(node["SID"].as<int>());
+  if (node["SID"]) {
+    conf->SetSID(node["SID"].as<int>());
+    conf->SetMID(node["SID"].as<int>());
+  }
+
   if (node["NCH"]) {
     nch = node["NCH"].as<int>();
     conf->SetNCH(nch);
@@ -417,7 +423,11 @@ void RunConfig::ConfigGADCS(YAML::Node ymlnode)
 
   if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-  if (node["SID"]) conf->SetSID(node["SID"].as<int>());
+  if (node["SID"]) {
+    conf->SetSID(node["SID"].as<int>());
+    conf->SetMID(node["SID"].as<int>());
+  }
+
   if (node["NCH"]) {
     nch = node["NCH"].as<int>();
     conf->SetNCH(nch);
@@ -467,21 +477,28 @@ void RunConfig::ConfigMADCS(YAML::Node ymlnode)
 
   if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
-  if (node["SID"]) { conf->SetSID(node["SID"].as<int>()); }
+  if (node["SID"]) {
+    conf->SetSID(node["SID"].as<int>());
+    conf->SetMID(node["SID"].as<int>());
+  }
+
   if (node["NCH"]) {
     nch = node["NCH"].as<int>();
     conf->SetNCH(nch);
   }
+
+  if (node["RL"]) conf->SetRL(node["RL"].as<int>());
+  if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
+
+  if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
+  if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
+  if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
 
   if (node["TLT"]) {
     std::string tlt_str = node["TLT"].as<std::string>();
     unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_str.c_str());
     conf->SetTLT(tlt_val);
   }
-
-  if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
-  if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
-  if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
 
   if (nch > 0) {
     FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);

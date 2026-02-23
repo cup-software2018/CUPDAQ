@@ -150,8 +150,7 @@ bool CupDAQManager::AddADC(AbsConf * conf)
 
   if (!conf->IsEnabled()) { return true; }
   if (!conf->IsLinked()) {
-    ERROR("%s[sid=%2d] enabled but not linked", GetADCName(fADCType), conf->SID());
-    return false;
+    WARNING("%s[sid=%2d] enabled but not linked", GetADCName(fADCType), conf->SID());
   }
 
   switch (fADCType) {

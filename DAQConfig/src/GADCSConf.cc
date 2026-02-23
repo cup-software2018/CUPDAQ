@@ -7,6 +7,7 @@ ClassImp(GADCSConf)
 GADCSConf::GADCSConf()
   : AbsConf()
 {
+  SetLink();
 }
 
 GADCSConf::GADCSConf(int sid)
@@ -47,6 +48,8 @@ GADCSConf::GADCSConf(int sid)
   fPTRG = 0;
   fPSC = 1;
   fADCType = ADC::GADCS;
+
+  SetLink();
 }
 
 void GADCSConf::PrintConf() const

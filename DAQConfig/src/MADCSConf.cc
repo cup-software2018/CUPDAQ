@@ -7,6 +7,7 @@ ClassImp(MADCSConf)
 MADCSConf::MADCSConf()
   : FADCTConf()
 {
+  SetLink();
 }
 
 MADCSConf::MADCSConf(int sid)
@@ -19,6 +20,8 @@ MADCSConf::MADCSConf(int sid)
   fPSC = 1;
   fNCH = kNCHMADC;
   fADCType = ADC::MADCS;
+
+  SetLink();
 }
 
 void MADCSConf::PrintConf() const

@@ -8,4 +8,7 @@
 /.clang-format
 /ld.sh
 /*.C
+/*.py
 /*.config
+/*.root*
+/*.h5*

@@ -7,6 +7,7 @@ ClassImp(FADCSConf)
 FADCSConf::FADCSConf()
   : FADCTConf()
 {
+  SetLink();
 }
 
 FADCSConf::FADCSConf(int sid)
@@ -18,6 +19,8 @@ FADCSConf::FADCSConf(int sid)
   fPTRG = 0;
   fPSC = 1;
   fADCType = ADC::FADCS;
+  
+  SetLink();
 }
 
 void FADCSConf::PrintConf() const
