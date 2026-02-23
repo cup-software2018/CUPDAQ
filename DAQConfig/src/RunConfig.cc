@@ -24,6 +24,30 @@ bool RunConfig::ReadConfig(const char * name)
       return false;
     }
 
+    if (node["Include"] && node["Include"].IsSequence()) {
+      for (const auto & inc : node["Include"]) {
+        std::string inc_file = inc.as<std::string>();
+        try {
+          YAML::Node inc_node = YAML::LoadFile(inc_file.c_str());
+
+          ConfigDAQ(inc_node);
+          ConfigTCB(inc_node);
+          ConfigFADCT(inc_node);
+          ConfigIADCT(inc_node);
+          ConfigSADCT(inc_node);
+          ConfigFADCS(inc_node);
+          ConfigGADCS(inc_node);
+          ConfigMADCS(inc_node);
+
+          INFO("Included config %s is successfully loaded", inc_file.c_str());
+        }
+        catch (const std::exception & e) {
+          ERROR("Failed to load included file %s: %s", inc_file.c_str(), e.what());
+          return false;
+        }
+      }
+    }
+
     ConfigDAQ(node);
     ConfigTCB(node);
     ConfigFADCT(node);
@@ -41,11 +65,12 @@ bool RunConfig::ReadConfig(const char * name)
     ERROR("file not found, %s", filename.c_str());
   }
   catch (const YAML::ParserException & e) {
-    ERROR("syntax error (%s) at line %d, col %d of config file", e.msg, e.mark.line + 1,
+    ERROR("syntax error (%s) at line %d, col %d of config file", e.msg.c_str(), e.mark.line + 1,
           e.mark.column + 1);
   }
   catch (const std::exception & e) {
-    ERROR("unknown error(%s) on reading config file", e.what());
+    const char * err_msg = e.what();
+    ERROR("unknown error(%s) on reading config file", err_msg ? err_msg : "Unknown");
   }
 
   return false;
