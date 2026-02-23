@@ -25,7 +25,7 @@ pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
 find_package(yaml-cpp REQUIRED)
 
 # ---- HDF5 (optional) ----
-option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" OFF )
+option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" ON )
 if ( CUPDAQ_ENABLE_HDF5 )
   find_package ( HDF5 QUIET COMPONENTS C CXX HL )
   if ( HDF5_FOUND )
