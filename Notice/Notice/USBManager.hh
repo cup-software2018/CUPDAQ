@@ -7,6 +7,13 @@
 
 class USBManager {
 public:
+  struct DeviceEntry {
+    libusb_device_handle * handle;
+    uint16_t vendor_id;
+    uint16_t product_id;
+    int serial_id;
+  };
+
   static USBManager & Instance();
 
   USBManager(const USBManager &) = delete;
@@ -23,13 +30,6 @@ public:
   libusb_context * Context() const;
 
 private:
-  struct DeviceEntry {
-    libusb_device_handle * handle;
-    uint16_t vendor_id;
-    uint16_t product_id;
-    int serial_id;
-  };
-
   USBManager();
   ~USBManager();
 
