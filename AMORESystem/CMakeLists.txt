@@ -13,6 +13,7 @@ set ( DICT_I_FLAGS
     -I${CMAKE_SOURCE_DIR}/DAQUtils
     -I${CMAKE_SOURCE_DIR}/DAQSystem
     -I${CMAKE_SOURCE_DIR}/DAQConfig
+    -I${CMAKE_SOURCE_DIR}/AMORE
 )
 
 # Generate ROOT dictionary for only the two headers above
@@ -43,6 +44,7 @@ target_link_libraries ( ${MODULE_NAME}
     Notice
     DAQConfig
     DAQSystem
+    AMORE
 )
 
 # ---- Install ----

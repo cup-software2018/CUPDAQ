@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <cstdint>
@@ -15,16 +16,20 @@ public:
   int Open();
   void Close();
 
-  int ReadBCount() const;
-  int ReadData(int bcount, unsigned char * data, unsigned int timeout = 0) const;
+  // Changed to uint32_t for consistency with hardware registers
+  uint32_t ReadBCount() const;
+
+  // bcount: Block count, returns 0 on success or negative error code
+  int ReadData(uint32_t bcount, unsigned char * data, unsigned int timeout = 1000u) const;
 
   int Sid() const;
 
 private:
-  void WaitFPGAAndInit();
+  // Returns true if successful, false on timeout
+  bool WaitFPGAAndInit();
 
   int _sid{0};
-  USB3Com _usb{};
+  USB3Com _usb;
 };
 
 inline int NKAMOREADC::Sid() const { return _sid; }

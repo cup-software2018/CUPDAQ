@@ -1,7 +1,9 @@
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -10,17 +12,62 @@
 
 namespace {
 
-constexpr std::uint16_t kNKFADC125S_VENDOR_ID = 0x0547;
-constexpr std::uint16_t kNKFADC125S_PRODUCT_ID = 0x1903;
+constexpr std::uint16_t kVENDOR_ID = 0x0547;
+constexpr std::uint16_t kPRODUCT_ID = 0x1903;
 
-inline std::uint32_t RegChOffset(std::uint32_t base, unsigned long ch) { return base + (((ch - 1UL) & 0xFFUL) << 16); }
-inline std::uint32_t RegChOffsetZeroBase(std::uint32_t base, unsigned long ch) { return base + ((ch & 0xFFUL) << 16); }
+// Register Addresses
+constexpr uint32_t kAddr_RUN = 0x20000000u;
+constexpr uint32_t kAddr_CW = 0x20000001u;
+constexpr uint32_t kAddr_RL = 0x20000002u;
+constexpr uint32_t kAddr_DRAMON = 0x20000003u;
+constexpr uint32_t kAddr_DACOFF = 0x20000004u;
+constexpr uint32_t kAddr_PED_CMD = 0x20000005u;
+constexpr uint32_t kAddr_PED_READ = 0x20000006u;
+constexpr uint32_t kAddr_DLY = 0x20000007u;
+constexpr uint32_t kAddr_THR = 0x20000008u;
+constexpr uint32_t kAddr_POL = 0x20000009u;
+constexpr uint32_t kAddr_PSW = 0x2000000Au;
+// 0xB is skipped?
+constexpr uint32_t kAddr_PCT = 0x2000000Cu;
+constexpr uint32_t kAddr_PCI = 0x2000000Du;
+constexpr uint32_t kAddr_PWT = 0x2000000Eu;
+constexpr uint32_t kAddr_DT = 0x2000000Fu;
+
+constexpr uint32_t kAddr_BCOUNT = 0x20000010u;
+constexpr uint32_t kAddr_PTRIG = 0x20000011u;
+constexpr uint32_t kAddr_TRIG_CMD = 0x20000012u; // Also ReadCHNUM
+constexpr uint32_t kAddr_TRIG_ENABLE = 0x20000013u;
+constexpr uint32_t kAddr_TM = 0x20000014u;
+constexpr uint32_t kAddr_TLT = 0x20000015u;
+// 0x16?
+constexpr uint32_t kAddr_ADCRST = 0x20000017u;
+constexpr uint32_t kAddr_ADCCAL = 0x20000018u;
+constexpr uint32_t kAddr_ADCDLY = 0x20000019u;
+constexpr uint32_t kAddr_ADCSETUP = 0x2000001Au; // Also ADCSTAT
+constexpr uint32_t kAddr_DRAMDLY = 0x2000001Bu;
+constexpr uint32_t kAddr_DRAMBITS = 0x2000001Cu;
+constexpr uint32_t kAddr_DRAMTEST = 0x2000001Du;
+constexpr uint32_t kAddr_ADCBITS = 0x2000001Eu; // Also PSCALE read?
+constexpr uint32_t kAddr_PSCALE =
+    0x20000006u; // Write addr distinct from read? (Original code used 0x06 for write)
+constexpr uint32_t kAddr_DSR = 0x2000001Fu;
+
+constexpr uint32_t kAddr_DATA = 0x40000000u;
+
+// Helper to calculate register address for a channel
+// Base + ((ch-1) << 16)
+inline uint32_t GetChAddr(uint32_t base, uint32_t ch) { return base + (((ch - 1u) & 0xFFu) << 16); }
+
+// Base + (ch << 16) - For zero-based channel index registers like DRAMDLY
+inline uint32_t GetChAddrZB(uint32_t base, uint32_t ch) { return base + ((ch & 0xFFu) << 16); }
+
+void SleepMs(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 
 } // namespace
 
 NKFADC125S::NKFADC125S(int sid)
   : _sid(sid),
-    _usb(kNKFADC125S_VENDOR_ID, kNKFADC125S_PRODUCT_ID, sid)
+    _usb(kVENDOR_ID, kPRODUCT_ID, sid)
 {
 }
 
@@ -29,24 +76,23 @@ NKFADC125S::~NKFADC125S() { Close(); }
 void NKFADC125S::SetSID(int sid)
 {
   _sid = sid;
-  _usb.Set(kNKFADC125S_VENDOR_ID, kNKFADC125S_PRODUCT_ID, _sid);
+  _usb.Set(kVENDOR_ID, kPRODUCT_ID, _sid);
 }
 
 int NKFADC125S::Open()
 {
   int status = _usb.Open();
   if (status < 0) {
-    ERROR("failed to open device (sid=%d)", _sid);
+    ERROR("NKFADC125S: failed to open device (sid=%d)", _sid);
     return status;
   }
 
   status = _usb.ClaimInterface(0);
   if (status < 0) {
-    ERROR("failed to claim interface 0 (sid=%d)", _sid);
+    ERROR("NKFADC125S: failed to claim interface 0 (sid=%d)", _sid);
     _usb.Close();
     return status;
   }
-
   return 0;
 }
 
@@ -56,349 +102,255 @@ void NKFADC125S::Close()
   _usb.Close();
 }
 
-void NKFADC125S::Reset() const { _usb.Write(0x20000000u, 1u << 2); }
+void NKFADC125S::Reset() const { _usb.Write(kAddr_RUN, 1u << 2); }
+void NKFADC125S::ResetTimer() const { _usb.Write(kAddr_RUN, 1u); }
+void NKFADC125S::Start() const { _usb.Write(kAddr_RUN, 1u << 3); }
+void NKFADC125S::Stop() const { _usb.Write(kAddr_RUN, 0u); }
 
-void NKFADC125S::ResetTimer() const { _usb.Write(0x20000000u, 1u); }
+uint32_t NKFADC125S::ReadRun() const { return _usb.ReadReg(kAddr_RUN); }
 
-void NKFADC125S::Start() const { _usb.Write(0x20000000u, 1u << 3); }
-
-void NKFADC125S::Stop() const { _usb.Write(0x20000000u, 0u << 3); }
-
-unsigned long NKFADC125S::ReadRun() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000000u)); }
-
-void NKFADC125S::WriteCW(unsigned long ch, unsigned long data) const
+void NKFADC125S::WriteCW(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000001u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
+  _usb.Write(GetChAddr(kAddr_CW, ch), data);
 }
+uint32_t NKFADC125S::ReadCW(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_CW, ch)); }
 
-unsigned long NKFADC125S::ReadCW(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000001u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
+void NKFADC125S::WriteRL(uint32_t data) const { _usb.Write(kAddr_RL, data); }
+uint32_t NKFADC125S::ReadRL() const { return _usb.ReadReg(kAddr_RL); }
 
-void NKFADC125S::WriteRL(unsigned long data) const { _usb.Write(0x20000002u, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC125S::ReadRL() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000002u)); }
-
-void NKFADC125S::WriteDRAMON(unsigned long data) const
+void NKFADC125S::WriteDRAMON(uint32_t data) const
 {
   if (data) {
-    unsigned int status = _usb.ReadReg(0x20000003u);
-    if (status) { _usb.Write(0x20000003u, 0u); }
+    uint32_t status = _usb.ReadReg(kAddr_DRAMON);
+    if (status) { _usb.Write(kAddr_DRAMON, 0u); }
 
-    _usb.Write(0x20000003u, 1u);
+    _usb.Write(kAddr_DRAMON, 1u);
 
-    status = 0;
-    while (!status) {
-      status = _usb.ReadReg(0x20000003u);
+    // Added Timeout to prevent infinite loop
+    int timeout = 1000;
+    while (_usb.ReadReg(kAddr_DRAMON) == 0 && timeout > 0) {
+      timeout--;
+      // Optional: short sleep could be added here
     }
+    if (timeout == 0) ERROR("WriteDRAMON timeout");
   }
   else {
-    _usb.Write(0x20000003u, 0u);
+    _usb.Write(kAddr_DRAMON, 0u);
   }
 }
 
-unsigned long NKFADC125S::ReadDRAMON() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000003u)); }
+uint32_t NKFADC125S::ReadDRAMON() const { return _usb.ReadReg(kAddr_DRAMON); }
 
-void NKFADC125S::WriteDACOFF(unsigned long ch, unsigned long data) const
+void NKFADC125S::WriteDACOFF(uint32_t ch, uint32_t data) const
 {
-  if (ch) {
-    const std::uint32_t addr = RegChOffset(0x20000004u, ch);
-    _usb.Write(addr, static_cast<std::uint32_t>(data));
-  }
+  if (ch > 0) { _usb.Write(GetChAddr(kAddr_DACOFF, ch), data); }
   else {
-    const unsigned long nch = ReadCHNUM();
-    for (unsigned long chan = 1; chan <= nch; ++chan) {
-      const std::uint32_t addr = RegChOffset(0x20000004u, chan);
-      _usb.Write(addr, static_cast<std::uint32_t>(data));
+    // Broadcast to all channels
+    uint32_t nch = ReadCHNUM();
+    for (uint32_t i = 1; i <= nch; ++i) {
+      _usb.Write(GetChAddr(kAddr_DACOFF, i), data);
     }
   }
 }
 
-unsigned long NKFADC125S::ReadDACOFF(unsigned long ch) const
+uint32_t NKFADC125S::ReadDACOFF(uint32_t ch) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000004u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
+  return _usb.ReadReg(GetChAddr(kAddr_DACOFF, ch));
 }
 
-void NKFADC125S::MeasurePED(unsigned long ch) const
+void NKFADC125S::MeasurePED(uint32_t ch) const { _usb.Write(GetChAddr(kAddr_PED_CMD, ch), 0u); }
+uint32_t NKFADC125S::ReadPED(uint32_t ch) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000005u, ch);
-  _usb.Write(addr, 0u);
+  return _usb.ReadReg(GetChAddr(kAddr_PED_READ, ch));
 }
 
-unsigned long NKFADC125S::ReadPED(unsigned long ch) const
+void NKFADC125S::WriteDLY(uint32_t, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000006u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
+  uint32_t value = ((data / 1000u) << 10) | (data % 1000u);
+  _usb.Write(kAddr_DLY, value);
 }
 
-void NKFADC125S::WriteDLY(unsigned long, unsigned long data) const
+uint32_t NKFADC125S::ReadDLY(uint32_t) const
 {
-  const unsigned long value = ((data / 1000UL) << 10) | (data % 1000UL);
-  _usb.Write(0x20000007u, static_cast<std::uint32_t>(value));
+  uint32_t value = _usb.ReadReg(kAddr_DLY);
+  return (value >> 10) * 1000u + (value & 0x3FFu);
 }
 
-unsigned long NKFADC125S::ReadDLY(unsigned long) const
+// Simple Wrappers
+void NKFADC125S::WriteTHR(uint32_t ch, uint32_t data) const
 {
-  const unsigned long value = static_cast<unsigned long>(_usb.ReadReg(0x20000007u));
-  const unsigned long data = (value >> 10) * 1000UL + (value & 0x3FFUL);
-  return data;
+  _usb.Write(GetChAddr(kAddr_THR, ch), data);
+}
+uint32_t NKFADC125S::ReadTHR(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_THR, ch)); }
+
+void NKFADC125S::WritePOL(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_POL, ch), data);
+}
+uint32_t NKFADC125S::ReadPOL(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_POL, ch)); }
+
+void NKFADC125S::WritePSW(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_PSW, ch), data);
+}
+uint32_t NKFADC125S::ReadPSW(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PSW, ch)); }
+
+void NKFADC125S::WritePCT(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_PCT, ch), data);
+}
+uint32_t NKFADC125S::ReadPCT(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PCT, ch)); }
+
+void NKFADC125S::WritePCI(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_PCI, ch), data);
+}
+uint32_t NKFADC125S::ReadPCI(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PCI, ch)); }
+
+void NKFADC125S::WritePWT(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_PWT, ch), data);
+}
+uint32_t NKFADC125S::ReadPWT(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_PWT, ch)); }
+
+void NKFADC125S::WriteDT(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_DT, ch), data);
+}
+uint32_t NKFADC125S::ReadDT(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_DT, ch)); }
+
+void NKFADC125S::WritePTRIG(uint32_t data) const { _usb.Write(kAddr_PTRIG, data); }
+uint32_t NKFADC125S::ReadPTRIG() const { return _usb.ReadReg(kAddr_PTRIG); }
+
+void NKFADC125S::SendTRIG() const { _usb.Write(kAddr_TRIG_CMD, 0u); }
+uint32_t NKFADC125S::ReadCHNUM() const { return _usb.ReadReg(kAddr_TRIG_CMD); }
+
+void NKFADC125S::WriteTRIGENABLE(uint32_t data) const { _usb.Write(kAddr_TRIG_ENABLE, data); }
+uint32_t NKFADC125S::ReadTRIGENABLE() const { return _usb.ReadReg(kAddr_TRIG_ENABLE); }
+
+void NKFADC125S::WriteTM(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_TM, ch), data);
+}
+uint32_t NKFADC125S::ReadTM(uint32_t ch) const { return _usb.ReadReg(GetChAddr(kAddr_TM, ch)); }
+
+void NKFADC125S::WriteTLT(uint32_t data) const { _usb.Write(kAddr_TLT, data); }
+uint32_t NKFADC125S::ReadTLT() const { return _usb.ReadReg(kAddr_TLT); }
+
+void NKFADC125S::SendADCRST() const { _usb.Write(kAddr_ADCRST, 0u); }
+void NKFADC125S::SendADCCAL() const { _usb.Write(kAddr_ADCCAL, 0u); }
+
+void NKFADC125S::WriteADCDLY(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddr(kAddr_ADCDLY, ch), data);
 }
 
-void NKFADC125S::WriteTHR(unsigned long ch, unsigned long data) const
+void NKFADC125S::WriteADCSETUP(uint32_t addr, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000008u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
+  uint32_t value = (addr << 8) | (data & 0xFFu);
+  _usb.Write(kAddr_ADCSETUP, value);
+}
+uint32_t NKFADC125S::ReadADCSTAT() const { return _usb.ReadReg(kAddr_ADCSETUP); }
+
+void NKFADC125S::WriteDRAMDLY(uint32_t ch, uint32_t data) const
+{
+  _usb.Write(GetChAddrZB(kAddr_DRAMDLY, ch), data);
+}
+void NKFADC125S::WriteDRAMBITSLIP(uint32_t ch) const
+{
+  _usb.Write(GetChAddrZB(kAddr_DRAMBITS, ch), 0u);
 }
 
-unsigned long NKFADC125S::ReadTHR(unsigned long ch) const
+void NKFADC125S::WriteDRAMTEST(uint32_t data) const { _usb.Write(kAddr_DRAMTEST, data); }
+uint32_t NKFADC125S::ReadDRAMTEST(uint32_t ch) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000008u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
+  return _usb.ReadReg(GetChAddrZB(kAddr_DRAMTEST, ch));
 }
 
-void NKFADC125S::WritePOL(unsigned long ch, unsigned long data) const
+void NKFADC125S::WriteADCBITSLIP(uint32_t ch, uint32_t data) const
 {
-  const std::uint32_t addr = RegChOffset(0x20000009u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
+  _usb.Write(GetChAddr(kAddr_ADCBITS, ch), data);
 }
 
-unsigned long NKFADC125S::ReadPOL(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000009u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
+void NKFADC125S::WritePSCALE(uint32_t data) const { _usb.Write(kAddr_PSCALE, data); }
+// Note: Read addr 0x2000001E (ADCBITS) for PSCALE read? Preserving original logic.
+uint32_t NKFADC125S::ReadPSCALE() const { return _usb.ReadReg(kAddr_ADCBITS); }
 
-void NKFADC125S::WritePSW(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Au, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
+void NKFADC125S::WriteDSR(uint32_t data) const { _usb.Write(kAddr_DSR, data); }
+uint32_t NKFADC125S::ReadDSR() const { return _usb.ReadReg(kAddr_DSR); }
 
-unsigned long NKFADC125S::ReadPSW(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Au, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC125S::WritePCT(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Cu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC125S::ReadPCT(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Cu, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC125S::WritePCI(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Du, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC125S::ReadPCI(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Du, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC125S::WritePWT(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Eu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC125S::ReadPWT(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Eu, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC125S::WriteDT(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Fu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC125S::ReadDT(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000000Fu, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC125S::WritePTRIG(unsigned long data) const { _usb.Write(0x20000011u, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC125S::ReadPTRIG() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000011u)); }
-
-void NKFADC125S::SendTRIG() const { _usb.Write(0x20000012u, 0u); }
-
-unsigned long NKFADC125S::ReadCHNUM() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000012u)); }
-
-void NKFADC125S::WriteTRIGENABLE(unsigned long data) const
-{
-  _usb.Write(0x20000013u, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC125S::ReadTRIGENABLE() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000013u)); }
-
-void NKFADC125S::WriteTM(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000014u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-unsigned long NKFADC125S::ReadTM(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000014u, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC125S::WriteTLT(unsigned long data) const { _usb.Write(0x20000015u, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC125S::ReadTLT() const { return static_cast<unsigned long>(_usb.ReadReg(0x20000015u)); }
-
-void NKFADC125S::SendADCRST() const { _usb.Write(0x20000017u, 0u); }
-
-void NKFADC125S::SendADCCAL() const { _usb.Write(0x20000018u, 0u); }
-
-void NKFADC125S::WriteADCDLY(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x20000019u, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-void NKFADC125S::WriteADCSETUP(unsigned long addr, unsigned long data) const
-{
-  const unsigned long value = (addr << 8) | (data & 0xFFUL);
-  _usb.Write(0x2000001Au, static_cast<std::uint32_t>(value));
-}
-
-unsigned long NKFADC125S::ReadADCSTAT() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Au)); }
-
-void NKFADC125S::WriteDRAMDLY(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Bu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-void NKFADC125S::WriteDRAMBITSLIP(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Cu, ch);
-  _usb.Write(addr, 0u);
-}
-
-void NKFADC125S::WriteDRAMTEST(unsigned long data) const { _usb.Write(0x2000001Du, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC125S::ReadDRAMTEST(unsigned long ch) const
-{
-  const std::uint32_t addr = RegChOffsetZeroBase(0x2000001Du, ch);
-  return static_cast<unsigned long>(_usb.ReadReg(addr));
-}
-
-void NKFADC125S::WriteADCBITSLIP(unsigned long ch, unsigned long data) const
-{
-  const std::uint32_t addr = RegChOffset(0x2000001Eu, ch);
-  _usb.Write(addr, static_cast<std::uint32_t>(data));
-}
-
-void NKFADC125S::WritePSCALE(unsigned long data) const { _usb.Write(0x20000006u, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC125S::ReadPSCALE() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Eu)); }
-
-void NKFADC125S::WriteDSR(unsigned long data) const { _usb.Write(0x2000001Fu, static_cast<std::uint32_t>(data)); }
-
-unsigned long NKFADC125S::ReadDSR() const { return static_cast<unsigned long>(_usb.ReadReg(0x2000001Fu)); }
-
-int NKFADC125S::ReadBCount() const { return static_cast<int>(_usb.ReadReg(0x20000010u)); }
+int NKFADC125S::ReadBCount() const { return static_cast<int>(_usb.ReadReg(kAddr_BCOUNT)); }
 
 int NKFADC125S::ReadData(int bcount, unsigned char * data, unsigned int timeout) const
 {
   if (bcount <= 0 || data == nullptr) {
-    ERROR("invalid arguments (bcount=%d, data=%p, sid=%d)", bcount, static_cast<void *>(data), _sid);
+    ERROR("NKFADC125S: invalid ReadData arguments");
     return -1;
   }
-
-  const int count = bcount * 256;
-  return _usb.Read(static_cast<std::uint32_t>(count), 0x40000000u, data, timeout);
+  uint32_t count = static_cast<uint32_t>(bcount) * 256;
+  return _usb.Read(count, kAddr_DATA, data, timeout);
 }
 
 void NKFADC125S::FlushData() const
 {
   int bcount = ReadBCount();
-  if (bcount <= 0) { return; }
+  if (bcount <= 0) return;
 
-  std::vector<unsigned char> buffer(10485760);
+  // Use a smaller fixed-size buffer on heap or stack to drain data
+  // instead of allocating 10MB every time.
+  constexpr int kFlushChunkSize = 10240 * 256; // ~2.6MB
+  std::vector<unsigned char> buffer(kFlushChunkSize);
 
-  const unsigned long total = static_cast<unsigned long>(bcount);
-  const unsigned long chunk = total / 10240UL;
-  const unsigned long slice = total % 10240UL;
+  uint32_t total_bytes = static_cast<uint32_t>(bcount) * 256;
 
-  for (unsigned long i = 0; i < chunk; ++i) {
-    ReadData(10240, buffer.data());
+  // Just drain it using existing USB API
+  // Note: if USB3Com::Read handles large buffers, we can just call it in chunks
+  // But here we emulate original logic logic for safety, just safer memory usage.
+
+  uint32_t bytes_read = 0;
+  while (bytes_read < total_bytes) {
+    uint32_t to_read = std::min(static_cast<uint32_t>(buffer.size()), total_bytes - bytes_read);
+    _usb.Read(to_read, kAddr_DATA, buffer.data());
+    bytes_read += to_read;
   }
-
-  if (slice) { ReadData(static_cast<int>(slice), buffer.data()); }
 }
 
 void NKFADC125S::AlignADC() const
 {
-  int mini;
-  unsigned long nch;
-  unsigned long ch;
-  unsigned long dly;
-  unsigned long value;
-  int bit_okay;
-  int word_okay;
-  int flag;
-  int count;
-  int sum;
-  unsigned long gdly;
-  unsigned long bitslip;
-  unsigned long gbitslip;
-
-  nch = ReadCHNUM();
-  if (nch > 4) { mini = 0; }
-  else {
-    mini = 1;
-  }
+  uint32_t nch = ReadCHNUM();
+  bool is_small_module = (nch > 4) ? false : true;
 
   SendADCRST();
-  usleep(1000000);
+  SleepMs(1000);
   SendADCCAL();
 
   WriteADCSETUP(0x009, 0x02);
 
-  for (ch = 1; ch <= nch; ++ch) {
+  for (uint32_t ch = 1; ch <= nch; ++ch) {
     WriteADCSETUP(0x0006, 0x02);
     WriteADCSETUP(0x000A, 0x33);
     WriteADCSETUP(0x000B, 0x33);
 
     WriteADCBITSLIP(ch, 0);
 
-    sum = 0;
-    count = 0;
-    flag = 0;
-    gbitslip = 0;
+    // 1. Scan Delay
+    int sum = 0;
+    int count = 0;
+    bool flag = false;
 
-    for (dly = 0; dly < 32; ++dly) {
+    for (uint32_t dly = 0; dly < 32; ++dly) {
       WriteADCDLY(ch, dly);
 
-      value = ReadADCSTAT();
-      bit_okay = static_cast<int>((value >> (ch - 1)) & 0x1UL);
+      uint32_t value = ReadADCSTAT();
+      bool bit_okay = (value >> (ch - 1)) & 0x1u;
 
       if (bit_okay) {
         ++count;
-        sum += static_cast<int>(dly);
-        if (count > 5) { ++flag; }
+        sum += dly;
+        if (count > 5) flag = true;
       }
       else {
-        if (flag) { dly = 32; }
+        if (flag) break; // End of valid window
         else {
           sum = 0;
           count = 0;
@@ -406,11 +358,7 @@ void NKFADC125S::AlignADC() const
       }
     }
 
-    if (count) { gdly = static_cast<unsigned long>(sum / count); }
-    else {
-      gdly = 0;
-    }
-
+    uint32_t gdly = count ? (sum / count) : 0;
     WriteADCDLY(ch, gdly);
 
     WriteADCSETUP(0x000E, 0x81);
@@ -418,28 +366,35 @@ void NKFADC125S::AlignADC() const
     WriteADCSETUP(0x000A, 0x55);
     WriteADCSETUP(0x000B, 0x55);
 
-    for (bitslip = 0; bitslip < 7; ++bitslip) {
-      if (!mini) { WriteADCBITSLIP(ch, bitslip); }
+    // 2. Scan Bitslip
+    uint32_t gbitslip = 0;
+    flag = false;
 
-      value = ReadADCSTAT();
-      word_okay = static_cast<int>((value >> (ch + 15)) & 0x1UL);
+    for (uint32_t bitslip = 0; bitslip < 7; ++bitslip) {
+      if (!is_small_module) { WriteADCBITSLIP(ch, bitslip); }
+
+      uint32_t value = ReadADCSTAT();
+      bool word_okay = (value >> (ch + 15)) & 0x1u;
 
       if (word_okay) {
-        ++flag;
+        flag = true;
         gbitslip = bitslip;
-        bitslip = 7;
+        break; // Found it
       }
       else {
-        if (mini) { WriteADCBITSLIP(ch, bitslip); }
+        // Original logic: For small modules, write bitslip AFTER check fail?
+        // This implies checking 'default' first, then applying 0, 1, 2...
+        if (is_small_module) { WriteADCBITSLIP(ch, bitslip); }
       }
     }
 
-    if (flag > 1) { INFO("ADC(%lu) is aligned, delay = %lu, bitslip = %lu", ch, gdly, gbitslip); }
+    if (flag) { INFO("ADC(%u) aligned: delay=%u, bitslip=%u", ch, gdly, gbitslip); }
     else {
-      INFO("Fail to align ADC(%lu)!", ch);
+      INFO("ADC(%u) alignment FAILED", ch);
     }
   }
 
+  // Finalize
   WriteADCSETUP(0x122, 0x02);
   WriteADCSETUP(0x222, 0x02);
   WriteADCSETUP(0x422, 0x02);
@@ -453,98 +408,74 @@ void NKFADC125S::AlignADC() const
 
 void NKFADC125S::AlignDRAM() const
 {
-  int mini;
-  unsigned long ch;
-  unsigned long dly;
-  unsigned long value;
-  int flag;
-  int count;
-  int sum;
-  int aflag;
-  unsigned long gdly;
-  int bitslip;
-  int gbitslip = 0;
-
-  value = ReadCHNUM();
-  if (value > 4) { mini = 0; }
-  else {
-    mini = 1;
-  }
+  uint32_t nch = ReadCHNUM();
+  bool is_small_module = (nch > 4) ? false : true;
 
   WriteDRAMON(1);
 
-  if (mini) { INFO("DRAM is aligned"); }
-  else {
-    WriteDRAMTEST(1);
-    SendADCCAL();
-    WriteDRAMTEST(2);
+  if (is_small_module) {
+    INFO("DRAM is aligned (Skipped for small module)");
+    return;
+  }
 
-    for (ch = 0; ch < 8; ++ch) {
-      count = 0;
-      sum = 0;
-      flag = 0;
+  WriteDRAMTEST(1);
+  SendADCCAL();
+  WriteDRAMTEST(2);
 
-      for (dly = 0; dly < 32; ++dly) {
-        WriteDRAMDLY(ch, dly);
+  for (uint32_t ch = 0; ch < 8; ++ch) {
+    int count = 0;
+    int sum = 0;
+    bool flag = false;
 
-        WriteDRAMTEST(3);
-        value = ReadDRAMTEST(ch);
+    // 1. Scan Delay
+    for (uint32_t dly = 0; dly < 32; ++dly) {
+      WriteDRAMDLY(ch, dly);
+      WriteDRAMTEST(3);
+      uint32_t value = ReadDRAMTEST(ch);
 
-        aflag = 0;
-        if (value == 0xFFAA5500UL) { aflag = 1; }
-        else if (value == 0xAA5500FFUL) {
-          aflag = 1;
-        }
-        else if (value == 0x5500FFAAUL) {
-          aflag = 1;
-        }
-        else if (value == 0x00FFAA55UL) {
-          aflag = 1;
-        }
+      bool aflag = (value == 0xFFAA5500u || value == 0xAA5500FFu || value == 0x5500FFAAu ||
+                    value == 0x00FFAA55u);
 
-        if (aflag) {
-          ++count;
-          sum += static_cast<int>(dly);
-          if (count > 4) { flag = 1; }
-        }
-        else {
-          if (flag) { dly = 32; }
-          else {
-            count = 0;
-            sum = 0;
-          }
-        }
+      if (aflag) {
+        ++count;
+        sum += dly;
+        if (count > 4) flag = true;
       }
-
-      if (count) { gdly = static_cast<unsigned long>(sum / count); }
       else {
-        gdly = 9;
-      }
-
-      WriteDRAMDLY(ch, gdly);
-
-      aflag = 0;
-      for (bitslip = 0; bitslip < 4; ++bitslip) {
-        WriteDRAMTEST(3);
-        value = ReadDRAMTEST(ch);
-
-        if (value == 0xFFAA5500UL) {
-          aflag = 1;
-          gbitslip = bitslip;
-          bitslip = 4;
-        }
+        if (flag) break;
         else {
-          aflag = 0;
-          WriteDRAMBITSLIP(ch);
+          count = 0;
+          sum = 0;
         }
-      }
-
-      if (aflag) { INFO("DRAM(%lu) is aligned, delay = %lu, bitslip = %d", ch, gdly, gbitslip); }
-      else {
-        INFO("Fail to align DRAM(%lu)!", ch);
       }
     }
 
-    WriteDRAMTEST(0);
+    uint32_t gdly = count ? (sum / count) : 9;
+    WriteDRAMDLY(ch, gdly);
+
+    // 2. Scan Bitslip
+    bool aligned = false;
+    int gbitslip = 0;
+
+    for (int bitslip = 0; bitslip < 4; ++bitslip) {
+      WriteDRAMTEST(3);
+      uint32_t value = ReadDRAMTEST(ch);
+
+      if (value == 0xFFAA5500u) {
+        aligned = true;
+        gbitslip = bitslip;
+        break;
+      }
+      else {
+        WriteDRAMBITSLIP(ch);
+      }
+    }
+
+    if (aligned) { INFO("DRAM(%u) aligned: delay=%u, bitslip=%d", ch, gdly, gbitslip); }
+    else {
+      INFO("DRAM(%u) align FAILED", ch);
+    }
   }
+
+  WriteDRAMTEST(0);
 }

@@ -24,7 +24,7 @@ public:
   void SetPID(int ch, int val) override {}
   int CID(int) const override { return 0; }
   int PID(int) const override { return 0; }
-  void PrintConf() const override {}
+  void PrintConf() const override;
 
 private:
   std::vector<std::tuple<int, std::string, std::string, int>> fDAQs;

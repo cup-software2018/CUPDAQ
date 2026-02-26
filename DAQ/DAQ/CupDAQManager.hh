@@ -51,22 +51,20 @@ public:
 
   void UseEventMerger();
 
-  virtual void AddADC(AbsADC * adc);
-  virtual bool AddADC(AbsConf * conf);
+  void AddADC(AbsADC * adc);
+  bool AddADC(AbsConf * conf);
   virtual bool AddADC(AbsConfList * conflist);
 
   AbsADC * FindADC(int sid);
   int FindADCAt(int sid);
 
-  bool OpenDAQ();
-  void CloseDAQ();
-
+  virtual bool OpenDAQ();
+  virtual void CloseDAQ();
   virtual bool PrepareDAQ();
-
-  bool ConfigureDAQ();
-  bool InitializeDAQ();
-  void StartTrigger();
-  void StopTrigger();
+  virtual bool ConfigureDAQ();
+  virtual bool InitializeDAQ();
+  virtual void StartTrigger();
+  virtual void StopTrigger();
 
   int ReadBCount(int n);
   int ReadBCountMin(int * bcounts = nullptr);
@@ -84,7 +82,7 @@ public:
   void SetDAQTime(int t);
   void EnableHistograming();
 
-  virtual void Run();
+  void Run();
 
   void TF_TriggerMon();
   void TF_DebugMon();
@@ -262,10 +260,10 @@ protected:
   unsigned long fMonitorServerOn;
 
   TBenchmark * fBenchmark;
-  // TStopwatch fReadSW;
-  // TStopwatch fSortSW;
-  // TStopwatch fBuildSW;
-  // TStopwatch fWriteSW;
+  //TStopwatch fReadSW;
+  //TStopwatch fSortSW;
+  //TStopwatch fBuildSW;
+  //TStopwatch fWriteSW;
 
   AbsSoftTrigger * fSoftTrigger;
 

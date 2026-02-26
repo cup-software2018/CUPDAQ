@@ -4,6 +4,7 @@
 #pragma link off all    classes;
 #pragma link off all    functions;
 
+#pragma link C++ class  USBManager+;
 #pragma link C++ class  USB3Com+;
 #pragma link C++ class  USB3Tcb+;
 #pragma link C++ class  NKTCB+;

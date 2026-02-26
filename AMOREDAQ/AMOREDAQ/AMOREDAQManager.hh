@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 #include "AMOREAlgs/AMOREChunkFIFO.hh"
 #include "AMORESystem/AMORETCB.hh"
@@ -15,18 +16,23 @@ public:
   AMOREDAQManager();
   ~AMOREDAQManager() override;
 
+  bool AddADC(AbsConfList * conflist) override;
+  bool PrepareDAQ() override;
+
   virtual void Run();
 
 private:
-  bool AddADC(AbsConfList * conflist) override;
-
   void RC_AMORETCB();
   void RC_AMOREDAQ();
 
   bool ReadConfig();
-  bool ParseConfig(std::ifstream & input);
 
-  bool PrepareDAQ() override;
+  template <typename T>
+  void FillConfigArray(YAML::Node node, int nch, std::function<void(int, T)> setter,
+                       bool inc = false);
+
+  void ReadConfigTCB(YAML::Node ymlnode);
+  void ReadConfigADC(YAML::Node ymlnode);
 
   void TF_ReadData_AMORE();
   void TF_StreamData();

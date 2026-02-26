@@ -3,7 +3,6 @@
 #include <stdexcept> // For std::stoi exceptions
 #include <string>
 #include <thread>
-#include <vector>
 
 #include "AMOREDAQ/AMOREDAQManager.hh"
 #include "AMORESystem/AMOREADC.hh"
@@ -53,207 +52,154 @@ bool AMOREDAQManager::AddADC(AbsConfList * conflist)
 bool AMOREDAQManager::ReadConfig()
 {
   if (fConfigFilename.IsNull()) {
-    ERROR("config filename not set");
+    ERROR("config filename is empty");
     return false;
   }
 
-  std::ifstream input;
-  input.open(fConfigFilename.Data(), std::ifstream::in);
+  std::string filename(fConfigFilename.Data());
 
-  if (!input.is_open()) {
-    ERROR("Failed to open config file: %s", fConfigFilename.Data());
-    return false;
+  try {
+    YAML::Node node = YAML::LoadFile(filename.c_str());
+    if (node.IsNull()) {
+      ERROR("config file is empty");
+      return false;
+    }
+
+    if (node["Include"] && node["Include"].IsSequence()) {
+      for (const auto & inc : node["Include"]) {
+        std::string inc_file = inc.as<std::string>();
+        try {
+          YAML::Node inc_node = YAML::LoadFile(inc_file.c_str());
+
+          ReadConfigTCB(inc_node);
+          ReadConfigADC(inc_node);
+
+          INFO("Included config %s is successfully loaded", inc_file.c_str());
+        }
+        catch (const std::exception & e) {
+          ERROR("Failed to load included file %s: %s", inc_file.c_str(), e.what());
+          return false;
+        }
+      }
+    }
+
+    ReadConfigTCB(node);
+    ReadConfigADC(node);
+
+    INFO("reading config %s is done", filename.c_str());
+
+    return true;
+  }
+  catch (const YAML::BadFile & e) {
+    ERROR("file not found, %s", filename.c_str());
+  }
+  catch (const YAML::ParserException & e) {
+    ERROR("syntax error (%s) at line %d, col %d of config file", e.msg.c_str(), e.mark.line + 1,
+          e.mark.column + 1);
+  }
+  catch (const std::exception & e) {
+    const char * err_msg = e.what();
+    ERROR("unknown error(%s) on reading config file", err_msg ? err_msg : "Unknown");
   }
 
-  if (!ParseConfig(input)) { return false; }
-
-  INFO("reading config file %s done.", fConfigFilename.Data());
-
-  return true;
+  return false;
 }
 
-bool AMOREDAQManager::ParseConfig(std::ifstream & file)
+template <typename T>
+void AMOREDAQManager::FillConfigArray(YAML::Node node, int nch, std::function<void(int, T)> setter,
+                                bool inc)
 {
-  auto GetNextToken = [&](std::string & token) -> bool {
-    while (file >> token) {
-      // If token starts with '#', ignore the rest of the line and loop again
-      if (token.empty()) continue;
-      if (token[0] == '#') {
-        file.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        continue;
-      }
-      return true; // Found a valid token
-    }
-    return false; // End of file
-  };
+  if (!node) return;
 
-  auto GetNextInt = [&](int & value, const std::string & contextKey) -> bool {
-    std::string token;
-    if (!GetNextToken(token)) {
-      ERROR("Unexpected EOF while expecting value for %s", contextKey.c_str());
-      return false;
-    }
+  std::vector<T> val;
+  if (node.IsScalar()) { val.push_back(node.as<T>()); }
+  else {
     try {
-      value = std::stoi(token);
+      val = node.as<std::vector<T>>();
     }
-    catch (const std::exception & e) {
-      ERROR("Invalid integer format '%s' for key %s", token.c_str(), contextKey.c_str());
-      return false;
-    }
-    return true;
-  };
-
-  std::string token;
-
-  // Main parsing loop
-  while (GetNextToken(token)) {
-    if (token == "DAQ") {
-      auto * daq = static_cast<DAQConf *>(fConfigList->GetDAQConfig());
-      if (!daq) {
-        daq = new DAQConf();
-        fConfigList->Add(daq);
-      }
-
-      std::string key;
-      bool blockEnded = false;
-      while (GetNextToken(key)) {
-        if (key == "END") {
-          blockEnded = true;
-          break;
-        }
-
-        if (key == "SERVER") {
-          int id = 0;
-          int port = 0;
-          std::string name, ip;
-
-          if (!GetNextInt(id, "DAQ SERVER ID")) return false;
-          if (!GetNextToken(name)) return false;
-          if (!GetNextToken(ip)) return false;
-          if (!GetNextInt(port, "DAQ SERVER PORT")) return false;
-
-          daq->AddDAQ(id, name, ip, port);
-        }
-      }
-
-      if (!blockEnded) {
-        ERROR("Missing 'END' for DAQ block");
-        return false;
-      }
-    }
-    else if (token == "AMORETCB") {
-      auto * tcb = new AMORETCBConf();
-
-      std::string key;
-      bool blockEnded = false;
-
-      while (GetNextToken(key)) {
-        if (key == "END") {
-          blockEnded = true;
-          break;
-        }
-
-        int val = 0;
-        // Check key and read corresponding value
-        if (key == "CW") {
-          if (!GetNextInt(val, "CW")) return false;
-          tcb->SetCW(val);
-        }
-        else if (key == "DT") {
-          if (!GetNextInt(val, "DT")) return false;
-          tcb->SetDT(val);
-        }
-        else if (key == "SCALE") {
-          if (!GetNextInt(val, "SCALE")) return false;
-          tcb->SetSCALE(val);
-        }
-        else {
-          WARNING("Unknown key in AMORETCB: %s", key.c_str());
-          // return false; // Uncomment if strict check is required
-        }
-      }
-
-      if (!blockEnded) {
-        ERROR("Missing 'END' for AMORETCB block");
-        return false;
-      }
-      fConfigList->Add(tcb);
-    }
-    else if (token == "AMOREADC") {
-      int sid = 0;
-      int nch = 0;
-
-      // Read SID and NCH using helper
-      if (!GetNextInt(sid, "AMOREADC SID") || !GetNextInt(nch, "AMOREADC NCH")) { return false; }
-
-      auto * adc = new AMOREADCConf(sid);
-      adc->SetNCH(nch);
-
-      std::string key;
-      bool blockEnded = false;
-
-      while (GetNextToken(key)) {
-        if (key == "END") {
-          blockEnded = true;
-          break;
-        }
-
-        // Arrays: Read 'nch' values
-        if (key == "CID" || key == "PID" || key == "TRGON") {
-          for (int i = 0; i < nch; ++i) {
-            int val = 0;
-            // Use key + index for error context
-            std::string ctx = key + " index " + std::to_string(i);
-            if (!GetNextInt(val, ctx)) return false;
-
-            if (key == "CID") adc->SetCID(i, val);
-            else if (key == "PID") adc->SetPID(i, val);
-            else if (key == "TRGON") adc->SetTRGON(i, val);
-          }
-        }
-        // Single values
-        else {
-          int val = 0;
-          if (key == "ENABLED") {
-            if (!GetNextInt(val, "ENABLED")) return false;
-            if (val > 0) adc->SetEnable();
-          }
-          else if (key == "SR") {
-            if (!GetNextInt(val, "SR")) return false;
-            adc->SetSR(val);
-          }
-          else if (key == "RL") {
-            if (!GetNextInt(val, "RL")) return false;
-            adc->SetRL(val);
-          }
-          else if (key == "DLY") {
-            if (!GetNextInt(val, "DLY")) return false;
-            adc->SetDLY(val);
-          }
-          else if (key == "ZSU") {
-            if (!GetNextInt(val, "ZSU")) return false;
-            adc->SetZSU(val);
-          }
-          else {
-            WARNING("Unknown key in AMOREADC (SID %d): %s", sid, key.c_str());
-            // return false;
-          }
-        }
-      }
-
-      if (!blockEnded) {
-        ERROR("Missing 'END' for AMOREADC block (SID %d)", sid);
-        return false;
-      }
-      fConfigList->Add(adc);
-    }
-    else {
-      ERROR("Unknown configuration block: %s", token.c_str());
-      return false;
+    catch (...) {
+      return;
     }
   }
 
-  return true;
+  int valsize = val.size();
+  if (valsize == 0) return;
+
+  for (int i = 0; i < nch; ++i) {
+    T target;
+    if (i < valsize) { target = val[i]; }
+    else {
+      if (inc) { target = val[valsize - 1] + (i - (valsize - 1)); }
+      else {
+        target = val[valsize - 1];
+      }
+    }
+    setter(i, target);
+  }
+}
+
+void AMOREDAQManager::ReadConfigTCB(YAML::Node ymlnode)
+{
+  if (!ymlnode["AMORETCB"]) return;
+
+  auto * conf = new AMORETCBConf();
+  auto tcb = ymlnode["AMORETCB"];
+
+  if (tcb["ID"]) conf->SetDAQID(tcb["ID"].as<int>());
+  if (tcb["CW"]) conf->SetCW(tcb["CW"].as<int>());
+  if (tcb["DT"]) conf->SetDT(tcb["DT"].as<int>());
+  if (tcb["SCALE"]) conf->SetSCALE(tcb["SCALE"].as<int>());
+
+  fConfigList->Add(conf);
+}
+
+void AMOREDAQManager::ReadConfigADC(YAML::Node ymlnode)
+{
+  if (!ymlnode["AMOREADC"]) return;
+
+  std::vector<YAML::Node> nodes;
+  if (ymlnode["AMOREADC"].IsSequence()) {
+    for (const auto & n : ymlnode["AMOREADC"])
+      nodes.push_back(n);
+  }
+  else {
+    nodes.push_back(ymlnode["AMOREADC"]);
+  }
+
+  for (auto & node : nodes) {
+    int nch = 0;
+
+    auto * conf = new AMOREADCConf();
+    conf->SetName("AMOREADC");
+    conf->SetADCType(ADC::AMOREADC);
+
+    if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
+
+    if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());
+
+    if (node["SID"]) {
+      int sid = node["SID"].as<int>();
+      conf->SetSID(sid);
+      conf->SetMID(sid+128);
+    }
+    if (node["NCH"]) {
+      nch = node["NCH"].as<int>();
+      conf->SetNCH(nch);
+    }
+
+    if (node["SR"]) conf->SetSR(node["SR"].as<int>());
+    if (node["RL"]) conf->SetRL(node["RL"].as<int>());
+    if (node["DLY"]) conf->SetDLY(node["DLY"].as<int>());
+    if (node["ZSU"]) conf->SetZSU(node["ZSU"].as<int>());
+
+    if (nch > 0) {
+      FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
+      FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
+      FillConfigArray<int>(node["TRGON"], nch, [&](int i, int v) { conf->SetTRGON(i, v); });
+    }
+
+    fConfigList->Add(conf);
+  }
 }
 
 bool AMOREDAQManager::PrepareDAQ()

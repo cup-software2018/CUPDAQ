@@ -21,8 +21,11 @@ include ( ${ROOT_USE_FILE} )
 find_package ( PkgConfig REQUIRED )
 pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
 
+# ---- yaml parser for config ----
+find_package ( yaml-cpp REQUIRED )
+
 # ---- HDF5 (optional) ----
-option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" OFF )
+option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" ON )
 
 if ( CUPDAQ_ENABLE_HDF5 )
   find_package ( HDF5 QUIET COMPONENTS C CXX HL )
@@ -51,6 +54,7 @@ add_subdirectory ( DAQTrigger )
 add_subdirectory ( OnlHistogramer )
 add_subdirectory ( RawObjs )
 add_subdirectory ( DAQ )
+add_subdirectory ( AMORE )
 add_subdirectory ( AMORESystem )
 add_subdirectory ( AMOREAlgs )
 add_subdirectory ( AMOREDAQ )

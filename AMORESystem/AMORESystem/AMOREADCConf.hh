@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DAQConfig/AbsConf.hh"
-#include "OnlConsts/amoreconsts.hh"
+#include "AMORE/amoreconsts.hh"
 
 class AMOREADCConf : public AbsConf {
 public:

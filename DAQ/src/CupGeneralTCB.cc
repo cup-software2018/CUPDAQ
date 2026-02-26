@@ -89,11 +89,11 @@ bool CupGeneralTCB::Config()
     TString name = conf->GetName();
     if (name.Contains("TCB")) continue;
 
-    unsigned long mid = conf->MID();
+    uint32_t mid = conf->MID();
 
     fTCB->WriteDRAMON(mid, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    unsigned long dramon = fTCB->ReadDRAMON(mid);
+    uint32_t dramon = fTCB->ReadDRAMON(mid);
     if (dramon) { INFO("%s[mid=%2lu] DRAM on", name.Data(), mid); }
     else {
       ERROR("%s[mid=%2lu] error occurred during turning DRAM on", name.Data(), mid);
@@ -202,7 +202,7 @@ void CupGeneralTCB::StopTrigger()
 
 bool CupGeneralTCB::ConfigFADC(FADCTConf * conf)
 {
-  unsigned long mid = conf->MID();
+  uint32_t mid = conf->MID();
 
   if (!conf->IsEnabled()) {
     INFO("%s[mid=%2lu] is disabled, passed", conf->GetName(), mid);
@@ -224,7 +224,7 @@ bool CupGeneralTCB::ConfigFADC(FADCTConf * conf)
 
 bool CupGeneralTCB::ConfigSADC(SADCTConf * conf)
 {
-  unsigned long mid = conf->MID();
+  uint32_t mid = conf->MID();
 
   if (!conf->IsEnabled()) {
     INFO("%s[mid=%2lu] is disabled, passed", conf->GetName(), mid);
@@ -246,7 +246,7 @@ bool CupGeneralTCB::ConfigSADC(SADCTConf * conf)
 
 bool CupGeneralTCB::ConfigIADC(IADCTConf * conf)
 {
-  unsigned long mid = conf->MID();
+  uint32_t mid = conf->MID();
 
   if (!conf->IsEnabled()) {
     INFO("%s[mid=%2lu] is disabled, passed", conf->GetName(), mid);
@@ -282,10 +282,10 @@ int CupGeneralTCB::CheckLinkStatus()
   int nlinked = 0;
   int nport = 0;
 
-  unsigned long linkedMID[40];
+  uint32_t linkedMID[40];
   int linked[40];
 
-  unsigned long data[2];
+  uint32_t data[2];
   fTCB->ReadLNSTAT(data);
 
   if (fTCBType == TCB::MINI) {

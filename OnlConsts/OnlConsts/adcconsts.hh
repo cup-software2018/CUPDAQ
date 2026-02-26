@@ -1,4 +1,5 @@
-#pragma once
+#ifndef adcconsts_hh
+#define adcconsts_hh
 
 #include <string>
 
@@ -77,6 +78,12 @@ const unsigned long kBYTESPEREVENTSADC = 256;
 const int kNCHFADC = 4;
 
 //
+// AMORE ADC constants
+//
+const int kMINIMUMBCOUNTAMOREADC = 2048; // kbytes
+const int kNCHAMOREADC = 16;
+
+//
 // GADC constants
 //
 const int kNCHGADC = 16;
@@ -91,10 +98,4 @@ const int kNCHMADC = 4;
 //
 const int kNCHIADC = 40;
 const unsigned long kBYTESPEREVENTIADC = 256;
-
-
-//
-// AMOREADC
-//
-const int kNCHAMOREADC = 16;
-const unsigned long kBYTEPERSAMPLE = 64;
+#endif

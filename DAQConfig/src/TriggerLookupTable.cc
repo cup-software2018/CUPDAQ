@@ -1,84 +1,74 @@
-#include "TFormula.h"
-#include "TString.h"
+#include <algorithm>
+#include <cctype>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include "DAQConfig/TriggerLookupTable.hh"
 
-ClassImp(TriggerLookupTable)
-
-TriggerLookupTable::TriggerLookupTable()
-  : TObject()
+unsigned short TriggerLookupTable::GetTLT(const char * val)
 {
-}
+  // 1. Safety Checks
+  if (!val || val[0] == '\0') return 0;
+  std::string expr(val);
 
-UShort_t TriggerLookupTable::GetTLT(const char * val)
-{
-  TString a(val);
-  a.ReplaceAll(" ", "");
-  a.ToLower();
+  // Remove spaces
+  expr.erase(std::remove_if(expr.begin(), expr.end(), ::isspace), expr.end());
+  if (expr.empty()) return 0;
 
-  a.ReplaceAll("+", 1, "|", 1);
-  a.ReplaceAll("*", "x");
+  // 2. Parse Logic into Bitmasks (The "Compiler" Phase)
+  // We store required bits for each OR-term.
+  // Example: "1x2 + 4" -> stores { 0x3 (binary 0011), 0x8 (binary 1000) }
+  std::vector<unsigned short> logic_masks;
 
-  int n = 0;
-  bool isAndBefore = false;
-  while (true) {
-    if (a.Length() == n) break;
-    if (a[n] == 'x') {
-      a.Replace(n, 1, "&");
-      if (isAndBefore) {
-        a.Remove(n - 1, 1);
-        a.Insert(n + 1, ")");
-      }
-      else {
-        a.Insert(n - 1, "(");
-        a.Insert(n + 3, ")");
-      }
-      isAndBefore = true;
-      n = 0;
-    }
-    else if (a[n] == '|') {
-      isAndBefore = false;
-    }
-    n += 1;
-  }
+  // Normalize splitters: treat '+' as logic OR separator
+  std::replace(expr.begin(), expr.end(), '|', '+');
 
-  for (int i = 0; i < 4; i++) {
-    a.ReplaceAll(TString(Form("%d", i + 1)).Data(), 1, TString(Form("int([%d])", i)).Data(), 8);
-  }
+  std::stringstream ss(expr);
+  std::string segment;
 
-  a = "(" + a + ")";
+  while (std::getline(ss, segment, '+')) {
+    if (segment.empty()) continue;
 
-  for (int i = 0; i < 4; i++) {
-    if (!a.Contains(Form("%d", i))) { a += Form(" + 0*[%d]", i); }
-  }
+    unsigned short current_mask = 0;
+    bool has_valid_channel = false;
 
-  auto * tlt = new TFormula("TLT", a.Data());
-
-  unsigned int tch1, tch2, tch3, tch4, shift;
-  unsigned long tltf = 0;
-  unsigned long triggerf = 0;
-
-  for (tch4 = 0; tch4 <= 1; tch4++) {
-    for (tch3 = 0; tch3 <= 1; tch3++) {
-      for (tch2 = 0; tch2 <= 1; tch2++) {
-        for (tch1 = 0; tch1 <= 1; tch1++) {
-          tlt->SetParameter(0, tch1);
-          tlt->SetParameter(1, tch2);
-          tlt->SetParameter(2, tch3);
-          tlt->SetParameter(3, tch4);
-
-          triggerf = static_cast<unsigned long>(tlt->Eval(0.0));
-
-          shift = (tch4 << 3) | (tch3 << 2) | (tch2 << 1) | tch1;
-          tltf = tltf + (triggerf << shift);
-        }
+    for (char c : segment) {
+      if (c >= '1' && c <= '4') {
+        // Convert char '1'..'4' to bit index 0..3
+        // '1' -> bit 0 (1 << 0)
+        // '2' -> bit 1 (1 << 1)
+        int bit_idx = c - '1';
+        current_mask |= (1 << bit_idx);
+        has_valid_channel = true;
       }
     }
+
+    // Only add valid terms (ignore garbage like "&&&")
+    if (has_valid_channel) { logic_masks.push_back(current_mask); }
   }
 
-  tltf &= 0xFFFFUL;
+  if (logic_masks.empty()) return 0;
 
-  delete tlt;
+  // 3. Evaluate Logic (The "Execution" Phase)
+  unsigned short tlt_result = 0;
 
-  return static_cast<UShort_t>(tltf);
+  // Iterate through all 16 combinations (0x0 to 0xF)
+  for (unsigned short i = 0; i < 16; ++i) {
+    bool match = false;
+
+    // Check against pre-calculated masks
+    // Logic: For a term to be true, the input (i) must have ALL bits of the mask set.
+    // Formula: (input & mask) == mask
+    for (unsigned short mask : logic_masks) {
+      if ((i & mask) == mask) {
+        match = true;
+        break; // Short-circuit: Logic OR satisfied
+      }
+    }
+
+    if (match) { tlt_result |= (1 << i); }
+  }
+
+  return tlt_result;
 }

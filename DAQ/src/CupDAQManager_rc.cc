@@ -298,7 +298,9 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
   time(&fStartDatime);
 
-  if (WaitCommand(fDoEndRun, fRunStatus) != 0) { WARNING("run=%d ended by error state", fRunNumber); }
+  if (WaitCommand(fDoEndRun, fRunStatus) != 0) {
+    WARNING("run=%d ended by error state", fRunNumber);
+  }
 
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
   time(&fEndDatime);
@@ -396,7 +398,9 @@ void CupDAQManager::RC_MERGER()
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
   time(&fStartDatime);
 
-  if (WaitCommand(fDoEndRun, fRunStatus) != 0) { WARNING("run=%d ended by error state", fRunNumber); }
+  if (WaitCommand(fDoEndRun, fRunStatus) != 0) {
+    WARNING("run=%d ended by error state", fRunNumber);
+  }
 
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
   time(&fEndDatime);
@@ -417,7 +421,7 @@ TERMINATE:
     }
   }
   fRecvEventBuffer.clear();
- 
+
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kPROCENDED);
 

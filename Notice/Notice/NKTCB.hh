@@ -1,13 +1,18 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include "Notice/USB3Tcb.hh"
 
-#define TM_COUNT (0x1)
-#define TM_WIDTH (0x2)
-#define TM_PEAKSUM (0x4)
-#define TM_ORPEAKSUM (0x8)
+// Hardware Constants
+namespace NKTCBConst {
+// Trigger Mode Bitmasks
+constexpr uint32_t TM_COUNT = 0x1;
+constexpr uint32_t TM_WIDTH = 0x2;
+constexpr uint32_t TM_PEAKSUM = 0x4;
+constexpr uint32_t TM_ORPEAKSUM = 0x8;
+} // namespace NKTCBConst
 
 class NKTCB {
 public:
@@ -17,220 +22,232 @@ public:
   int Open();
   void Close();
 
-  void WriteLT(unsigned long mid, const char * data, int len);
+  // Load Lookup Table (Bulk Write)
+  void WriteLT(uint32_t mid, const char * data, int len);
 
+  // -----------------------------------------------------------------------
+  // Control & Status Registers
+  // -----------------------------------------------------------------------
   void Reset();
   void ResetTimer();
   void Start();
   void Stop();
-  unsigned long ReadRUN(unsigned long mid) const;
+  uint32_t ReadRUN(uint32_t mid) const;
 
-  void WriteCW(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadCW(unsigned long mid, unsigned long ch) const;
+  void WriteCW(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadCW(uint32_t mid, uint32_t ch) const;
 
-  void WriteRL(unsigned long mid, unsigned long data) const;
-  unsigned long ReadRL(unsigned long mid) const;
+  void WriteRL(uint32_t mid, uint32_t data) const;
+  uint32_t ReadRL(uint32_t mid) const;
 
-  void WriteGW(unsigned long mid, unsigned long data) const;
-  unsigned long ReadGW(unsigned long mid) const;
+  void WriteGW(uint32_t mid, uint32_t data) const;
+  uint32_t ReadGW(uint32_t mid) const;
 
-  void WriteDRAMON(unsigned long mid, unsigned long data) const;
-  unsigned long ReadDRAMON(unsigned long mid) const;
+  void WriteDRAMON(uint32_t mid, uint32_t data) const;
+  uint32_t ReadDRAMON(uint32_t mid) const;
 
-  void WriteDACOFF(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadDACOFF(unsigned long mid, unsigned long ch) const;
+  void WriteDACOFF(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadDACOFF(uint32_t mid, uint32_t ch) const;
 
-  void MeasurePED(unsigned long mid, unsigned long ch) const;
-  unsigned long ReadPED(unsigned long mid, unsigned long ch) const;
+  void MeasurePED(uint32_t mid, uint32_t ch) const;
+  uint32_t ReadPED(uint32_t mid, uint32_t ch) const;
 
-  void WriteDLY(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadDLY(unsigned long mid, unsigned long ch) const;
+  // Delays & Thresholds
+  void WriteDLY(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadDLY(uint32_t mid, uint32_t ch) const;
 
-  void WriteAMOREDLY(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadAMOREDLY(unsigned long mid, unsigned long ch) const;
+  void WriteAMOREDLY(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadAMOREDLY(uint32_t mid, uint32_t ch) const;
 
-  void WriteTHR(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadTHR(unsigned long mid, unsigned long ch) const;
+  void WriteTHR(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadTHR(uint32_t mid, uint32_t ch) const;
 
-  void WritePOL(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadPOL(unsigned long mid, unsigned long ch) const;
+  void WritePOL(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadPOL(uint32_t mid, uint32_t ch) const;
 
-  void WritePSW(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadPSW(unsigned long mid, unsigned long ch) const;
+  void WritePSW(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadPSW(uint32_t mid, uint32_t ch) const;
 
-  void WriteAMODE(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadAMODE(unsigned long mid, unsigned long ch) const;
+  void WriteAMODE(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadAMODE(uint32_t mid, uint32_t ch) const;
 
-  void WritePCT(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadPCT(unsigned long mid, unsigned long ch) const;
+  // Pulse & Trigger Configuration
+  void WritePCT(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadPCT(uint32_t mid, uint32_t ch) const;
 
-  void WritePCI(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadPCI(unsigned long mid, unsigned long ch) const;
+  void WritePCI(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadPCI(uint32_t mid, uint32_t ch) const;
 
-  void WritePWT(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadPWT(unsigned long mid, unsigned long ch) const;
+  void WritePWT(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadPWT(uint32_t mid, uint32_t ch) const;
 
-  void WritePSS(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadPSS(unsigned long mid, unsigned long ch) const;
+  void WritePSS(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadPSS(uint32_t mid, uint32_t ch) const;
 
-  void WriteRT(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadRT(unsigned long mid, unsigned long ch) const;
+  void WriteRT(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadRT(uint32_t mid, uint32_t ch) const;
 
-  void WriteSR(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadSR(unsigned long mid, unsigned long ch) const;
+  void WriteSR(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadSR(uint32_t mid, uint32_t ch) const;
 
-  void WriteDACGain(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadDACGain(unsigned long mid, unsigned long ch) const;
+  void WriteDACGain(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadDACGain(uint32_t mid, uint32_t ch) const;
 
-  void WriteTM(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadTM(unsigned long mid, unsigned long ch) const;
+  void WriteTM(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadTM(uint32_t mid, uint32_t ch) const;
 
-  void WriteTLT(unsigned long mid, unsigned long data) const;
-  unsigned long ReadTLT(unsigned long mid) const;
+  void WriteTLT(uint32_t mid, uint32_t data) const;
+  uint32_t ReadTLT(uint32_t mid) const;
 
-  void WriteSTLT(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadSTLT(unsigned long mid, unsigned long ch) const;
+  void WriteSTLT(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadSTLT(uint32_t mid, uint32_t ch) const;
 
-  void WriteZEROSUP(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadZEROSUP(unsigned long mid, unsigned long ch) const;
+  void WriteZEROSUP(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadZEROSUP(uint32_t mid, uint32_t ch) const;
 
-  void SendADCRST(unsigned long mid) const;
-  void SendADCCAL(unsigned long mid) const;
+  // ADC Controls
+  void SendADCRST(uint32_t mid) const;
+  void SendADCCAL(uint32_t mid) const;
 
-  void WriteADCDLY(unsigned long mid, unsigned long ch, unsigned long data) const;
-  void WriteADCALIGN(unsigned long mid, unsigned long data) const;
-  unsigned long ReadADCSTAT(unsigned long mid) const;
+  void WriteADCDLY(uint32_t mid, uint32_t ch, uint32_t data) const;
+  void WriteADCALIGN(uint32_t mid, uint32_t data) const;
+  uint32_t ReadADCSTAT(uint32_t mid) const;
 
-  void WriteBITSLIP(unsigned long mid, unsigned long ch, unsigned long data) const;
+  void WriteBITSLIP(uint32_t mid, uint32_t ch, uint32_t data) const;
 
-  void WriteFMUX(unsigned long mid, unsigned long ch) const;
-  unsigned long ReadFMUX(unsigned long mid) const;
+  void WriteFMUX(uint32_t mid, uint32_t ch) const;
+  uint32_t ReadFMUX(uint32_t mid) const;
 
-  void ArmFADC(unsigned long mid) const;
-  unsigned long ReadFREADY(unsigned long mid) const;
+  void ArmFADC(uint32_t mid) const;
+  uint32_t ReadFREADY(uint32_t mid) const;
 
-  void WriteZSFD(unsigned long mid, unsigned long data) const;
-  unsigned long ReadZSFD(unsigned long mid) const;
+  void WriteZSFD(uint32_t mid, uint32_t data) const;
+  uint32_t ReadZSFD(uint32_t mid) const;
 
-  void WriteDSR(unsigned long mid, unsigned long data) const;
-  unsigned long ReadDSR(unsigned long mid) const;
+  void WriteDSR(uint32_t mid, uint32_t data) const;
+  uint32_t ReadDSR(uint32_t mid) const;
 
-  void WriteST(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadST(unsigned long mid, unsigned long ch) const;
+  void WriteST(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadST(uint32_t mid, uint32_t ch) const;
 
-  void WritePT(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadPT(unsigned long mid, unsigned long ch) const;
+  void WritePT(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadPT(uint32_t mid, uint32_t ch) const;
 
-  void WriteDRAMDLY(unsigned long mid, unsigned long ch, unsigned long data) const;
-  void WriteDRAMBITSLIP(unsigned long mid, unsigned long ch) const;
-  void WriteDRAMTEST(unsigned long mid, unsigned long data) const;
-  unsigned long ReadDRAMTEST(unsigned long mid, unsigned long ch) const;
+  // DRAM Controls
+  void WriteDRAMDLY(uint32_t mid, uint32_t ch, uint32_t data) const;
+  void WriteDRAMBITSLIP(uint32_t mid, uint32_t ch) const;
+  void WriteDRAMTEST(uint32_t mid, uint32_t data) const;
+  uint32_t ReadDRAMTEST(uint32_t mid, uint32_t ch) const;
 
-  void WriteDAQMODE(unsigned long mid, unsigned long data) const;
-  unsigned long ReadDAQMODE(unsigned long mid) const;
+  void WriteDAQMODE(uint32_t mid, uint32_t data) const;
+  uint32_t ReadDAQMODE(uint32_t mid) const;
 
-  void WriteHV(unsigned long mid, unsigned long ch, float data) const;
-  float ReadHV(unsigned long mid, unsigned long ch) const;
+  // Sensors & Environment
+  void WriteHV(uint32_t mid, uint32_t ch, float data) const;
+  float ReadHV(uint32_t mid, uint32_t ch) const;
+  float ReadTEMP(uint32_t mid, uint32_t ch) const;
 
-  float ReadTEMP(unsigned long mid, unsigned long ch) const;
+  void WriteADCMUX(uint32_t mid, uint32_t ch, uint32_t data) const;
+  void ReadFADCBUF(uint32_t mid, uint32_t * data) const;
 
-  void WriteADCMUX(unsigned long mid, unsigned long ch, unsigned long data) const;
-  void ReadFADCBUF(unsigned long mid, unsigned long * data) const;
+  // Calibration & Alignment (Complex Logic)
+  void AlignFADC500(uint32_t mid) const;
+  void AlignSADC64(uint32_t mid) const;
+  void AlignFADC125(uint32_t mid) const;
+  void AlignIADC64(uint32_t mid) const;
+  void AlignDRAM(uint32_t mid) const;
 
-  void AlignFADC500(unsigned long mid) const;
-  void AlignSADC64(unsigned long mid) const;
-  void AlignFADC125(unsigned long mid) const;
-  void AlignIADC64(unsigned long mid) const;
-  void AlignDRAM(unsigned long mid) const;
+  // Global Trigger Controls
+  void WriteRUNNO(uint32_t data) const;
+  uint32_t ReadRUNNO() const;
 
-  void WriteRUNNO(unsigned long data) const;
-  unsigned long ReadRUNNO() const;
-
-  void WriteGATEDLY(unsigned long data) const;
-  unsigned long ReadGATEDLY() const;
+  void WriteGATEDLY(uint32_t data) const;
+  uint32_t ReadGATEDLY() const;
 
   void SendTRIG() const;
 
-  void ReadLNSTAT(unsigned long * data) const;
-  void ReadMIDS(unsigned long * data) const;
+  void ReadLNSTAT(uint32_t * data) const;
+  void ReadMIDS(uint32_t * data) const;
 
-  void WritePTRIG(unsigned long data) const;
-  unsigned long ReadPTRIG() const;
+  void WritePTRIG(uint32_t data) const;
+  uint32_t ReadPTRIG() const;
 
-  void WriteTRIGENABLE(unsigned long mid, unsigned long data) const;
-  unsigned long ReadTRIGENABLE(unsigned long mid) const;
+  void WriteTRIGENABLE(uint32_t mid, uint32_t data) const;
+  uint32_t ReadTRIGENABLE(uint32_t mid) const;
 
-  void WriteEXTOUT(unsigned long data) const;
-  unsigned long ReadEXTOUT() const;
+  void WriteEXTOUT(uint32_t data) const;
+  uint32_t ReadEXTOUT() const;
 
-  void WriteGATEWIDTH(unsigned long data) const;
-  unsigned long ReadGATEWIDTH() const;
+  void WriteGATEWIDTH(uint32_t data) const;
+  uint32_t ReadGATEWIDTH() const;
 
-  void WriteEXTOUTWIDTH(unsigned long data) const;
-  unsigned long ReadEXTOUTWIDTH() const;
+  void WriteEXTOUTWIDTH(uint32_t data) const;
+  uint32_t ReadEXTOUTWIDTH() const;
 
-  unsigned long ReadBCount(unsigned long mid) const;
-  int ReadData(unsigned long mid, unsigned long bcount, unsigned char * data) const;
+  // Data Readout
+  uint32_t ReadBCount(uint32_t mid) const;
+  int ReadData(uint32_t mid, uint32_t bcount, unsigned char * data) const;
 
-  void WriteGAIN(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadGAIN(unsigned long mid, unsigned long ch) const;
+  void WriteGAIN(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadGAIN(uint32_t mid, uint32_t ch) const;
 
-  void WriteMTHR(unsigned long mid, unsigned long data) const;
-  unsigned long ReadMTHR(unsigned long mid) const;
+  void WriteMTHR(uint32_t mid, uint32_t data) const;
+  uint32_t ReadMTHR(uint32_t mid) const;
 
-  void WritePSDDLY(unsigned long mid, unsigned long data) const;
-  unsigned long ReadPSDDLY(unsigned long mid) const;
+  void WritePSDDLY(uint32_t mid, uint32_t data) const;
+  uint32_t ReadPSDDLY(uint32_t mid) const;
 
-  void WritePSDTHR(unsigned long mid, float data) const;
-  float ReadPSDTHR(unsigned long mid) const;
+  void WritePSDTHR(uint32_t mid, float data) const;
+  float ReadPSDTHR(uint32_t mid) const;
 
-  unsigned long ReadADCSTATWORD(unsigned long mid) const;
+  uint32_t ReadADCSTATWORD(uint32_t mid) const;
 
-  void WriteMTHRFADC500(unsigned long data) const;
-  unsigned long ReadMTHRFADC500() const;
+  // Specific ADC Controls
+  void WriteMTHRFADC500(uint32_t data) const;
+  uint32_t ReadMTHRFADC500() const;
+  void WritePSCALEFADC500(uint32_t data) const;
+  uint32_t ReadPSCALEFADC500() const;
 
-  void WritePSCALEFADC500(unsigned long data) const;
-  unsigned long ReadPSCALEFADC500() const;
+  void WriteMTHRSADC64MU(uint32_t data) const;
+  uint32_t ReadMTHRSADC64MU() const;
+  void WritePSCALESADC64MU(uint32_t data) const;
+  uint32_t ReadPSCALESADC64MU() const;
 
-  void WriteMTHRSADC64MU(unsigned long data) const;
-  unsigned long ReadMTHRSADC64MU() const;
+  void WriteMTHRSADC64LS(uint32_t data) const;
+  uint32_t ReadMTHRSADC64LS() const;
+  void WritePSCALESADC64LS(uint32_t data) const;
+  uint32_t ReadPSCALESADC64LS() const;
 
-  void WritePSCALESADC64MU(unsigned long data) const;
-  unsigned long ReadPSCALESADC64MU() const;
+  void WriteMTHRIADC64(uint32_t data) const;
+  uint32_t ReadMTHRIADC64() const;
+  void WritePSCALEIADC64(uint32_t data) const;
+  uint32_t ReadPSCALEIADC64() const;
 
-  void WriteMTHRSADC64LS(unsigned long data) const;
-  unsigned long ReadMTHRSADC64LS() const;
+  // Trigger Switches
+  void WriteTrigSwitchFADC500(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
+                              uint32_t iadc) const;
+  uint32_t ReadSwitchFADC500() const;
 
-  void WritePSCALESADC64LS(unsigned long data) const;
-  unsigned long ReadPSCALESADC64LS() const;
+  void WriteTrigSwitchSADC64MU(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
+                               uint32_t iadc) const;
+  uint32_t ReadSwitchSADC64MU() const;
 
-  void WriteMTHRIADC64(unsigned long data) const;
-  unsigned long ReadMTHRIADC64() const;
+  void WriteTrigSwitchSADC64LS(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
+                               uint32_t iadc) const;
+  uint32_t ReadSwitchSADC64LS() const;
 
-  void WritePSCALEIADC64(unsigned long data) const;
-  unsigned long ReadPSCALEIADC64() const;
+  void WriteTrigSwitchIADC64(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
+                             uint32_t iadc) const;
+  uint32_t ReadSwitchIADC64() const;
 
-  void WriteTrigSwitchFADC500(unsigned long fadc, unsigned long sadc_muon, unsigned long sadc_ls,
-                              unsigned long muondaq) const;
-  unsigned long ReadSwitchFADC500() const;
+  uint32_t ReadDBG() const;
 
-  void WriteTrigSwitchSADC64MU(unsigned long fadc, unsigned long sadc_muon, unsigned long sadc_ls,
-                               unsigned long muondaq) const;
-  unsigned long ReadSwitchSADC64MU() const;
-
-  void WriteTrigSwitchSADC64LS(unsigned long fadc, unsigned long sadc_muon, unsigned long sadc_ls,
-                               unsigned long muondaq) const;
-  unsigned long ReadSwitchSADC64LS() const;
-
-  void WriteTrigSwitchIADC64(unsigned long fadc, unsigned long sadc_muon, unsigned long sadc_ls,
-                             unsigned long muondaq) const;
-  unsigned long ReadSwitchIADC64() const;
-
-  unsigned long ReadDBG() const;
-
-  void WriteDT(unsigned long mid, unsigned long ch, unsigned long data) const;
-  unsigned long ReadDT(unsigned long mid, unsigned long ch) const;
+  void WriteDT(uint32_t mid, uint32_t ch, uint32_t data) const;
+  uint32_t ReadDT(uint32_t mid, uint32_t ch) const;
 
 private:
   USB3Tcb _usb;
+
+  // Helper for address calculation
+  uint32_t GetAddr(uint32_t baseAddr, uint32_t mid, uint32_t ch) const;
 };

@@ -154,7 +154,7 @@ int AMORETCB::CheckLinkStatus()
 {
   const int nport = 8;
 
-  unsigned long data[2];
+  uint32_t data[2];
   fNKTCB.ReadLNSTAT(data);
 
   int linked[nport];
@@ -163,7 +163,7 @@ int AMORETCB::CheckLinkStatus()
   }
 
   // get mid
-  unsigned long linkedMID[40];
+  uint32_t linkedMID[40];
   fNKTCB.ReadMIDS(linkedMID);
 
   int nlinked = 0;

@@ -7,4 +7,8 @@
 /lib/
 /.clang-format
 /ld.sh
-/amore.config
+/*.C
+/*.py
+/*.config
+/*.root*
+/*.h5*

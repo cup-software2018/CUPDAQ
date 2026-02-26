@@ -17,6 +17,7 @@ set ( DICT_I_FLAGS
     -I${CMAKE_SOURCE_DIR}/DAQConfig
     -I${CMAKE_SOURCE_DIR}/DAQTrigger
     -I${CMAKE_SOURCE_DIR}/DAQ
+    -I${CMAKE_SOURCE_DIR}/AMORE
     -I${CMAKE_SOURCE_DIR}/AMORESystem
     -I${CMAKE_SOURCE_DIR}/AMOREAlgs
     
@@ -55,6 +56,7 @@ endif ()
 # Link ROOT and apply its compile defs
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
+    yaml-cpp
     ${ROOT_LIBRARIES}
     OnlConsts
     Notice
@@ -65,6 +67,7 @@ target_link_libraries ( ${MODULE_NAME}
     DAQConfig
     DAQTrigger
     DAQ
+    AMORE
     AMORESystem    
     AMOREAlgs
 )

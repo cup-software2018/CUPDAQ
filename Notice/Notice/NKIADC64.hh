@@ -15,8 +15,12 @@ public:
   int Open();
   void Close();
 
-  int ReadBCount() const;
-  int ReadData(int bcount, unsigned char * data, unsigned int timeout = 0) const;
+  // Changed to uint32_t for consistency
+  uint32_t ReadBCount() const;
+
+  // bcount: number of 256-byte blocks
+  int ReadData(uint32_t bcount, unsigned char * data, unsigned int timeout = 0) const;
+
   void FlushData() const;
 
   int Sid() const;

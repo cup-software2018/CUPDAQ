@@ -31,38 +31,38 @@ void AbsTCB::WriteRegisterTCB(TCBConf * conf)
     WriteDT(0, 3, conf->DTI());
 
     int sw = conf->SWF();
-    unsigned long f = (unsigned long)TESTBIT(sw, 0);
-    unsigned long sm = (unsigned long)TESTBIT(sw, 1);
-    unsigned long sl = (unsigned long)TESTBIT(sw, 2);
-    unsigned long i = (unsigned long)TESTBIT(sw, 3);
+    uint32_t f = (uint32_t)TESTBIT(sw, 0);
+    uint32_t sm = (uint32_t)TESTBIT(sw, 1);
+    uint32_t sl = (uint32_t)TESTBIT(sw, 2);
+    uint32_t i = (uint32_t)TESTBIT(sw, 3);
     WriteTRGSWFADC(f, sm, sl, i);
 
     sw = conf->SWSM();
-    f = (unsigned long)TESTBIT(sw, 0);
-    sm = (unsigned long)TESTBIT(sw, 1);
-    sl = (unsigned long)TESTBIT(sw, 2);
-    i = (unsigned long)TESTBIT(sw, 3);
+    f = (uint32_t)TESTBIT(sw, 0);
+    sm = (uint32_t)TESTBIT(sw, 1);
+    sl = (uint32_t)TESTBIT(sw, 2);
+    i = (uint32_t)TESTBIT(sw, 3);
     WriteTRGSWSADCMU(f, sm, sl, i);
 
     sw = conf->SWSL();
-    f = (unsigned long)TESTBIT(sw, 0);
-    sm = (unsigned long)TESTBIT(sw, 1);
-    sl = (unsigned long)TESTBIT(sw, 2);
-    i = (unsigned long)TESTBIT(sw, 3);
+    f = (uint32_t)TESTBIT(sw, 0);
+    sm = (uint32_t)TESTBIT(sw, 1);
+    sl = (uint32_t)TESTBIT(sw, 2);
+    i = (uint32_t)TESTBIT(sw, 3);
     WriteTRGSWSADCLS(f, sm, sl, i);
 
     sw = conf->SWI();
-    f = (unsigned long)TESTBIT(sw, 0);
-    sm = (unsigned long)TESTBIT(sw, 1);
-    sl = (unsigned long)TESTBIT(sw, 2);
-    i = (unsigned long)TESTBIT(sw, 3);
+    f = (uint32_t)TESTBIT(sw, 0);
+    sm = (uint32_t)TESTBIT(sw, 1);
+    sl = (uint32_t)TESTBIT(sw, 2);
+    i = (uint32_t)TESTBIT(sw, 3);
     WriteTRGSWIADC(f, sm, sl, i);
   }
 }
 
 void AbsTCB::WriteRegisterFADC(FADCTConf * conf)
 {
-  unsigned long mid = conf->MID();
+  uint32_t mid = conf->MID();
   WriteRL(mid, conf->RL());
   WriteDSR(mid, conf->DSR());
   WriteTLT(mid, conf->TLT());
@@ -90,7 +90,7 @@ void AbsTCB::WriteRegisterFADC(FADCTConf * conf)
 
 void AbsTCB::WriteRegisterSADC(SADCTConf * conf)
 {
-  unsigned long mid = conf->MID();
+  uint32_t mid = conf->MID();
 
   WriteGW(mid, conf->GW());
   WriteCW(mid, 1, conf->CW());
@@ -113,7 +113,7 @@ void AbsTCB::WriteRegisterSADC(SADCTConf * conf)
 
 void AbsTCB::WriteRegisterIADC(IADCTConf * conf)
 {
-  unsigned long mid = conf->MID();
+  uint32_t mid = conf->MID();
 
   int mode = conf->MODE();
   WriteRL(mid, conf->RL());
@@ -144,7 +144,7 @@ void AbsTCB::WriteRegisterIADC(IADCTConf * conf)
 void AbsTCB::PrintRegisterTCB(TCBConf * conf)
 {
   if (conf->TCBTYPE() == TCB::V2) {
-    unsigned long sw = ReadTRGSWFADC();
+    uint32_t sw = ReadTRGSWFADC();
     int f = (int)TESTBIT(sw, 0);
     int sm = (int)TESTBIT(sw, 1);
     int sl = (int)TESTBIT(sw, 2);
@@ -201,9 +201,9 @@ void AbsTCB::PrintRegisterFADC(FADCTConf * conf)
   int mid = conf->MID();
   int nch = conf->NCH();
 
-  unsigned long rRL = ReadRL(mid);
-  unsigned long rTLT = ReadTLT(mid);
-  unsigned long rDSR = ReadDSR(mid);
+  uint32_t rRL = ReadRL(mid);
+  uint32_t rTLT = ReadTLT(mid);
+  uint32_t rDSR = ReadDSR(mid);
 
   cout << Form(" ++ FADC register: SID(%d) MID(%1d) NCH(%1d) RL(%lu) TLT(%lX) "
                "DSR(%lu)",
@@ -285,10 +285,10 @@ void AbsTCB::PrintRegisterSADC(SADCTConf * conf)
   int mid = conf->MID();
   int nch = conf->NCH();
 
-  unsigned long rCW = ReadCW(mid, 1);
-  unsigned long rGW = ReadGW(mid);
-  unsigned long rPSW = ReadPSW(mid, 1);
-  unsigned long rPEDSUB = ReadAMODE(mid, 1);
+  uint32_t rCW = ReadCW(mid, 1);
+  uint32_t rGW = ReadGW(mid);
+  uint32_t rPSW = ReadPSW(mid, 1);
+  uint32_t rPEDSUB = ReadAMODE(mid, 1);
 
   cout << Form(" ++ SADCT register: SID(%d) MID(%d) NCH(%1d) CW(%lu) GW(%lu) "
                "PSW(%lu) SUBPED(%lu)",
@@ -326,11 +326,11 @@ void AbsTCB::PrintRegisterIADC(IADCTConf * conf)
   int mid = conf->MID();
   int nch = conf->NCH();
 
-  unsigned long rRL = ReadRL(mid);
-  unsigned long rCW = ReadCW(mid, 1);
-  unsigned long rGW = ReadGW(mid);
-  unsigned long rPSW = ReadPSW(mid, 1);
-  unsigned long rMODE = ReadDAQMODE(mid);
+  uint32_t rRL = ReadRL(mid);
+  uint32_t rCW = ReadCW(mid, 1);
+  uint32_t rGW = ReadGW(mid);
+  uint32_t rPSW = ReadPSW(mid, 1);
+  uint32_t rMODE = ReadDAQMODE(mid);
 
   if (rMODE > 0) rGW = 0;
   else rRL = 0;

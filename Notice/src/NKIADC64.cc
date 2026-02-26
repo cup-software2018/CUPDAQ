@@ -1,24 +1,30 @@
+#include <algorithm> // for std::min
 #include <vector>
 
 #include "DAQUtils/ELog.hh"
 #include "Notice/NKIADC64.hh"
 
 namespace {
-constexpr uint16_t kNKIADC64_VENDOR_ID = 0x0547;
-constexpr uint16_t kNKIADC64_PRODUCT_ID = 0x2010;
+constexpr uint16_t kVENDOR_ID = 0x0547;
+constexpr uint16_t kPRODUCT_ID = 0x2010;
 
-constexpr uint32_t kNKIADC64_REG_BCOUNT = 0x30000000u;
-constexpr uint32_t kNKIADC64_ADDR_DATA = 0x40000000u;
+// Register Addresses
+constexpr uint32_t kAddr_BCOUNT = 0x30000000u;
+constexpr uint32_t kAddr_DATA = 0x40000000u;
 
-constexpr unsigned long kNKIADC64_FLUSH_MAX_BYTES = 10485760ul;
-constexpr unsigned long kNKIADC64_FLUSH_CHUNK_BCOUNT = 10240ul;
+// Constants
+constexpr uint32_t kBlockSize = 256u;
 } // namespace
 
-NKIADC64::NKIADC64() {}
+NKIADC64::NKIADC64()
+  : _sid(0),
+    _usb(kVENDOR_ID, kPRODUCT_ID, 0)
+{
+}
 
 NKIADC64::NKIADC64(int sid)
   : _sid(sid),
-    _usb(kNKIADC64_VENDOR_ID, kNKIADC64_PRODUCT_ID, sid)
+    _usb(kVENDOR_ID, kPRODUCT_ID, sid)
 {
 }
 
@@ -27,20 +33,20 @@ NKIADC64::~NKIADC64() { Close(); }
 void NKIADC64::SetSID(int sid)
 {
   _sid = sid;
-  _usb.Set(kNKIADC64_VENDOR_ID, kNKIADC64_PRODUCT_ID, _sid);
+  _usb.Set(kVENDOR_ID, kPRODUCT_ID, _sid);
 }
 
 int NKIADC64::Open()
 {
   int status = _usb.Open();
   if (status < 0) {
-    ERROR("NKIADC64: failed to open device (sid=%d)", _sid);
+    ERROR("NKIADC64: Failed to open device (sid=%d)", _sid);
     return status;
   }
 
   status = _usb.ClaimInterface(0);
   if (status < 0) {
-    ERROR("NKIADC64: failed to claim interface 0 (sid=%d)", _sid);
+    ERROR("NKIADC64: Failed to claim interface 0 (sid=%d)", _sid);
     _usb.Close();
     return status;
   }
@@ -54,41 +60,45 @@ void NKIADC64::Close()
   _usb.Close();
 }
 
-int NKIADC64::ReadBCount() const { return _usb.ReadRegI(kNKIADC64_REG_BCOUNT); }
+uint32_t NKIADC64::ReadBCount() const { return _usb.ReadReg(kAddr_BCOUNT); }
 
-int NKIADC64::ReadData(int bcount, unsigned char * data, unsigned int timeout) const
+int NKIADC64::ReadData(uint32_t bcount, unsigned char * data, unsigned int timeout) const
 {
-  if (bcount <= 0 || data == nullptr) {
-    ERROR("NKIADC64: invalid ReadData arguments (bcount=%d, data=%p)", bcount, static_cast<void *>(data));
+  if (bcount == 0 || data == nullptr) {
+    ERROR("NKIADC64: Invalid ReadData arguments (bcount=%u, data=%p)", bcount,
+          static_cast<void *>(data));
     return -1;
   }
 
-  int count = bcount * 256;
-  return _usb.Read(static_cast<uint32_t>(count), kNKIADC64_ADDR_DATA, data, timeout);
+  // Calculate total bytes: bcount * 256 bytes per block
+  uint32_t total_bytes = bcount * kBlockSize;
+
+  return _usb.Read(total_bytes, kAddr_DATA, data, timeout);
 }
 
 void NKIADC64::FlushData() const
 {
-  int bcountInt = ReadBCount();
-  if (bcountInt <= 0) { return; }
+  uint32_t bcount = ReadBCount();
+  if (bcount == 0) return;
 
-  unsigned long bcount = static_cast<unsigned long>(bcountInt);
+  // Define a chunk size for flushing (e.g., 2.6 MB buffer)
+  // 10240 blocks * 256 bytes = 2,621,440 bytes
+  constexpr uint32_t kChunkBlocks = 10240u;
+  constexpr size_t kBufferSize = kChunkBlocks * kBlockSize;
 
-  std::vector<unsigned char> buffer(kNKIADC64_FLUSH_MAX_BYTES);
+  std::vector<unsigned char> buffer(kBufferSize);
 
-  unsigned long chunk = bcount / kNKIADC64_FLUSH_CHUNK_BCOUNT;
-  unsigned long slice = bcount % kNKIADC64_FLUSH_CHUNK_BCOUNT;
+  uint32_t remaining_blocks = bcount;
 
-  for (unsigned long i = 0; i < chunk; ++i) {
-    int ret = ReadData(static_cast<int>(kNKIADC64_FLUSH_CHUNK_BCOUNT), buffer.data());
+  while (remaining_blocks > 0) {
+    uint32_t read_blocks = std::min(remaining_blocks, kChunkBlocks);
+
+    int ret = ReadData(read_blocks, buffer.data());
     if (ret < 0) {
-      ERROR("NKIADC64: FlushData chunk read failed at i=%lu (sid=%d)", i, _sid);
-      return;
+      ERROR("NKIADC64: FlushData failed while draining %u blocks (sid=%d)", read_blocks, _sid);
+      break;
     }
-  }
 
-  if (slice > 0ul) {
-    int ret = ReadData(static_cast<int>(slice), buffer.data());
-    if (ret < 0) { ERROR("NKIADC64: FlushData slice read failed (sid=%d)", _sid); }
+    remaining_blocks -= read_blocks;
   }
 }
