@@ -42,39 +42,60 @@ bool AMORETCB::Config()
     return false;
   }
 
+  //
+  // TCB configuration
   fNKTCB.Reset();
 
+  auto * conf = static_cast<AMORETCBConf *>(fConfigs->FindConfig(ADC::AMORETCB, 0));
+  if (!conf) {
+    ERROR("no AMORETCB in config list");
+    return false;
+  }
+
+  // TCB DRAM on
+  fNKTCB.WriteDRAMON(0, 1);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  unsigned long dramon = fNKTCB.ReadDRAMON(0);
+  if (dramon) { INFO("AMORETCB DRAM on"); }
+  else {
+    ERROR("AMORETCB error occurred during turning DRAM on");
+    return false;
+  }
+
+  ConfigAMORETCB(conf);
+
+  //
+  // ADC configuration
   bool retval = true;
   for (int i = 0; i < nconf; i++) {
     auto * conf = static_cast<AbsConf *>(fConfigs->At(i));
     if (!conf->IsEnabled() || !conf->IsLinked()) continue;
 
     int mid = conf->MID();
-    TString name = conf->GetName();
+    const char * name = conf->GetName();
+
+    if (mid == 0) continue; // AMORETCB
+    if (conf->GetADCType() != ADC::AMOREADC) continue;
 
     fNKTCB.WriteDRAMON(mid, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    unsigned long dramon = fNKTCB.ReadDRAMON(mid);
-    if (dramon) { INFO("%s[mid=%2lu] DRAM on", name.Data(), mid); }
+    dramon = fNKTCB.ReadDRAMON(mid);
+    if (dramon) { INFO("%s[mid=%2lu] DRAM on", name, mid); }
     else {
-      ERROR("%s[mid=%2lu] error occurred during turning DRAM on", name.Data(), mid);
+      ERROR("%s[mid=%2lu] error occurred during turning DRAM on", name, mid);
       return false;
     }
 
-    if (name.Contains("AMORETCB")) { retval &= ConfigAMORETCB(static_cast<AMORETCBConf *>(conf)); }
-    else if (name.Contains("AMOREADC")) {
-      unsigned long bcount = fNKTCB.ReadBCount(mid);
-      if (bcount) {
-        std::vector<unsigned char> data(bcount * kKILOBYTES);
-        fNKTCB.ReadData(mid, bcount, data.data());
-      }
-      retval &= ConfigAMOREADC(static_cast<AMOREADCConf *>(conf));
+    // clean ADC's dram
+    unsigned long bcount = fNKTCB.ReadBCount(mid);
+    if (bcount) {
+      std::vector<unsigned char> data(bcount * kKILOBYTES);
+      fNKTCB.ReadData(mid, bcount, data.data());
     }
-    else {
-      WARNING("unknown kind of module : %s", name.Data());
-      continue;
-    }
+
+    retval &= ConfigAMOREADC(static_cast<AMOREADCConf *>(conf));
   }
 
   if (retval) { INFO("all modules configuration done"); }

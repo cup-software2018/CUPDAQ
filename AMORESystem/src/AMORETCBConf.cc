@@ -5,7 +5,7 @@
 ClassImp(AMORETCBConf)
 
 AMORETCBConf::AMORETCBConf(int sid)
-  : AbsConf(sid, ADC::TCB)
+  : AbsConf(sid, ADC::AMORETCB)
 {
   SetNameTitle("AMORETCB", "Trigger Control Board for AMOREADC");
   SetEnable();
@@ -13,5 +13,5 @@ AMORETCBConf::AMORETCBConf(int sid)
 
 void AMORETCBConf::PrintConf() const
 {
-  std::cout << Form(" ++ AMORETCB config: SID(%d) CW(%d) DT(%d) SCALE(%d)", fSID, fCW, fDT, fSCALE) << std::endl;
+  std::cout << Form(" ++ AMORETCB config: SID(%d) CW(%d) DT(%d) PSC(%d)", fSID, fCW, fDT, fPSC) << std::endl;
 }

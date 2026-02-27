@@ -148,7 +148,7 @@ void AMOREDAQManager::ReadConfigTCB(YAML::Node ymlnode)
   if (tcb["ID"]) conf->SetDAQID(tcb["ID"].as<int>());
   if (tcb["CW"]) conf->SetCW(tcb["CW"].as<int>());
   if (tcb["DT"]) conf->SetDT(tcb["DT"].as<int>());
-  if (tcb["SCALE"]) conf->SetSCALE(tcb["SCALE"].as<int>());
+  if (tcb["PSC"]) conf->SetPSC(tcb["PSC"].as<int>());
 
   fConfigList->Add(conf);
 }
@@ -225,7 +225,14 @@ bool AMOREDAQManager::PrepareDAQ()
     fFIFOs.push_back(std::make_unique<AMOREChunkFIFO>(kNCHAMOREADC, head, tail));
   }
 
+  Sort();
+
   fTimeDelta = dsr * 1000;
+
+  
+
+
+  INFO("prepared to take data from AMOREADC");
 
   return true;
 }

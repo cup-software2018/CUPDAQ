@@ -10,11 +10,11 @@ public:
 
   void SetCW(int cw);
   void SetDT(int dt);
-  void SetSCALE(int s);
+  void SetPSC(int s);
 
   int CW() const;
   int DT() const;
-  int SCALE() const;
+  int PSC() const;
 
   void SetCID(int, int) override {}
   void SetPID(int, int) override {}
@@ -26,15 +26,15 @@ public:
 private:
   int fCW{};
   int fDT{};
-  int fSCALE{};
+  int fPSC{};
 
   ClassDef(AMORETCBConf, 1)
 };
 
 inline void AMORETCBConf::SetCW(int cw) { fCW = cw; }
 inline void AMORETCBConf::SetDT(int dt) { fDT = dt; }
-inline void AMORETCBConf::SetSCALE(int s) { fSCALE = s; }
+inline void AMORETCBConf::SetPSC(int s) { fPSC = s; }
 
 inline int AMORETCBConf::CW() const { return fCW; }
 inline int AMORETCBConf::DT() const { return fDT; }
-inline int AMORETCBConf::SCALE() const { return fSCALE; }
+inline int AMORETCBConf::PSC() const { return fPSC; }
