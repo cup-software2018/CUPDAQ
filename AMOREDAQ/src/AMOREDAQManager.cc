@@ -230,7 +230,10 @@ bool AMOREDAQManager::PrepareDAQ()
   fTimeDelta = dsr * 1000;
 
 
-
+  fRemainingBCount = new int[nadc];
+  for (int i = 0; i < nadc; i++) {
+    fRemainingBCount[i] = 0;
+  }
 
   INFO("prepared to take data from AMOREADC");
 
