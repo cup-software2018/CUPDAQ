@@ -1,3 +1,5 @@
+#include "TRandom3.h"
+
 #include "AMOREDAQ/AMOREDAQManager.hh"
 
 void AMOREDAQManager::TF_ReadData_AMORE()
@@ -162,6 +164,11 @@ void AMOREDAQManager::TF_SWTrigger(int n)
   unsigned long lasttime;
   bool isFirstSample = true;
 
+  std::vector<int> ndt(nch);
+  std::vector<bool> istriggered(nch);
+
+  const int DT = 100000;
+
   while (true) {
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
 
@@ -183,6 +190,26 @@ void AMOREDAQManager::TF_SWTrigger(int n)
               WARNING("[NS ERROR] missing samples! Last: %lu Now: %lu Gap: %lu ns | Lost: %lu",
                       lasttime, currenttime, delta, lost);
             }
+          }
+        }
+
+        for (int i = 0; i < nch; ++i) {
+          if (!conf->TRGON(i)) continue;
+
+          if (istriggered[i]) {
+            ndt[i] += 1;
+            if (ndt[i] > DT) {
+              istriggered[i] = false;
+              ndt[i] = 0;
+            }
+            continue;
+          }
+
+          if(gRandom->Rndm() < 1e-06) {
+            INFO("%02d [sid=%d] is triggered", i, adc->GetSID());
+
+
+            istriggered[i] = true;
           }
         }
       }

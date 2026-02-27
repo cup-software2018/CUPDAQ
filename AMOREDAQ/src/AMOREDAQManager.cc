@@ -142,7 +142,7 @@ void AMOREDAQManager::ReadConfigTCB(YAML::Node ymlnode)
 {
   if (!ymlnode["AMORETCB"]) return;
 
-  auto * conf = new AMORETCBConf();
+  auto * conf = new AMORETCBConf(0);
   auto tcb = ymlnode["AMORETCB"];
 
   if (tcb["ID"]) conf->SetDAQID(tcb["ID"].as<int>());
@@ -229,7 +229,7 @@ bool AMOREDAQManager::PrepareDAQ()
 
   fTimeDelta = dsr * 1000;
 
-  
+
 
 
   INFO("prepared to take data from AMOREADC");
