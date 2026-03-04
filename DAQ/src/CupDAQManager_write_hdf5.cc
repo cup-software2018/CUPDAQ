@@ -32,6 +32,16 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
   double perror = 0;
   double integral = 0;
 
+  int nadcch = 4;
+  ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(fADCType) % 10);
+  switch (adctype) {
+    case ADC::FADC: nadcch = 4; break;
+    case ADC::GADC: nadcch = 16; break;
+    case ADC::MADC: nadcch = 4; break;
+    case ADC::IADC: nadcch = 40; break;
+    default: break;
+  }
+
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
   fWriteStatus = RUNNING;
@@ -55,9 +65,10 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
       std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
       BuiltEvent * ev = bevent.get();
 
-      unsigned long fastttime = UINT64_MAX;
-      unsigned int tnum = 0;
-      unsigned int ttype = 0;
+      eventinfo.tnum = ev->GetTriggerNumber();
+      eventinfo.ttime = ev->GetTriggerTime();
+      eventinfo.ttype = ev->GetTriggerType();
+
       unsigned short nhit = 0;
 
       const int nadc = ev->GetEntries();
@@ -65,15 +76,14 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         auto * adcraw = static_cast<FADCRawEvent *>(ev->At(j));
         auto * header = adcraw->GetADCHeader();
 
-        if (header->GetLocalTriggerTime() < fastttime) {
-          fastttime = header->GetLocalTriggerTime();
-          tnum = header->GetTriggerNumber();
-          ttype = header->GetTriggerType();
+        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
+        if (!conf) {
+          ERROR("no config for mid=%d", header->GetMID());
+          RUNSTATE::SetError(fRunStatus);
+          break;
         }
 
-        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
-
-        for (int i = 0; i < kNCHFADC; ++i) {
+        for (int i = 0; i < nadcch; ++i) {
           if (header->GetZero(i)) continue;
 
           FChannel_t channel{};
@@ -89,9 +99,6 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         }
       }
 
-      eventinfo.tnum = tnum;
-      eventinfo.ttime = fastttime;
-      eventinfo.ttype = ttype;
       eventinfo.nhit = nhit;
 
       wlock.lock();
@@ -99,7 +106,7 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
       wlock.unlock();
 
       if (status < 0) {
-        ERROR("H5FADCEvent::AppendEvent failed (tnum=%u)", tnum);
+        ERROR("H5FADCEvent::AppendEvent failed (tnum=%u)", eventinfo.tnum);
         RUNSTATE::SetError(fRunStatus);
         break;
       }

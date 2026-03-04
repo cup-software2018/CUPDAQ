@@ -189,7 +189,7 @@ bool H5DataReader::AddFile(const char * fname)
 
   const int nevt = static_cast<int>(subrun.nevent);
   int ient = fNEvent;
-  int ievt = static_cast<int>(subrun.first);
+  int ievt = 0;//static_cast<int>(subrun.first);
 
   // Build mapping from global entry index -> local event index
   for (int i = 0; i < nevt; ++i) {

@@ -114,6 +114,18 @@ void CupDAQManager::TF_TriggerMon()
   TStopwatch sw;
   sw.Start();
 
+  auto get_hms = [](double sec) {
+    if (sec < 0) sec = 0;
+
+    int h = static_cast<int>(sec) / 3600;
+    int m = (static_cast<int>(sec) % 3600) / 60;
+    double s = std::fmod(sec, 60.0);
+
+    char buf[16];
+    std::snprintf(buf, sizeof(buf), "%02d:%02d:%04.1f", h, m, s);
+    return std::string(buf);
+  };
+
   while (true) {
     double elapsetime = sw.RealTime();
     sw.Continue();
@@ -132,15 +144,15 @@ void CupDAQManager::TF_TriggerMon()
       double insrate = dtime > 0.0 ? dnevent / dtime : 0.0;
       double accrate = triggertime > 0.0 ? triggernumber / triggertime : 0.0;
 
-      STATS("%4d events triggered [%8d | %8d / %5.1f(%5.1f) Hz / %.1f s]", static_cast<int>(dnevent), triggernumber,
-            fNBuiltEvent, insrate, accrate, triggertime);
+      STATS("%4d events triggered [%8d | %8d / %5.1f(%5.1f) Hz / %s]", static_cast<int>(dnevent),
+            triggernumber, fNBuiltEvent, insrate, accrate, get_hms(triggertime).c_str());
 
       dummynevent = static_cast<unsigned int>(triggernumber);
       dummytime = triggertime;
     }
 
-    bool runstate =
-        RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+    bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
+                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
     if (runstate) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -188,13 +200,14 @@ void CupDAQManager::TF_DebugMon()
       DEBUG("ADC bcount size: %s", adcbcountsize.Data());
       DEBUG("ADC buffer size: %s", adcbufsize.Data());
       DEBUG("sorting buffer size: %s", sortbufsize.Data());
-      DEBUG("building buffer size: %5zu %5zu", fBuiltEventBuffer1.size(), fBuiltEventBuffer2.size());
-      DEBUG("%.3f(r) %.3f(s) %.3f(b) %.3f(w)", fReadSleep / 1000.0, fSortSleep / 1000.0, fBuildSleep / 1000.0,
-            fWriteSleep / 1000.0);
+      DEBUG("building buffer size: %5zu %5zu", fBuiltEventBuffer1.size(),
+            fBuiltEventBuffer2.size());
+      DEBUG("%.3f(r) %.3f(s) %.3f(b) %.3f(w)", fReadSleep / 1000.0, fSortSleep / 1000.0,
+            fBuildSleep / 1000.0, fWriteSleep / 1000.0);
     }
 
-    bool runstate =
-        RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+    bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
+                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
     if (runstate) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -227,7 +240,8 @@ void CupDAQManager::TF_MsgServer()
   }
 
   int opt = 1;
-  if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt), sizeof(opt)) < 0) {
+  if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt),
+                 sizeof(opt)) < 0) {
     ERROR("[%s] setsockopt failed", name.Data());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
     close(master_socket);
@@ -291,7 +305,8 @@ void CupDAQManager::TF_MsgServer()
     }
 
     if (FD_ISSET(master_socket, &readfds)) {
-      int new_socket = accept(master_socket, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
+      int new_socket =
+          accept(master_socket, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
 
       if (new_socket < 0) {
         ERROR("[%s]: accept error occurred", name.Data());
@@ -327,8 +342,8 @@ void CupDAQManager::TF_MsgServer()
         getpeername(sd, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
 
         if (valread == 0) {
-          INFO("[%s]: host disconnected, socket fd: %d, ip: %s, port: %d", name.Data(), sd, inet_ntoa(address.sin_addr),
-               ntohs(address.sin_port));
+          INFO("[%s]: host disconnected, socket fd: %d, ip: %s, port: %d", name.Data(), sd,
+               inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
           close(sd);
           client_socket[i] = -1;
@@ -347,8 +362,10 @@ void CupDAQManager::TF_MsgServer()
               break;
             }
             case kQUERYRUNINFO: {
-              EncodeMsg(buffer, static_cast<unsigned long>(fRunNumber), static_cast<unsigned long>(fSubRunNumber),
-                        static_cast<unsigned long>(fStartDatime), static_cast<unsigned long>(fEndDatime));
+              EncodeMsg(buffer, static_cast<unsigned long>(fRunNumber),
+                        static_cast<unsigned long>(fSubRunNumber),
+                        static_cast<unsigned long>(fStartDatime),
+                        static_cast<unsigned long>(fEndDatime));
               root_socket[i]->SendRaw(buffer, kMESSLEN);
               break;
             }
@@ -392,8 +409,8 @@ void CupDAQManager::TF_MsgServer()
                 delete mess;
               }
               else {
-                WARNING("[%s] error in event sender [ip=%s, port=%d]", name.Data(), inet_ntoa(address.sin_addr),
-                        ntohs(address.sin_port));
+                WARNING("[%s] error in event sender [ip=%s, port=%d]", name.Data(),
+                        inet_ntoa(address.sin_addr), ntohs(address.sin_port));
               }
               break;
             }
@@ -499,8 +516,8 @@ void CupDAQManager::TF_ShrinkToFit()
       if (fVerboseLevel > 0) { INFO("shrink buffer memory to fit"); }
     }
 
-    bool runstate =
-        RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+    bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
+                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
     if (runstate) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -547,8 +564,8 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
 
         if (fVerboseLevel >= 1) { INFO("output file will be split"); }
       }
-      bool runstate =
-          RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) || RUNSTATE::CheckError(fRunStatus) || fDoExit;
+      bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
+                      RUNSTATE::CheckError(fRunStatus) || fDoExit;
       if (runstate) { break; }
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));

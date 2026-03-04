@@ -35,7 +35,7 @@ private:
 
   std::uint64_t fTotalChannels{0};
 
-    int fNDP{0};
+  int fNDP{0};
 
   std::vector<FChannelHeader_t> fChBuf;
   std::vector<std::uint16_t> fWaveBuf;

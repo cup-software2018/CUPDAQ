@@ -418,7 +418,7 @@ herr_t H5FADCEvent::AppendEvent(const EventInfo_t & info, const std::vector<FCha
 herr_t H5FADCEvent::ReadEvent(int n)
 {
   // resolve (file, local event index) from chain if needed
-  int evtno;
+  int evtno = n;
   hid_t fid = fChain && fChain->GetNFile() > 0 ? fChain->GetFileId(n, evtno) : fFile;
 
   // open all datasets needed for this event
