@@ -17,11 +17,11 @@ public:
   void Close();
 
   int GetNFile() const;
-  hid_t GetFileId(int entno, int & evtno);
+  hid_t GetFileId(int entno, int & evtno, bool * file_changed = nullptr);
 
 private:
-  hid_t fCurrentFile;
-  std::vector<DataFile_t *> fFiles;
+  DataFile_t * fCurrentFilePtr{nullptr};
+  std::vector<DataFile_t *> fFiles;  
 
   ClassDef(H5ChainFile, 0)
 };

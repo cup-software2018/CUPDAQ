@@ -11,11 +11,7 @@ H5AMOREEvent::H5AMOREEvent()
 
 H5AMOREEvent::~H5AMOREEvent()
 {
-  // free per-event read buffer
-  if (fData) {
-    delete[] fData;
-    fData = nullptr;
-  }
+  // fDataBuf is managed by std::vector, no manual deletion needed.
 }
 
 void H5AMOREEvent::Open()
@@ -29,7 +25,8 @@ void H5AMOREEvent::Open()
 
   // safety: file id must be valid in write mode
   if (fFile < 0) {
-    Error("Open", "invalid file id (fFile = %d). SetFileId must be called before Open().", static_cast<int>(fFile));
+    Error("Open", "invalid file id (fFile = %d). SetFileId must be called before Open().",
+          static_cast<int>(fFile));
     return;
   }
 
@@ -93,7 +90,8 @@ void H5AMOREEvent::Open()
     H5Pset_chunk(dcpl, 1, &chunk);
     H5Pset_deflate(dcpl, fCompressionLevel);
 
-    fDsetIndex = H5Dcreate2(fFile, "/events/index", H5T_NATIVE_ULLONG, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    fDsetIndex = H5Dcreate2(fFile, "/events/index", H5T_NATIVE_ULLONG, space, H5P_DEFAULT, dcpl,
+                            H5P_DEFAULT);
 
     H5Pclose(dcpl);
     H5Sclose(space);
@@ -137,7 +135,8 @@ void H5AMOREEvent::Open()
     H5Pset_chunk(dcpl, 2, chunk);
     H5Pset_deflate(dcpl, fCompressionLevel);
 
-    fDsetPhonon = H5Dcreate2(fFile, "/events/phonon", H5T_NATIVE_USHORT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    fDsetPhonon = H5Dcreate2(fFile, "/events/phonon", H5T_NATIVE_USHORT, space, H5P_DEFAULT, dcpl,
+                             H5P_DEFAULT);
 
     H5Pclose(dcpl);
     H5Sclose(space);
@@ -159,7 +158,8 @@ void H5AMOREEvent::Open()
     H5Pset_chunk(dcpl, 2, chunk);
     H5Pset_deflate(dcpl, fCompressionLevel);
 
-    fDsetPhoton = H5Dcreate2(fFile, "/events/photon", H5T_NATIVE_USHORT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+    fDsetPhoton = H5Dcreate2(fFile, "/events/photon", H5T_NATIVE_USHORT, space, H5P_DEFAULT, dcpl,
+                             H5P_DEFAULT);
 
     H5Pclose(dcpl);
     H5Sclose(space);
@@ -216,7 +216,9 @@ int H5AMOREEvent::GetNDP()
   H5Sclose(space);
   H5Dclose(dset);
 
-  if (dims[1] > 0 && dims[1] <= static_cast<hsize_t>(kH5AMORENDPMAX)) { fNDP = static_cast<int>(dims[1]); }
+  if (dims[1] > 0 && dims[1] <= static_cast<hsize_t>(kH5AMORENDPMAX)) {
+    fNDP = static_cast<int>(dims[1]);
+  }
   else {
     fNDP = 0;
   }
@@ -290,7 +292,8 @@ herr_t H5AMOREEvent::FlushBuffer()
 
     hid_t mem_space = H5Screate_simple(1, count, nullptr);
 
-    status = H5Dwrite(fDsetIndex, H5T_NATIVE_ULLONG, mem_space, file_space, H5P_DEFAULT, indexBuf.data());
+    status = H5Dwrite(fDsetIndex, H5T_NATIVE_ULLONG, mem_space, file_space, H5P_DEFAULT,
+                      indexBuf.data());
 
     H5Sclose(mem_space);
     H5Sclose(file_space);
@@ -338,9 +341,11 @@ herr_t H5AMOREEvent::FlushBuffer()
 
     hid_t mem_space_wave = H5Screate_simple(2, count_wave, nullptr);
 
-    status = H5Dwrite(fDsetPhonon, H5T_NATIVE_USHORT, mem_space_wave, file_space_ph, H5P_DEFAULT, fPhononBuf.data());
+    status = H5Dwrite(fDsetPhonon, H5T_NATIVE_USHORT, mem_space_wave, file_space_ph, H5P_DEFAULT,
+                      fPhononBuf.data());
     if (status >= 0) {
-      status = H5Dwrite(fDsetPhoton, H5T_NATIVE_USHORT, mem_space_wave, file_space_pt, H5P_DEFAULT, fPhotonBuf.data());
+      status = H5Dwrite(fDsetPhoton, H5T_NATIVE_USHORT, mem_space_wave, file_space_pt, H5P_DEFAULT,
+                        fPhotonBuf.data());
     }
 
     H5Sclose(mem_space_wave);
@@ -366,31 +371,57 @@ herr_t H5AMOREEvent::FlushBuffer()
 
 void H5AMOREEvent::Close()
 {
-  if (fWriteTag) {
-    // flush remaining buffered events before closing datasets
-    FlushBuffer();
+  if (fWriteTag) { FlushBuffer(); }
 
-    if (fDsetInfo >= 0) {
-      H5Dclose(fDsetInfo);
-      fDsetInfo = H5I_INVALID_HID;
-    }
-    if (fDsetIndex >= 0) {
-      H5Dclose(fDsetIndex);
-      fDsetIndex = H5I_INVALID_HID;
-    }
-    if (fDsetChs >= 0) {
-      H5Dclose(fDsetChs);
-      fDsetChs = H5I_INVALID_HID;
-    }
-    if (fDsetPhonon >= 0) {
-      H5Dclose(fDsetPhonon);
-      fDsetPhonon = H5I_INVALID_HID;
-    }
-    if (fDsetPhoton >= 0) {
-      H5Dclose(fDsetPhoton);
-      fDsetPhoton = H5I_INVALID_HID;
-    }
+  // Close cached DataSpaces
+  if (fFileSpaceInfo >= 0) {
+    H5Sclose(fFileSpaceInfo);
+    fFileSpaceInfo = H5I_INVALID_HID;
   }
+  if (fFileSpaceIndex >= 0) {
+    H5Sclose(fFileSpaceIndex);
+    fFileSpaceIndex = H5I_INVALID_HID;
+  }
+  if (fFileSpaceChs >= 0) {
+    H5Sclose(fFileSpaceChs);
+    fFileSpaceChs = H5I_INVALID_HID;
+  }
+  if (fFileSpacePhonon >= 0) {
+    H5Sclose(fFileSpacePhonon);
+    fFileSpacePhonon = H5I_INVALID_HID;
+  }
+  if (fFileSpacePhoton >= 0) {
+    H5Sclose(fFileSpacePhoton);
+    fFileSpacePhoton = H5I_INVALID_HID;
+  }
+  if (fMemSpaceEvt >= 0) {
+    H5Sclose(fMemSpaceEvt);
+    fMemSpaceEvt = H5I_INVALID_HID;
+  }
+
+  // Close Datasets
+  if (fDsetInfo >= 0) {
+    H5Dclose(fDsetInfo);
+    fDsetInfo = H5I_INVALID_HID;
+  }
+  if (fDsetIndex >= 0) {
+    H5Dclose(fDsetIndex);
+    fDsetIndex = H5I_INVALID_HID;
+  }
+  if (fDsetChs >= 0) {
+    H5Dclose(fDsetChs);
+    fDsetChs = H5I_INVALID_HID;
+  }
+  if (fDsetPhonon >= 0) {
+    H5Dclose(fDsetPhonon);
+    fDsetPhonon = H5I_INVALID_HID;
+  }
+  if (fDsetPhoton >= 0) {
+    H5Dclose(fDsetPhoton);
+    fDsetPhoton = H5I_INVALID_HID;
+  }
+
+  fCurrentReadFid = H5I_INVALID_HID; // Reset tracker
 
   // close committed types
   if (fEvtType >= 0) {
@@ -421,8 +452,9 @@ herr_t H5AMOREEvent::AppendEvent(const EventInfo_t & info, const std::vector<Cry
 
   // approximate memory usage for this event (metadata + all crystals)
   std::size_t addBytes = sizeof(EventInfo_t);
-  addBytes += static_cast<std::size_t>(nhit) *
-              (sizeof(CrystalHeader_t) + 2u * static_cast<std::size_t>(fNDP) * sizeof(std::uint16_t));
+  addBytes +=
+      static_cast<std::size_t>(nhit) *
+      (sizeof(CrystalHeader_t) + 2u * static_cast<std::size_t>(fNDP) * sizeof(std::uint16_t));
 
   // copy crystal headers and waveforms into flat buffers
   for (std::size_t i = 0; i < nhit; ++i) {
@@ -450,7 +482,8 @@ herr_t H5AMOREEvent::AppendEvent(const EventInfo_t & info, const std::vector<Cry
   fBufBytesUsed += addBytes;
 
   // flush if event-count or byte-size thresholds are exceeded
-  if ((fBufEventCap > 0 && fBufEventCount >= fBufEventCap) || (fBufMaxBytes > 0 && fBufBytesUsed >= fBufMaxBytes)) {
+  if ((fBufEventCap > 0 && fBufEventCount >= fBufEventCap) ||
+      (fBufMaxBytes > 0 && fBufBytesUsed >= fBufMaxBytes)) {
     return FlushBuffer();
   }
 
@@ -459,161 +492,179 @@ herr_t H5AMOREEvent::AppendEvent(const EventInfo_t & info, const std::vector<Cry
 
 herr_t H5AMOREEvent::ReadEvent(int n)
 {
+  int evtno = n;
+  bool file_changed = false;
+  hid_t fid = H5I_INVALID_HID;
+
   // resolve (file, local event index) from chain if needed
-  int evtno;
-  hid_t fid = fChain && fChain->GetNFile() > 0 ? fChain->GetFileId(n, evtno) : fFile;
+  if (fChain && fChain->GetNFile() > 0) { fid = fChain->GetFileId(n, evtno, &file_changed); }
+  else {
+    fid = fFile;
+    if (fCurrentReadFid != fid) { file_changed = true; }
+  }
 
-  // open all datasets needed for this event
-  hid_t dset_info = H5Dopen2(fid, "/events/info", H5P_DEFAULT);
-  hid_t dset_index = H5Dopen2(fid, "/events/index", H5P_DEFAULT);
-  hid_t dset_chs = H5Dopen2(fid, "/events/chs", H5P_DEFAULT);
-  hid_t dset_phonon = H5Dopen2(fid, "/events/phonon", H5P_DEFAULT);
-  hid_t dset_photon = H5Dopen2(fid, "/events/photon", H5P_DEFAULT);
+  if (fid < 0) return -1;
 
-  if (dset_info < 0 || dset_index < 0 || dset_chs < 0 || dset_phonon < 0 || dset_photon < 0) {
-    if (dset_info >= 0) H5Dclose(dset_info);
-    if (dset_index >= 0) H5Dclose(dset_index);
-    if (dset_chs >= 0) H5Dclose(dset_chs);
-    if (dset_phonon >= 0) H5Dclose(dset_phonon);
-    if (dset_photon >= 0) H5Dclose(dset_photon);
-    return -1;
+  // Optimization 1 & 2: Open datasets and cache DataSpaces only when file switches
+  if (file_changed) {
+    // Close existing DataSpaces
+    if (fFileSpaceInfo >= 0) {
+      H5Sclose(fFileSpaceInfo);
+      fFileSpaceInfo = H5I_INVALID_HID;
+    }
+    if (fFileSpaceIndex >= 0) {
+      H5Sclose(fFileSpaceIndex);
+      fFileSpaceIndex = H5I_INVALID_HID;
+    }
+    if (fFileSpaceChs >= 0) {
+      H5Sclose(fFileSpaceChs);
+      fFileSpaceChs = H5I_INVALID_HID;
+    }
+    if (fFileSpacePhonon >= 0) {
+      H5Sclose(fFileSpacePhonon);
+      fFileSpacePhonon = H5I_INVALID_HID;
+    }
+    if (fFileSpacePhoton >= 0) {
+      H5Sclose(fFileSpacePhoton);
+      fFileSpacePhoton = H5I_INVALID_HID;
+    }
+    if (fMemSpaceEvt >= 0) {
+      H5Sclose(fMemSpaceEvt);
+      fMemSpaceEvt = H5I_INVALID_HID;
+    }
+
+    // Close existing Datasets
+    if (fDsetInfo >= 0) {
+      H5Dclose(fDsetInfo);
+      fDsetInfo = H5I_INVALID_HID;
+    }
+    if (fDsetIndex >= 0) {
+      H5Dclose(fDsetIndex);
+      fDsetIndex = H5I_INVALID_HID;
+    }
+    if (fDsetChs >= 0) {
+      H5Dclose(fDsetChs);
+      fDsetChs = H5I_INVALID_HID;
+    }
+    if (fDsetPhonon >= 0) {
+      H5Dclose(fDsetPhonon);
+      fDsetPhonon = H5I_INVALID_HID;
+    }
+    if (fDsetPhoton >= 0) {
+      H5Dclose(fDsetPhoton);
+      fDsetPhoton = H5I_INVALID_HID;
+    }
+
+    // Tuning: Use DAPL to increase chunk cache for massive waveforms (32MB)
+    hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
+    H5Pset_chunk_cache(dapl, 10007, 32 * 1024 * 1024, 1.0);
+
+    fDsetInfo = H5Dopen2(fid, "/events/info", H5P_DEFAULT);
+    fDsetIndex = H5Dopen2(fid, "/events/index", H5P_DEFAULT);
+    fDsetChs = H5Dopen2(fid, "/events/chs", H5P_DEFAULT);
+    fDsetPhonon = H5Dopen2(fid, "/events/phonon", dapl);
+    fDsetPhoton = H5Dopen2(fid, "/events/photon", dapl);
+
+    H5Pclose(dapl);
+
+    if (fDsetInfo < 0 || fDsetIndex < 0 || fDsetChs < 0 || fDsetPhonon < 0 || fDsetPhoton < 0) {
+      // Cleanup on failure handled by Close()
+      return -1;
+    }
+
+    // Cache DataSpaces
+    fFileSpaceInfo = H5Dget_space(fDsetInfo);
+    fFileSpaceIndex = H5Dget_space(fDsetIndex);
+    fFileSpaceChs = H5Dget_space(fDsetChs);
+    fFileSpacePhonon = H5Dget_space(fDsetPhonon);
+    fFileSpacePhoton = H5Dget_space(fDsetPhoton);
+
+    // Create a simple memory space for 1 event
+    hsize_t count_evt[1] = {1};
+    fMemSpaceEvt = H5Screate_simple(1, count_evt, nullptr);
+
+    fCurrentReadFid = fid;
+    fNDP = 0; // Reset cached NDP for new file
+    GetNDP();
   }
 
   herr_t status = 0;
 
-  // read one event header from /events/info
+  // Read one event header from /events/info
   hsize_t offset_evt[1] = {static_cast<hsize_t>(evtno)};
   hsize_t count_evt[1] = {1};
 
-  hid_t file_space_info = H5Dget_space(dset_info);
-  H5Sselect_hyperslab(file_space_info, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
+  H5Sselect_hyperslab(fFileSpaceInfo, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
+  status = H5Dread(fDsetInfo, fEvtType, fMemSpaceEvt, fFileSpaceInfo, H5P_DEFAULT, &fEvtInfo);
 
-  hid_t mem_space_info = H5Screate_simple(1, count_evt, nullptr);
+  if (status < 0) { return status; }
 
-  status = H5Dread(dset_info, fEvtType, mem_space_info, file_space_info, H5P_DEFAULT, &fEvtInfo);
-
-  H5Sclose(mem_space_info);
-  H5Sclose(file_space_info);
-
-  if (status < 0) {
-    H5Dclose(dset_info);
-    H5Dclose(dset_index);
-    H5Dclose(dset_chs);
-    H5Dclose(dset_phonon);
-    H5Dclose(dset_photon);
-    return status;
-  }
-
-  // read crystal start index for this event from /events/index
+  // Read crystal start index for this event from /events/index
   std::uint64_t offset_value = 0;
 
-  hid_t file_space_idx = H5Dget_space(dset_index);
-  H5Sselect_hyperslab(file_space_idx, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
+  H5Sselect_hyperslab(fFileSpaceIndex, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
+  status = H5Dread(fDsetIndex, H5T_NATIVE_ULLONG, fMemSpaceEvt, fFileSpaceIndex, H5P_DEFAULT,
+                   &offset_value);
 
-  hid_t mem_space_idx = H5Screate_simple(1, count_evt, nullptr);
-
-  status = H5Dread(dset_index, H5T_NATIVE_ULLONG, mem_space_idx, file_space_idx, H5P_DEFAULT, &offset_value);
-
-  H5Sclose(mem_space_idx);
-  H5Sclose(file_space_idx);
-
-  if (status < 0) {
-    H5Dclose(dset_info);
-    H5Dclose(dset_index);
-    H5Dclose(dset_chs);
-    H5Dclose(dset_phonon);
-    H5Dclose(dset_photon);
-    return status;
-  }
+  if (status < 0) { return status; }
 
   const std::uint16_t nhit = fEvtInfo.nhit;
 
-  // (re)allocate per-event crystal buffer
-  if (fData) {
-    delete[] fData;
-    fData = nullptr;
-  }
-  fData = (nhit > 0) ? new Crystal_t[nhit] : nullptr;
+  // Optimization 3: Resize vector buffer to avoid repeated memory allocation
+  fDataBuf.resize(nhit);
 
   if (nhit > 0) {
-    // make sure NDP is known in read mode
-    GetNDP();
-
     if (fNDP <= 0 || fNDP > kH5AMORENDPMAX) {
       Error("ReadEvent", "Invalid NDP: %d (max %d)", fNDP, kH5AMORENDPMAX);
-      H5Dclose(dset_info);
-      H5Dclose(dset_index);
-      H5Dclose(dset_chs);
-      H5Dclose(dset_phonon);
-      H5Dclose(dset_photon);
       return -1;
     }
 
-    // read crystal headers
+    // Read crystal headers
     std::vector<CrystalHeader_t> headers(nhit);
 
     hsize_t offset_ch[1] = {static_cast<hsize_t>(offset_value)};
     hsize_t count_ch[1] = {static_cast<hsize_t>(nhit)};
 
-    hid_t file_space_chs = H5Dget_space(dset_chs);
-    H5Sselect_hyperslab(file_space_chs, H5S_SELECT_SET, offset_ch, nullptr, count_ch, nullptr);
-
+    H5Sselect_hyperslab(fFileSpaceChs, H5S_SELECT_SET, offset_ch, nullptr, count_ch, nullptr);
     hid_t mem_space_chs = H5Screate_simple(1, count_ch, nullptr);
-
-    status = H5Dread(dset_chs, fChType, mem_space_chs, file_space_chs, H5P_DEFAULT, headers.data());
-
+    status = H5Dread(fDsetChs, fChType, mem_space_chs, fFileSpaceChs, H5P_DEFAULT, headers.data());
     H5Sclose(mem_space_chs);
-    H5Sclose(file_space_chs);
 
-    if (status < 0) {
-      H5Dclose(dset_info);
-      H5Dclose(dset_index);
-      H5Dclose(dset_chs);
-      H5Dclose(dset_phonon);
-      H5Dclose(dset_photon);
-      return status;
-    }
+    if (status < 0) { return status; }
 
-    // read phonon and photon waveforms
-    std::vector<std::uint16_t> bufPn(static_cast<std::size_t>(nhit) * static_cast<std::size_t>(fNDP));
-    std::vector<std::uint16_t> bufPt(static_cast<std::size_t>(nhit) * static_cast<std::size_t>(fNDP));
+    // Read phonon and photon waveforms
+    std::vector<std::uint16_t> bufPn(static_cast<std::size_t>(nhit) *
+                                     static_cast<std::size_t>(fNDP));
+    std::vector<std::uint16_t> bufPt(static_cast<std::size_t>(nhit) *
+                                     static_cast<std::size_t>(fNDP));
 
     hsize_t offset_wave[2] = {static_cast<hsize_t>(offset_value), 0};
     hsize_t count_wave[2] = {static_cast<hsize_t>(nhit), static_cast<hsize_t>(fNDP)};
 
-    hid_t file_space_ph = H5Dget_space(dset_phonon);
-    hid_t file_space_pt = H5Dget_space(dset_photon);
-
-    H5Sselect_hyperslab(file_space_ph, H5S_SELECT_SET, offset_wave, nullptr, count_wave, nullptr);
-    H5Sselect_hyperslab(file_space_pt, H5S_SELECT_SET, offset_wave, nullptr, count_wave, nullptr);
+    H5Sselect_hyperslab(fFileSpacePhonon, H5S_SELECT_SET, offset_wave, nullptr, count_wave,
+                        nullptr);
+    H5Sselect_hyperslab(fFileSpacePhoton, H5S_SELECT_SET, offset_wave, nullptr, count_wave,
+                        nullptr);
 
     hid_t mem_space_wave = H5Screate_simple(2, count_wave, nullptr);
 
-    status = H5Dread(dset_phonon, H5T_NATIVE_USHORT, mem_space_wave, file_space_ph, H5P_DEFAULT, bufPn.data());
+    status = H5Dread(fDsetPhonon, H5T_NATIVE_USHORT, mem_space_wave, fFileSpacePhonon, H5P_DEFAULT,
+                     bufPn.data());
     if (status >= 0) {
-      status = H5Dread(dset_photon, H5T_NATIVE_USHORT, mem_space_wave, file_space_pt, H5P_DEFAULT, bufPt.data());
+      status = H5Dread(fDsetPhoton, H5T_NATIVE_USHORT, mem_space_wave, fFileSpacePhoton,
+                       H5P_DEFAULT, bufPt.data());
     }
-
     H5Sclose(mem_space_wave);
-    H5Sclose(file_space_ph);
-    H5Sclose(file_space_pt);
 
-    if (status < 0) {
-      H5Dclose(dset_info);
-      H5Dclose(dset_index);
-      H5Dclose(dset_chs);
-      H5Dclose(dset_phonon);
-      H5Dclose(dset_photon);
-      return status;
-    }
+    if (status < 0) { return status; }
 
-    // fill user-facing Crystal_t array
+    // Fill user-facing Crystal_t array
     for (std::size_t i = 0; i < nhit; ++i) {
-      fData[i].id = headers[i].id;
-      fData[i].ttime = headers[i].ttime;
+      fDataBuf[i].id = headers[i].id;
+      fDataBuf[i].ttime = headers[i].ttime;
 
-      std::uint16_t * dstPn = fData[i].phonon;
-      std::uint16_t * dstPt = fData[i].photon;
+      std::uint16_t * dstPn = fDataBuf[i].phonon;
+      std::uint16_t * dstPt = fDataBuf[i].photon;
       const std::uint16_t * srcPn = &bufPn[i * static_cast<std::size_t>(fNDP)];
       const std::uint16_t * srcPt = &bufPt[i * static_cast<std::size_t>(fNDP)];
 
@@ -621,13 +672,6 @@ herr_t H5AMOREEvent::ReadEvent(int n)
       std::memcpy(dstPt, srcPt, static_cast<std::size_t>(fNDP) * sizeof(std::uint16_t));
     }
   }
-
-  // close datasets used for this read
-  H5Dclose(dset_info);
-  H5Dclose(dset_index);
-  H5Dclose(dset_chs);
-  H5Dclose(dset_phonon);
-  H5Dclose(dset_photon);
 
   return status;
 }

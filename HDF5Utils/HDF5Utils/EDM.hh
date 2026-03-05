@@ -113,14 +113,17 @@ struct DataFile_t {
   std::string filename;
   hsize_t memsize;
   hsize_t filesize;
-  std::map<int, int> entries;
+  //  std::map<int, int> entries;
+  int global_start;
+  int nevent;
 
   DataFile_t()
     : fid(H5I_INVALID_HID),
       filename(),
       memsize(0),
       filesize(0),
-      entries()
+      global_start(0),
+      nevent(0)
   {
   }
 };
@@ -219,7 +222,8 @@ inline void Crystal_t::SetPhoton(const std::uint16_t * wave, int ndp) noexcept
   std::memcpy(photon, wave, static_cast<std::size_t>(ndp) * sizeof(std::uint16_t));
 }
 
-inline void Crystal_t::SetWaveforms(const std::uint16_t * pn, const std::uint16_t * pt, int ndp) noexcept
+inline void Crystal_t::SetWaveforms(const std::uint16_t * pn, const std::uint16_t * pt,
+                                    int ndp) noexcept
 {
   SetPhonon(pn, ndp);
   SetPhoton(pt, ndp);

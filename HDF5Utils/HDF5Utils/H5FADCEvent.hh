@@ -23,13 +23,14 @@ public:
   void SetNDP(int ndp);
   int GetNDP();
 
-  FChannel_t * GetData() const;
+  FChannel_t * GetData();
 
 protected:
   herr_t FlushBuffer() override;
 
 private:
-  FChannel_t * fData{nullptr};
+  std::vector<FChannel_t> fDataBuf; // Added pre-allocated vector buffer
+  hid_t fCurrentReadFid{H5I_INVALID_HID}; // Track current file ID in read mode
 
   hid_t fDsetWave{H5I_INVALID_HID};
 
@@ -45,4 +46,4 @@ private:
 
 inline void H5FADCEvent::SetNDP(int ndp) { fNDP = ndp; }
 
-inline FChannel_t * H5FADCEvent::GetData() const { return fData; }
+inline FChannel_t * H5FADCEvent::GetData() { return fDataBuf.data(); }
