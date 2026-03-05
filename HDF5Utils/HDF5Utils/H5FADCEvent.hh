@@ -29,9 +29,6 @@ protected:
   herr_t FlushBuffer() override;
 
 private:
-  std::vector<FChannel_t> fDataBuf; // Added pre-allocated vector buffer
-  hid_t fCurrentReadFid{H5I_INVALID_HID}; // Track current file ID in read mode
-
   hid_t fDsetWave{H5I_INVALID_HID};
 
   std::uint64_t fTotalChannels{0};
@@ -40,6 +37,19 @@ private:
 
   std::vector<FChannelHeader_t> fChBuf;
   std::vector<std::uint16_t> fWaveBuf;
+
+  // Optimization: Pre-allocated vector buffer to avoid new/delete overhead
+  std::vector<FChannel_t> fDataBuf;
+
+  // Optimization: Track current file ID to avoid redundant open/close
+  hid_t fCurrentReadFid{H5I_INVALID_HID};
+
+  // Optimization: Cache DataSpaces for blazing fast read speeds
+  hid_t fFileSpaceInfo{H5I_INVALID_HID};
+  hid_t fFileSpaceIndex{H5I_INVALID_HID};
+  hid_t fFileSpaceChs{H5I_INVALID_HID};
+  hid_t fFileSpaceWave{H5I_INVALID_HID};
+  hid_t fMemSpaceEvt{H5I_INVALID_HID};
 
   ClassDef(H5FADCEvent, 0)
 };

@@ -9,7 +9,10 @@ H5FADCEvent::H5FADCEvent()
 {
 }
 
-H5FADCEvent::~H5FADCEvent() {}
+H5FADCEvent::~H5FADCEvent()
+{
+  // fDataBuf is managed by std::vector, no manual deletion needed.
+}
 
 void H5FADCEvent::Open()
 {
@@ -154,44 +157,6 @@ void H5FADCEvent::Open()
   fWaveBuf.clear();
   fBufEventCount = 0;
   fBufBytesUsed = 0;
-}
-
-void H5FADCEvent::Close()
-{
-  if (fWriteTag) {
-    // flush remaining buffered events before closing datasets
-    FlushBuffer();
-  }
-
-  // Close datasets for both read and write modes
-  if (fDsetInfo >= 0) {
-    H5Dclose(fDsetInfo);
-    fDsetInfo = H5I_INVALID_HID;
-  }
-  if (fDsetIndex >= 0) {
-    H5Dclose(fDsetIndex);
-    fDsetIndex = H5I_INVALID_HID;
-  }
-  if (fDsetChs >= 0) {
-    H5Dclose(fDsetChs);
-    fDsetChs = H5I_INVALID_HID;
-  }
-  if (fDsetWave >= 0) {
-    H5Dclose(fDsetWave);
-    fDsetWave = H5I_INVALID_HID;
-  }
-
-  fCurrentReadFid = H5I_INVALID_HID; // Reset tracker
-
-  // close committed types
-  if (fEvtType >= 0) {
-    H5Tclose(fEvtType);
-    fEvtType = H5I_INVALID_HID;
-  }
-  if (fChType >= 0) {
-    H5Tclose(fChType);
-    fChType = H5I_INVALID_HID;
-  }
 }
 
 int H5FADCEvent::GetNDP()
@@ -365,6 +330,66 @@ herr_t H5FADCEvent::FlushBuffer()
   return status;
 }
 
+void H5FADCEvent::Close()
+{
+  if (fWriteTag) {
+    // flush remaining buffered events before closing datasets
+    FlushBuffer();
+  }
+
+  // Close cached DataSpaces
+  if (fFileSpaceInfo >= 0) {
+    H5Sclose(fFileSpaceInfo);
+    fFileSpaceInfo = H5I_INVALID_HID;
+  }
+  if (fFileSpaceIndex >= 0) {
+    H5Sclose(fFileSpaceIndex);
+    fFileSpaceIndex = H5I_INVALID_HID;
+  }
+  if (fFileSpaceChs >= 0) {
+    H5Sclose(fFileSpaceChs);
+    fFileSpaceChs = H5I_INVALID_HID;
+  }
+  if (fFileSpaceWave >= 0) {
+    H5Sclose(fFileSpaceWave);
+    fFileSpaceWave = H5I_INVALID_HID;
+  }
+  if (fMemSpaceEvt >= 0) {
+    H5Sclose(fMemSpaceEvt);
+    fMemSpaceEvt = H5I_INVALID_HID;
+  }
+
+  // Close Datasets
+  if (fDsetInfo >= 0) {
+    H5Dclose(fDsetInfo);
+    fDsetInfo = H5I_INVALID_HID;
+  }
+  if (fDsetIndex >= 0) {
+    H5Dclose(fDsetIndex);
+    fDsetIndex = H5I_INVALID_HID;
+  }
+  if (fDsetChs >= 0) {
+    H5Dclose(fDsetChs);
+    fDsetChs = H5I_INVALID_HID;
+  }
+  if (fDsetWave >= 0) {
+    H5Dclose(fDsetWave);
+    fDsetWave = H5I_INVALID_HID;
+  }
+
+  fCurrentReadFid = H5I_INVALID_HID; // Reset tracker
+
+  // close committed types
+  if (fEvtType >= 0) {
+    H5Tclose(fEvtType);
+    fEvtType = H5I_INVALID_HID;
+  }
+  if (fChType >= 0) {
+    H5Tclose(fChType);
+    fChType = H5I_INVALID_HID;
+  }
+}
+
 herr_t H5FADCEvent::AppendEvent(const EventInfo_t & info, const std::vector<FChannel_t> & data)
 {
   if (!fWriteTag) { return -1; }
@@ -425,7 +450,7 @@ herr_t H5FADCEvent::ReadEvent(int n)
   bool file_changed = false;
   hid_t fid = H5I_INVALID_HID;
 
-  // Resolve (file, local event index) from chain if needed
+  // resolve (file, local event index) from chain if needed
   if (fChain && fChain->GetNFile() > 0) { fid = fChain->GetFileId(n, evtno, &file_changed); }
   else {
     fid = fFile;
@@ -434,9 +459,31 @@ herr_t H5FADCEvent::ReadEvent(int n)
 
   if (fid < 0) return -1;
 
-  // Optimization 1: Open datasets only when file switches (or first time)
+  // Optimization 1 & 2: Open datasets and cache DataSpaces only when file switches
   if (file_changed) {
-    // Close existing datasets if any
+    // Close existing DataSpaces
+    if (fFileSpaceInfo >= 0) {
+      H5Sclose(fFileSpaceInfo);
+      fFileSpaceInfo = H5I_INVALID_HID;
+    }
+    if (fFileSpaceIndex >= 0) {
+      H5Sclose(fFileSpaceIndex);
+      fFileSpaceIndex = H5I_INVALID_HID;
+    }
+    if (fFileSpaceChs >= 0) {
+      H5Sclose(fFileSpaceChs);
+      fFileSpaceChs = H5I_INVALID_HID;
+    }
+    if (fFileSpaceWave >= 0) {
+      H5Sclose(fFileSpaceWave);
+      fFileSpaceWave = H5I_INVALID_HID;
+    }
+    if (fMemSpaceEvt >= 0) {
+      H5Sclose(fMemSpaceEvt);
+      fMemSpaceEvt = H5I_INVALID_HID;
+    }
+
+    // Close existing Datasets
     if (fDsetInfo >= 0) {
       H5Dclose(fDsetInfo);
       fDsetInfo = H5I_INVALID_HID;
@@ -454,19 +501,28 @@ herr_t H5FADCEvent::ReadEvent(int n)
       fDsetWave = H5I_INVALID_HID;
     }
 
-    // Open datasets for the new file
+    // Tuning: Use DAPL to increase chunk cache for waveform data (16MB)
+    hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
+    H5Pset_chunk_cache(dapl, 10007, 16 * 1024 * 1024, 1.0);
+
     fDsetInfo = H5Dopen2(fid, "/events/info", H5P_DEFAULT);
     fDsetIndex = H5Dopen2(fid, "/events/index", H5P_DEFAULT);
     fDsetChs = H5Dopen2(fid, "/events/chs", H5P_DEFAULT);
-    fDsetWave = H5Dopen2(fid, "/events/wave", H5P_DEFAULT);
+    fDsetWave = H5Dopen2(fid, "/events/wave", dapl);
 
-    if (fDsetInfo < 0 || fDsetIndex < 0 || fDsetChs < 0 || fDsetWave < 0) {
-      if (fDsetInfo >= 0) H5Dclose(fDsetInfo);
-      if (fDsetIndex >= 0) H5Dclose(fDsetIndex);
-      if (fDsetChs >= 0) H5Dclose(fDsetChs);
-      if (fDsetWave >= 0) H5Dclose(fDsetWave);
-      return -1;
-    }
+    H5Pclose(dapl);
+
+    if (fDsetInfo < 0 || fDsetIndex < 0 || fDsetChs < 0 || fDsetWave < 0) { return -1; }
+
+    // Cache DataSpaces
+    fFileSpaceInfo = H5Dget_space(fDsetInfo);
+    fFileSpaceIndex = H5Dget_space(fDsetIndex);
+    fFileSpaceChs = H5Dget_space(fDsetChs);
+    fFileSpaceWave = H5Dget_space(fDsetWave);
+
+    // Create a simple memory space for 1 event
+    hsize_t count_evt[1] = {1};
+    fMemSpaceEvt = H5Screate_simple(1, count_evt, nullptr);
 
     fCurrentReadFid = fid;
     fNDP = 0; // Reset cached NDP for new file
@@ -475,34 +531,27 @@ herr_t H5FADCEvent::ReadEvent(int n)
 
   herr_t status = 0;
 
+  // read one event header from /events/info
   hsize_t offset_evt[1] = {static_cast<hsize_t>(evtno)};
   hsize_t count_evt[1] = {1};
 
-  // Read event header from /events/info
-  hid_t file_space_info = H5Dget_space(fDsetInfo);
-  H5Sselect_hyperslab(file_space_info, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
-  hid_t mem_space_info = H5Screate_simple(1, count_evt, nullptr);
-  status = H5Dread(fDsetInfo, fEvtType, mem_space_info, file_space_info, H5P_DEFAULT, &fEvtInfo);
-  H5Sclose(mem_space_info);
-  H5Sclose(file_space_info);
+  H5Sselect_hyperslab(fFileSpaceInfo, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
+  status = H5Dread(fDsetInfo, fEvtType, fMemSpaceEvt, fFileSpaceInfo, H5P_DEFAULT, &fEvtInfo);
 
-  if (status < 0) return status;
+  if (status < 0) { return status; }
 
-  // Read channel start index for this event from /events/index
+  // read channel start index for this event from /events/index
   std::uint64_t offset_value = 0;
-  hid_t file_space_idx = H5Dget_space(fDsetIndex);
-  H5Sselect_hyperslab(file_space_idx, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
-  hid_t mem_space_idx = H5Screate_simple(1, count_evt, nullptr);
-  status = H5Dread(fDsetIndex, H5T_NATIVE_ULLONG, mem_space_idx, file_space_idx, H5P_DEFAULT,
-                   &offset_value);
-  H5Sclose(mem_space_idx);
-  H5Sclose(file_space_idx);
 
-  if (status < 0) return status;
+  H5Sselect_hyperslab(fFileSpaceIndex, H5S_SELECT_SET, offset_evt, nullptr, count_evt, nullptr);
+  status = H5Dread(fDsetIndex, H5T_NATIVE_ULLONG, fMemSpaceEvt, fFileSpaceIndex, H5P_DEFAULT,
+                   &offset_value);
+
+  if (status < 0) { return status; }
 
   const std::uint16_t nhit = fEvtInfo.nhit;
 
-  // Optimization 2: Resize vector buffer to avoid repeated memory allocation
+  // Optimization 3: Resize vector buffer to avoid repeated memory allocation
   fDataBuf.resize(nhit);
 
   if (nhit > 0) {
@@ -511,37 +560,33 @@ herr_t H5FADCEvent::ReadEvent(int n)
       return -1;
     }
 
-    // Read channel headers slice for this event
+    // read channel headers slice for this event
     std::vector<FChannelHeader_t> headers(nhit);
     hsize_t offset_ch[1] = {static_cast<hsize_t>(offset_value)};
     hsize_t count_ch[1] = {static_cast<hsize_t>(nhit)};
 
-    hid_t file_space_chs = H5Dget_space(fDsetChs);
-    H5Sselect_hyperslab(file_space_chs, H5S_SELECT_SET, offset_ch, nullptr, count_ch, nullptr);
+    H5Sselect_hyperslab(fFileSpaceChs, H5S_SELECT_SET, offset_ch, nullptr, count_ch, nullptr);
     hid_t mem_space_chs = H5Screate_simple(1, count_ch, nullptr);
-    status = H5Dread(fDsetChs, fChType, mem_space_chs, file_space_chs, H5P_DEFAULT, headers.data());
+    status = H5Dread(fDsetChs, fChType, mem_space_chs, fFileSpaceChs, H5P_DEFAULT, headers.data());
     H5Sclose(mem_space_chs);
-    H5Sclose(file_space_chs);
 
-    if (status < 0) return status;
+    if (status < 0) { return status; }
 
-    // Read waveform block [nhit × NDP] for this event
+    // read waveform block [nhit × NDP] for this event
     std::vector<std::uint16_t> wbuf(static_cast<std::size_t>(nhit) *
                                     static_cast<std::size_t>(fNDP));
     hsize_t offset_wave[2] = {static_cast<hsize_t>(offset_value), 0};
     hsize_t count_wave[2] = {static_cast<hsize_t>(nhit), static_cast<hsize_t>(fNDP)};
 
-    hid_t file_space_wave = H5Dget_space(fDsetWave);
-    H5Sselect_hyperslab(file_space_wave, H5S_SELECT_SET, offset_wave, nullptr, count_wave, nullptr);
+    H5Sselect_hyperslab(fFileSpaceWave, H5S_SELECT_SET, offset_wave, nullptr, count_wave, nullptr);
     hid_t mem_space_wave = H5Screate_simple(2, count_wave, nullptr);
-    status = H5Dread(fDsetWave, H5T_NATIVE_USHORT, mem_space_wave, file_space_wave, H5P_DEFAULT,
+    status = H5Dread(fDsetWave, H5T_NATIVE_USHORT, mem_space_wave, fFileSpaceWave, H5P_DEFAULT,
                      wbuf.data());
     H5Sclose(mem_space_wave);
-    H5Sclose(file_space_wave);
 
-    if (status < 0) return status;
+    if (status < 0) { return status; }
 
-    // Fill the pre-allocated FChannel_t vector from header + waveform buffer
+    // fill FChannel_t array from header + waveform buffer
     for (std::size_t ich = 0; ich < nhit; ++ich) {
       fDataBuf[ich].id = headers[ich].id;
       fDataBuf[ich].tbit = headers[ich].tbit;
@@ -553,6 +598,5 @@ herr_t H5FADCEvent::ReadEvent(int n)
     }
   }
 
-  // Datasets are kept open for the next iteration!
   return status;
 }

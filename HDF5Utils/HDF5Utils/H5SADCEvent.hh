@@ -30,11 +30,17 @@ private:
 
   std::vector<AChannel_t> fChBuf;
 
-  // Pre-allocated vector buffer to avoid new/delete overhead
+  // Optimization: Pre-allocated vector buffer to avoid new/delete overhead
   std::vector<AChannel_t> fDataBuf;
 
-  // Track current file ID in read mode to avoid redundant dataset open/close
+  // Optimization: Track current file ID to avoid redundant open/close
   hid_t fCurrentReadFid{H5I_INVALID_HID};
+
+  // Optimization: Cache DataSpaces for blazing fast read speeds
+  hid_t fFileSpaceInfo{H5I_INVALID_HID};
+  hid_t fFileSpaceIndex{H5I_INVALID_HID};
+  hid_t fFileSpaceChs{H5I_INVALID_HID};
+  hid_t fMemSpaceEvt{H5I_INVALID_HID};
 
   ClassDef(H5SADCEvent, 0)
 };
