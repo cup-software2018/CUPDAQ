@@ -15,7 +15,7 @@
 class CupGeneralTCB : public TObject {
 public:
   CupGeneralTCB();
-  virtual ~CupGeneralTCB();
+  ~CupGeneralTCB() override;
 
   int Open();
   void Close();

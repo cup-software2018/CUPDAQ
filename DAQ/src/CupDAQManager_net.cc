@@ -21,7 +21,7 @@ void CupDAQManager::TF_SendEvent()
   }
   INFO("TF_SendEvent: sending event to merger started");
 
-  auto * socket = new TSocket(fMergeServerIPAddr, fMergeServerPort);
+  auto * socket = new TSocket(fMergeServerIPAddr.c_str(), fMergeServerPort);
   if (socket->GetErrorCode() < 0) {
     RUNSTATE::SetError(fRunStatus);
     delete socket;

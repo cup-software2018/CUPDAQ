@@ -1,4 +1,8 @@
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
 #include <memory>
+#include <string>
 
 #include "TRandom3.h"
 
@@ -28,31 +32,47 @@ void CupDAQManager::TF_Histogramer()
   histogramer->SetConfigList(fConfigList);
   histogramer->SetStartDatime(fStartDatime);
 
-  // open histogramer root file
-  if (fHistFilename.IsNull()) {
-    TString filename;
-    TString dirname = gSystem->Getenv("RAWDATA_DIR");
-    if (dirname.IsNull()) {
+  if (fHistFilename.empty()) {
+    std::string filename;
+
+    const char * rawdata_dir_env = std::getenv("RAWDATA_DIR");
+
+    char run_str[16];
+    std::snprintf(run_str, sizeof(run_str), "%06d", fRunNumber);
+
+    const char * adc_name = GetADCName(fADCType);
+
+    if (!rawdata_dir_env) {
       WARNING("variable RAWDATA_DIR is not set");
-      filename = Form("hist_%s_%06d.root", GetADCName(fADCType), fRunNumber);
+
+      filename = std::string("hist_") + adc_name + "_" + run_str + ".root";
     }
     else {
-      dirname += Form("/HIST/%06d", fRunNumber);
-      int isdir = gSystem->Exec(Form("test -d %s", dirname.Data()));
-      if (!isdir) {
-        gSystem->Exec(Form("mkdir %s", dirname.Data()));
-        INFO("%s created", dirname.Data());
-      }
-      INFO("%s already exist", dirname.Data());
 
-      filename = Form("%s/hist_%s_%06d.root", dirname.Data(), GetADCName(fADCType), fRunNumber);
+      namespace fs = std::filesystem;
+      fs::path dirname = fs::path(rawdata_dir_env) / "HIST" / run_str;
+
+      // 4. Safe directory creation (fixes the 'test -d' shell return code bug)
+      if (!fs::exists(dirname)) {
+        fs::create_directories(dirname);
+        INFO("%s created", dirname.c_str());
+      }
+      else {
+        INFO("%s already exist", dirname.c_str());
+      }
+
+      // Combine directory and filename naturally
+      fs::path full_path = dirname / (std::string("hist_") + adc_name + "_" + run_str + ".root");
+      filename = full_path.string();
     }
-    histogramer->SetFilename(filename);
+
+    histogramer->SetFilename(filename.c_str());
     fHistFilename = filename;
   }
 
   if (!histogramer->Open()) {
-    WARNING("cannot open histogramer root file %s, histogramer will be ended", fHistFilename.Data());
+    WARNING("cannot open histogramer root file %s, histogramer will be ended",
+            fHistFilename.c_str());
     return;
   }
 

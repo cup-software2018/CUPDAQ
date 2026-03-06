@@ -183,9 +183,9 @@ void CupDAQManager::TF_DebugMon()
     if (elapsetime > debugmontime) {
       sw.Start(true);
 
-      TString adcbcountsize;
-      TString adcbufsize;
-      TString sortbufsize;
+      std::string adcbcountsize;
+      std::string adcbufsize;
+      std::string sortbufsize;
 
       for (int i = 0; i < nadc_int; ++i) {
         adcbcountsize += Form("%5d ", fRemainingBCount[i]);
@@ -197,9 +197,9 @@ void CupDAQManager::TF_DebugMon()
         sortbufsize += Form("%5d ", static_cast<int>(modraw->size()));
       }
 
-      DEBUG("ADC bcount size: %s", adcbcountsize.Data());
-      DEBUG("ADC buffer size: %s", adcbufsize.Data());
-      DEBUG("sorting buffer size: %s", sortbufsize.Data());
+      DEBUG("ADC bcount size: %s", adcbcountsize.c_str());
+      DEBUG("ADC buffer size: %s", adcbufsize.c_str());
+      DEBUG("sorting buffer size: %s", sortbufsize.c_str());
       DEBUG("building buffer size: %5zu %5zu", fBuiltEventBuffer1.size(),
             fBuiltEventBuffer2.size());
       DEBUG("%.3f(r) %.3f(s) %.3f(b) %.3f(w)", fReadSleep / 1000.0, fSortSleep / 1000.0,
@@ -219,7 +219,7 @@ void CupDAQManager::TF_DebugMon()
 void CupDAQManager::TF_MsgServer()
 {
   int port = fDAQPort;
-  TString name = fDAQName;
+  std::string name = fDAQName;
   bool istcb = (fDAQID == 0);
 
   const int max_clients = 10;
@@ -233,7 +233,7 @@ void CupDAQManager::TF_MsgServer()
 
   int master_socket = socket(AF_INET, SOCK_STREAM, 0);
   if (master_socket == 0) {
-    ERROR("[%s] socket failed", name.Data());
+    ERROR("[%s] socket failed", name.c_str());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
     delete[] root_socket;
     return;
@@ -242,7 +242,7 @@ void CupDAQManager::TF_MsgServer()
   int opt = 1;
   if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt),
                  sizeof(opt)) < 0) {
-    ERROR("[%s] setsockopt failed", name.Data());
+    ERROR("[%s] setsockopt failed", name.c_str());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
     close(master_socket);
     delete[] root_socket;
@@ -257,23 +257,23 @@ void CupDAQManager::TF_MsgServer()
   socklen_t addrlen = sizeof(address);
 
   if (bind(master_socket, reinterpret_cast<struct sockaddr *>(&address), addrlen) < 0) {
-    ERROR("[%s] socket bind failed on port %d", name.Data(), port);
+    ERROR("[%s] socket bind failed on port %d", name.c_str(), port);
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
     close(master_socket);
     delete[] root_socket;
     return;
   }
-  INFO("[%s] message server on port %d", name.Data(), port);
+  INFO("[%s] message server on port %d", name.c_str(), port);
 
   if (listen(master_socket, 3) < 0) {
-    ERROR("[%s] socket listen error", name.Data());
+    ERROR("[%s] socket listen error", name.c_str());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
     close(master_socket);
     delete[] root_socket;
     return;
   }
 
-  INFO("[%s] message server start", name.Data());
+  INFO("[%s] message server start", name.c_str());
 
   char buffer[kMESSLEN];
   timeval tv{};
@@ -300,7 +300,7 @@ void CupDAQManager::TF_MsgServer()
     int activity = select(max_sd + 1, &readfds, nullptr, nullptr, &tv);
     if (activity == 0) { continue; }
     else if (activity < 0 && errno != EINTR) {
-      // DEBUG("select error occurred for [%s]", name.Data());
+      // DEBUG("select error occurred for [%s]", name.c_str());
       continue;
     }
 
@@ -309,7 +309,7 @@ void CupDAQManager::TF_MsgServer()
           accept(master_socket, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
 
       if (new_socket < 0) {
-        ERROR("[%s]: accept error occurred", name.Data());
+        ERROR("[%s]: accept error occurred", name.c_str());
         istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
         close(master_socket);
         for (int i = 0; i < max_clients; ++i) {
@@ -319,14 +319,14 @@ void CupDAQManager::TF_MsgServer()
         return;
       }
 
-      INFO("[%s]: new client connection, socket fd: %d, ip: %s, port: %d", name.Data(), new_socket,
+      INFO("[%s]: new client connection, socket fd: %d, ip: %s, port: %d", name.c_str(), new_socket,
            inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
       for (int i = 0; i < max_clients; ++i) {
         if (client_socket[i] == -1) {
           client_socket[i] = new_socket;
           root_socket[i] = new TSocket(new_socket);
-          INFO("[%s]: adding to list of sockets at %d", name.Data(), i);
+          INFO("[%s]: adding to list of sockets at %d", name.c_str(), i);
           break;
         }
       }
@@ -342,7 +342,7 @@ void CupDAQManager::TF_MsgServer()
         getpeername(sd, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
 
         if (valread == 0) {
-          INFO("[%s]: host disconnected, socket fd: %d, ip: %s, port: %d", name.Data(), sd,
+          INFO("[%s]: host disconnected, socket fd: %d, ip: %s, port: %d", name.c_str(), sd,
                inet_ntoa(address.sin_addr), ntohs(address.sin_port));
 
           close(sd);
@@ -384,7 +384,7 @@ void CupDAQManager::TF_MsgServer()
             }
             case kREQUESTCONFIG: {
               root_socket[i]->SendObject(fConfigList);
-              INFO("[%s] sent config list to DAQ", name.Data());
+              INFO("[%s] sent config list to DAQ", name.c_str());
               break;
             }
             case kSPLITOUTPUTFILE: {
@@ -392,7 +392,7 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoSplitOutputFile = true;
               }
-              INFO("[%s] output file split command received", name.Data());
+              INFO("[%s] output file split command received", name.c_str());
               break;
             }
             case kRECVEVENT: {
@@ -409,7 +409,7 @@ void CupDAQManager::TF_MsgServer()
                 delete mess;
               }
               else {
-                WARNING("[%s] error in event sender [ip=%s, port=%d]", name.Data(),
+                WARNING("[%s] error in event sender [ip=%s, port=%d]", name.c_str(),
                         inet_ntoa(address.sin_addr), ntohs(address.sin_port));
               }
               break;
@@ -428,7 +428,7 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoConfigRun = true;
               }
-              INFO("[%s] CONFIGRUN command received", name.Data());
+              INFO("[%s] CONFIGRUN command received", name.c_str());
               break;
             }
             case kSTARTRUN: {
@@ -436,7 +436,7 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoStartRun = true;
               }
-              INFO("[%s] STARTRUN command received", name.Data());
+              INFO("[%s] STARTRUN command received", name.c_str());
               break;
             }
             case kENDRUN: {
@@ -444,7 +444,7 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoEndRun = true;
               }
-              INFO("[%s] ENDRUN command received", name.Data());
+              INFO("[%s] ENDRUN command received", name.c_str());
               break;
             }
             case kEXIT: {
@@ -452,11 +452,11 @@ void CupDAQManager::TF_MsgServer()
               else {
                 fDoExit = true;
               }
-              INFO("[%s] EXIT command received", name.Data());
+              INFO("[%s] EXIT command received", name.c_str());
               break;
             }
             default: {
-              WARNING("[%s] unknown command [%lu] received", name.Data(), command);
+              WARNING("[%s] unknown command [%lu] received", name.c_str(), command);
               break;
             }
           }
@@ -472,7 +472,7 @@ void CupDAQManager::TF_MsgServer()
   }
   delete[] root_socket;
 
-  INFO("[%s] message server ended", name.Data());
+  INFO("[%s] message server ended", name.c_str());
 }
 
 void CupDAQManager::TF_ShrinkToFit()

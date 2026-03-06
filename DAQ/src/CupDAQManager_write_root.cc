@@ -1,5 +1,7 @@
+#include <cstdlib>
+#include <string>
+
 #include "TBranchRef.h"
-#include "TObjString.h"
 
 #include "DAQ/CupDAQManager.hh"
 #include "OnlObjs/ADCHeader.hh"
@@ -174,9 +176,16 @@ long CupDAQManager::OpenNewROOTFile(const char * filename)
 {
   long retval = 0;
 
-  TString bname = gSystem->BaseName(filename);
-  TObjArray * objs = bname.Tokenize(".");
-  int subnum = TString(((TObjString *)objs->At(objs->GetEntries() - 1))->GetName()).Atoi();
+  std::string filepath(filename);
+
+  std::size_t slash_pos = filepath.find_last_of("/\\");
+  std::string bname = (slash_pos == std::string::npos) ? filepath : filepath.substr(slash_pos + 1);
+
+  int subnum = 0;
+  std::size_t dot_pos = bname.find_last_of('.');
+  if (dot_pos != std::string::npos && dot_pos + 1 < bname.length()) {
+    subnum = std::atoi(bname.substr(dot_pos + 1).c_str());
+  }
 
   if (subnum == 0) {
     fROOTFile = new TFile(filename, "recreate", "", fCompressionLevel);
@@ -187,6 +196,7 @@ long CupDAQManager::OpenNewROOTFile(const char * filename)
     fROOTTree = new TTree("AbsEvent", "AbsEvent");
   }
   else {
+
     fROOTFile->cd();
     fROOTTree->Write();
     fROOTTree->Reset();

@@ -86,30 +86,32 @@ bool CupGeneralTCB::Config()
     auto * conf = static_cast<AbsConf *>(fConfigs->At(i));
     if (!conf->IsEnabled() || !conf->IsLinked()) continue;
 
-    TString name = conf->GetName();
-    if (name.Contains("TCB")) continue;
+    const char * name_cstr = conf->GetName();
+    std::string_view name(name_cstr);
+
+    if (name.find("TCB") != std::string_view::npos) continue;
 
     uint32_t mid = conf->MID();
 
     fTCB->WriteDRAMON(mid, 1);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     uint32_t dramon = fTCB->ReadDRAMON(mid);
-    if (dramon) { INFO("%s[mid=%2lu] DRAM on", name.Data(), mid); }
+
+    if (dramon) { INFO("%s[mid=%2u] DRAM on", name_cstr, mid); }
     else {
-      ERROR("%s[mid=%2lu] error occurred during turning DRAM on", name.Data(), mid);
+      ERROR("%s[mid=%2u] error occurred during turning DRAM on", name_cstr, mid);
       return false;
     }
 
-    if (name.Contains("AMOREADC")) {
+    if (name.find("AMOREADC") != std::string_view::npos) {
       int bcount = fTCB->ReadBCount(mid);
       if (bcount) {
-        auto * data = new unsigned char[bcount * kKILOBYTES];
-        fTCB->ReadData(mid, bcount, data);
-        delete[] data;
+        std::unique_ptr<unsigned char[]> data(new unsigned char[bcount * kKILOBYTES]);
+        fTCB->ReadData(mid, bcount, data.get());
       }
     }
 
-    if (!name.Contains("SADC")) { fTCB->AlignDRAM(mid); }
+    if (name.find("SADC") == std::string_view::npos) { fTCB->AlignDRAM(mid); }
   }
 
   fTCB->Reset();
@@ -117,22 +119,22 @@ bool CupGeneralTCB::Config()
   bool retval = true;
   for (int i = 0; i < nconf; i++) {
     auto * conf = static_cast<AbsConf *>(fConfigs->At(i));
-    TString name = conf->GetName();
+    std::string_view name = conf->GetName();
 
-    if (name.EqualTo("STRG") || name.EqualTo("DAQ")) continue;
-    if (name.EqualTo("TCB")) { retval &= ConfigTCB(static_cast<TCBConf *>(conf)); }
-    else if (name.EqualTo("FADCT")) {
+    if (name == "STRG" || name == "DAQ") continue;
+
+    if (name == "TCB") { retval &= ConfigTCB(static_cast<TCBConf *>(conf)); }
+    else if (name == "FADCT") {
       retval &= ConfigFADC(static_cast<FADCTConf *>(conf));
     }
-    else if (name.EqualTo("SADCT")) {
+    else if (name == "SADCT") {
       retval &= ConfigSADC(static_cast<SADCTConf *>(conf));
     }
-    else if (name.EqualTo("IADCT")) {
+    else if (name == "IADCT") {
       retval &= ConfigIADC(static_cast<IADCTConf *>(conf));
     }
     else {
-      WARNING("unknown kind of module : %s", name.Data());
-      continue;
+      WARNING("unknown kind of module : %s", conf->GetName());
     }
   }
 

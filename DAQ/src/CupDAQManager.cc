@@ -304,7 +304,7 @@ bool CupDAQManager::PrepareDAQ()
 
   Sort();
 
-  TString report = "\n";
+  std::string report = "\n";
   report += "============ CupDAQManager Prepare Report ==============\n";
   report += Form("                            type: %s\n", GetADCName(fADCType));
   report += Form("                   number of ADC: %d\n", nadc);
@@ -316,7 +316,7 @@ bool CupDAQManager::PrepareDAQ()
   report += Form("            preset daq time [s] : %d\n", fSetDAQTime);
   report += "=======================================================\n";
 
-  INFO("%s", report.Data());
+  INFO("%s", report.c_str());
 
   fRemainingBCount = new int[nadc];
   for (int i = 0; i < nadc; i++) {

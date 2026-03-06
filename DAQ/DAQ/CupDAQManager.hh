@@ -1,6 +1,7 @@
 // CupDAQManager.hh
 #pragma once
 
+#include <string>
 #include <chrono>
 #include <ctime>
 #include <memory>
@@ -14,7 +15,6 @@
 #include "TObjArray.h"
 #include "TSocket.h"
 #include "TStopwatch.h"
-#include "TString.h"
 #include "TTree.h"
 
 #include "DAQ/CupGeneralTCB.hh"
@@ -135,13 +135,15 @@ protected:
   long OpenNewHDF5File(const char * fname);
   long OpenNewGZIPFile(const char * fname);
   long SwitchRootFile(TFile *& oldfile, TFile * newfile);
+  void CloseHDF5Output();
 
   void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt, int * status);
   virtual void PrintDAQSummary();
 
   bool ThreadWait(bool ontcb = false) const;
   bool ThreadWait(unsigned long & state, bool & exit) const;
-  void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1, double ki = 0.01);
+  void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
+                   double ki = 0.01);
   bool WaitDAQStatus(RUNSTATE::STATE status) const;
   bool IsDAQRunning() const;
   bool IsDAQFail() const;
@@ -152,10 +154,10 @@ protected:
   int WaitCommand(bool & isgo, bool & exit) const;
   int WaitCommand(bool & isgo, unsigned long & state) const;
 
-  void EncodeMsg(char * buffer, unsigned long message1, unsigned long message2 = 0, unsigned long message3 = 0,
-                 unsigned long message4 = 0) const;
-  void DecodeMsg(char * buffer, unsigned long & message1, unsigned long & message2, unsigned long & message3,
-                 unsigned long & message4) const;
+  void EncodeMsg(char * buffer, unsigned long message1, unsigned long message2 = 0,
+                 unsigned long message3 = 0, unsigned long message4 = 0) const;
+  void DecodeMsg(char * buffer, unsigned long & message1, unsigned long & message2,
+                 unsigned long & message3, unsigned long & message4) const;
   unsigned long QueryDAQStatus(TSocket * socket) const;
 
   const char * GetADCName() const;
@@ -169,7 +171,7 @@ protected:
   int fSubRunNumber;
 
   int fDAQID;
-  TString fDAQName;
+  std::string fDAQName;
   int fDAQPort;
 
   DAQ::TYPE fDAQType;
@@ -177,7 +179,7 @@ protected:
   ADC::MODE fADCMode;
   TRIGGER::MODE fTriggerMode;
 
-  TString fConfigFilename;
+  std::string fConfigFilename;
   AbsConfList * fConfigList;
 
   CupGeneralTCB * fTCB;
@@ -223,7 +225,7 @@ protected:
   ConcurrentDeque<std::unique_ptr<BuiltEvent>> fBuiltEventBuffer2;
 
   OUTPUT::FORMAT fOutputFileFormat;
-  TString fOutputFilename;
+  std::string fOutputFilename;
   int fCompressionLevel;
   int fOutputSplitTime;
   std::vector<const char *> fOutputFileList;
@@ -236,7 +238,7 @@ protected:
   AbsH5Event * fH5Event;
 #endif
 
-  TString fHistFilename;
+  std::string fHistFilename;
   bool fDoHistograming;
   bool fHistogramerEnded;
   int fHistSleep;
@@ -260,10 +262,10 @@ protected:
   unsigned long fMonitorServerOn;
 
   TBenchmark * fBenchmark;
-  //TStopwatch fReadSW;
-  //TStopwatch fSortSW;
-  //TStopwatch fBuildSW;
-  //TStopwatch fWriteSW;
+  // TStopwatch fReadSW;
+  // TStopwatch fSortSW;
+  // TStopwatch fBuildSW;
+  // TStopwatch fWriteSW;
 
   AbsSoftTrigger * fSoftTrigger;
 
@@ -273,7 +275,7 @@ protected:
   std::mutex fWriteFileMutex;
   std::mutex fBenchmarkMutex;
 
-  TString fADCName;
+  std::string fADCName;
 
   bool fDoSendEvent;
   using BuiltEventQueue = ConcurrentDeque<std::unique_ptr<BuiltEvent>>;
@@ -287,7 +289,7 @@ protected:
   int fSendSleep;
   int fMergeSleep;
 
-  TString fMergeServerIPAddr;
+  std::string fMergeServerIPAddr;
   int fMergeServerPort;
   unsigned long fTotalRawDataSize;
 
@@ -344,7 +346,8 @@ inline void CupDAQManager::SetDAQTime(int t) { fSetDAQTime = t; }
 
 inline bool CupDAQManager::IsStandaloneDAQ() const
 {
-  return (fADCType == ADC::FADCS || fADCType == ADC::SADCS || fADCType == ADC::GADCS || fADCType == ADC::MADCS);
+  return (fADCType == ADC::FADCS || fADCType == ADC::SADCS || fADCType == ADC::GADCS ||
+          fADCType == ADC::MADCS);
 }
 
 inline int CupDAQManager::GetNADC() const { return GetEntries(); }
@@ -423,23 +426,23 @@ inline int CupDAQManager::GetADCChannelDataSize() const
   return dataSize;
 }
 
-inline const char * CupDAQManager::GetADCName() const { return fADCName.Data(); }
+inline const char * CupDAQManager::GetADCName() const { return fADCName.c_str(); }
 
 inline const char * CupDAQManager::GetADCName(ADC::TYPE type) const
 {
-  TString adcName;
-
   switch (type) {
-    case ADC::SADCS: adcName = "SADC"; break;
-    case ADC::SADCT: adcName = "SADC"; break;
-    case ADC::FADCS: adcName = "FADC"; break;
-    case ADC::FADCT: adcName = "FADC"; break;
-    case ADC::GADCS: adcName = "GADC"; break;
-    case ADC::GADCT: adcName = "GADC"; break;
-    case ADC::IADCT: adcName = "IADC"; break;
-    case ADC::MADCS: adcName = "MADC"; break;
-    default: break;
-  }
+    case ADC::SADCS:
+    case ADC::SADCT: return "SADC";
 
-  return adcName.Data();
+    case ADC::FADCS:
+    case ADC::FADCT: return "FADC";
+
+    case ADC::GADCS:
+    case ADC::GADCT: return "GADC";
+
+    case ADC::IADCT: return "IADC";
+    case ADC::MADCS: return "MADC";
+
+    default: return "Unknown"; // 안전을 위해 기본값 제공
+  }
 }

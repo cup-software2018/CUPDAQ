@@ -3,7 +3,9 @@
 #include "HDF5Utils/H5FADCEvent.hh"
 #include "HDF5Utils/H5SADCEvent.hh"
 #endif
-#include "TObjString.h"
+
+#include <cstdlib>
+#include <string>
 
 #include "DAQ/CupDAQManager.hh"
 #include "OnlObjs/ADCHeader.hh"
@@ -11,9 +13,13 @@
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
 
+// =====================================================================
+// HDF5 Enabled Implementation
+// =====================================================================
+#ifdef ENABLE_HDF5
+
 void CupDAQManager::WriteFADC_MOD_HDF5()
 {
-#ifdef ENABLE_HDF5
   auto * h5event = new H5FADCEvent;
   h5event->SetNDP(fNDP);
   fH5Event = h5event;
@@ -116,12 +122,10 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
     int size = fBuiltEventBuffer1.size();
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
-#endif
 }
 
 void CupDAQManager::WriteSADC_MOD_HDF5()
 {
-#ifdef ENABLE_HDF5
   auto * h5event = new H5SADCEvent;
   fH5Event = h5event;
 
@@ -222,20 +226,30 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
     int size = fBuiltEventBuffer1.size();
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
-#endif
 }
 
 long CupDAQManager::OpenNewHDF5File(const char * filename)
 {
   long retval = 0;
 
-#ifdef ENABLE_HDF5
-  TString bname = gSystem->BaseName(filename);
-  TObjArray * objs = bname.Tokenize(".");
-  int subnum = TString(((TObjString *)objs->At(objs->GetEntries() - 1))->GetName()).Atoi();
-  objs->Delete();
-  delete objs;
+  // 1. Convert to std::string for easy manipulation
+  std::string filepath(filename);
 
+  // 2. Extract BaseName (equivalent to gSystem->BaseName)
+  // Find the last slash to separate directory and filename
+  std::size_t slash_pos = filepath.find_last_of("/\\");
+  std::string bname = (slash_pos == std::string::npos) ? filepath : filepath.substr(slash_pos + 1);
+
+  // 3. Extract the subrun number (the last token after '.')
+  int subnum = 0;
+  std::size_t dot_pos = bname.find_last_of('.');
+
+  if (dot_pos != std::string::npos && dot_pos + 1 < bname.length()) {
+    // Convert substring to integer (e.g., "00001" -> 1)
+    subnum = std::atoi(bname.substr(dot_pos + 1).c_str());
+  }
+
+  // 4. Proceed with HDF5 file creation
   if (subnum == 0) {
     fHDF5File = new H5DataWriter(filename, fCompressionLevel);
     fHDF5File->SetSubrun(0);
@@ -248,6 +262,7 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
     fHDF5File = new H5DataWriter(filename, fCompressionLevel);
     fHDF5File->SetSubrun(subnum);
     fHDF5File->SetEvent(fH5Event);
+
     if (!fHDF5File->Open()) {
       ERROR("can't open output file %s", filename);
       return -1;
@@ -256,8 +271,29 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
 
   INFO("%s opened", filename);
   return retval;
-#else
-  ERROR("HDF5 not supported");
-  return -1;
-#endif
 }
+
+// =====================================================================
+// HDF5 Disabled Implementation (Stub Functions)
+// =====================================================================
+#else
+
+void CupDAQManager::WriteFADC_MOD_HDF5()
+{
+  ERROR("HDF5 is not enabled in this build. Cannot write FADC data.");
+  RUNSTATE::SetError(fRunStatus); // RunStatus 에러 처리 추가 권장
+}
+
+void CupDAQManager::WriteSADC_MOD_HDF5()
+{
+  ERROR("HDF5 is not enabled in this build. Cannot write SADC data.");
+  RUNSTATE::SetError(fRunStatus);
+}
+
+long CupDAQManager::OpenNewHDF5File(const char * filename)
+{
+  ERROR("HDF5 not supported. Cannot open %s", filename);
+  return -1;
+}
+
+#endif

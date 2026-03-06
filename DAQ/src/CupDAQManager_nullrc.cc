@@ -258,12 +258,16 @@ void CupDAQManager::RC_NullMERGER()
   fDAQName = daq->GetDAQName(fDAQID);
   fDAQPort = daq->GetPort(fDAQID);
 
-  TString adcname = GetADCName(fADCType);
+  const char * adcname = GetADCName(fADCType);
 
   for (int i = 0; i < daq->GetN(); i++) {
     int id = daq->GetID(i);
-    if (id != fDAQID && TString(daq->GetDAQName(id)).Contains(adcname)) {
-      INFO("event buffer for %s prepared", daq->GetDAQName(id).c_str());
+    if (id == fDAQID) continue;
+
+    const std::string & daq_name = daq->GetDAQName(id);
+
+    if (daq_name.find(adcname) != std::string::npos) {
+      INFO("event buffer for %s prepared", daq_name.c_str());
     }
   }
 

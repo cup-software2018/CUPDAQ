@@ -8,12 +8,12 @@ void CupDAQManager::Run()
   if (IsForcedEndRunFile()) { gSystem->Exec(Form("rm -f %s", kFORCEDENDRUNFILE)); }
 
   auto runConfig = std::make_unique<RunConfig>();
-  if (fConfigFilename.IsNull()) {
+  if (fConfigFilename.empty()) {
     ERROR("no config filename");
     return;
   }
-  if (!runConfig->ReadConfig(fConfigFilename.Data())) {
-    ERROR("error in reading config file \"%s\"", fConfigFilename.Data());
+  if (!runConfig->ReadConfig(fConfigFilename.c_str())) {
+    ERROR("error in reading config file \"%s\"", fConfigFilename.c_str());
     return;
   }
   fConfigList = runConfig->GetConfigs();
@@ -216,12 +216,15 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
 
   if (fDoSendEvent) {
-    TString adcname = GetADCName(fADCType);
-    adcname += "MERGER";
+    std::string target_name = GetADCName(fADCType);
+    target_name += "MERGER";
 
     for (int i = 0; i < daq->GetN(); i++) {
       int id = daq->GetID(i);
-      if (TString(daq->GetDAQName(id)).Contains(adcname)) {
+
+      const std::string & daq_name = daq->GetDAQName(id);
+
+      if (daq_name.find(target_name) != std::string::npos) {
         fMergeServerIPAddr = daq->GetIPAddr(id);
         fMergeServerPort = daq->GetPort(id);
       }
@@ -344,14 +347,20 @@ void CupDAQManager::RC_MERGER()
   fDAQName = daq->GetDAQName(fDAQID);
   fDAQPort = daq->GetPort(fDAQID);
 
-  TString adcname = GetADCName(fADCType);
+  const char * adcname = GetADCName(fADCType);
 
   for (int i = 0; i < daq->GetN(); i++) {
     int id = daq->GetID(i);
-    if (id != fDAQID && TString(daq->GetDAQName(id)).Contains(adcname)) {
+
+    if (id == fDAQID) continue;
+
+    const std::string & daq_name = daq->GetDAQName(id);
+
+    if (daq_name.find(adcname) != std::string::npos) {
       auto evtbuf = std::make_unique<ConcurrentDeque<std::unique_ptr<BuiltEvent>>>();
       fRecvEventBuffer.emplace_back(id, std::move(evtbuf));
-      INFO("event buffer for %s prepared", daq->GetDAQName(id).c_str());
+
+      INFO("event buffer for %s prepared", daq_name.c_str());
     }
   }
 
