@@ -125,8 +125,8 @@ bool CupMADCS::Configure()
     return false;
   }
 
-  if (!TString(fConfig->GetName()).EqualTo("MADCS")) {
-    ERROR("MADCS [sid=%d]: configuration not matched with MADCS", fSID);
+  if (std::string_view(fConfig->GetName()) != "MADCS") {
+    ERROR("FADCS [sid=%d]: configuration not matched with MADCS", fSID);
     return false;
   }
 

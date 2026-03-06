@@ -232,24 +232,19 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
 {
   long retval = 0;
 
-  // 1. Convert to std::string for easy manipulation
   std::string filepath(filename);
 
-  // 2. Extract BaseName (equivalent to gSystem->BaseName)
-  // Find the last slash to separate directory and filename
   std::size_t slash_pos = filepath.find_last_of("/\\");
   std::string bname = (slash_pos == std::string::npos) ? filepath : filepath.substr(slash_pos + 1);
 
-  // 3. Extract the subrun number (the last token after '.')
   int subnum = 0;
   std::size_t dot_pos = bname.find_last_of('.');
 
   if (dot_pos != std::string::npos && dot_pos + 1 < bname.length()) {
-    // Convert substring to integer (e.g., "00001" -> 1)
+
     subnum = std::atoi(bname.substr(dot_pos + 1).c_str());
   }
 
-  // 4. Proceed with HDF5 file creation
   if (subnum == 0) {
     fHDF5File = new H5DataWriter(filename, fCompressionLevel);
     fHDF5File->SetSubrun(0);

@@ -1,8 +1,9 @@
 #pragma once
 
+#include <cstdio>
+#include <iomanip>
 #include <iostream>
-
-#include "TString.h"
+#include <string>
 
 #include "DAQConfig/AbsConf.hh"
 #include "DAQUtils/ELog.hh"
@@ -25,7 +26,7 @@ public:
   virtual bool IsEnabled() const;
   virtual ADC::TYPE GetADCType() const;
   virtual double GetEfficiency() const;
-  virtual const char * GetReport() const;
+  virtual std::string GetReport() const;
   virtual void PrintReport() const;
 
 protected:
@@ -61,13 +62,15 @@ inline double AbsSoftTrigger::GetEfficiency() const
   return fIsEnabled ? 100.0 * fNTriggeredEvent / static_cast<double>(fTotalInputEvent) : 100.0;
 }
 
-inline const char * AbsSoftTrigger::GetReport() const
+inline std::string AbsSoftTrigger::GetReport() const
 {
-  const double eff = GetEfficiency();
-  return Form("%6.2f (%d/%d)", eff, fNTriggeredEvent, fTotalInputEvent);
+  char buf[128];
+  std::snprintf(buf, sizeof(buf), "%6.2f (%d/%d)", GetEfficiency(), fNTriggeredEvent,
+                fTotalInputEvent);
+  return std::string(buf);
 }
 
 inline void AbsSoftTrigger::PrintReport() const
 {
-  std::cout << Form("%28s", "Software Trigger : ") << GetReport() << std::endl;
+  std::cout << std::setw(28) << "Software Trigger : " << GetReport() << '\n';
 }

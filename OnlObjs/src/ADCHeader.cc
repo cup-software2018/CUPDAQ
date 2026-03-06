@@ -1,8 +1,6 @@
 #include <cstring>
 #include <iostream>
 
-#include "TString.h"
-
 #include "OnlObjs/ADCHeader.hh"
 
 ClassImp(ADCHeader)
@@ -50,7 +48,8 @@ ADCHeader::ADCHeader(const ADCHeader & header)
 {
   std::memcpy(zero, header.GetZero(), static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
   std::memcpy(tbit, header.GetTriggerBit(), static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
-  std::memcpy(ped, header.GetPedestal(), static_cast<std::size_t>(kNMAXADCCH) * sizeof(unsigned int));
+  std::memcpy(ped, header.GetPedestal(),
+              static_cast<std::size_t>(kNMAXADCCH) * sizeof(unsigned int));
 }
 
 ADCHeader::~ADCHeader()
@@ -62,8 +61,8 @@ ADCHeader::~ADCHeader()
 
 void ADCHeader::Print(Option_t * opt) const
 {
-  std::cout << Form("===> mid=%d cid=%d", mid, cid) << std::endl;
-  std::cout << Form(" dlength=%u, ttype=%u", dlen, ttype) << std::endl;
-  std::cout << Form(" tnum =%u, ttime =%lu", tnum, ttime) << std::endl;
-  std::cout << Form(" ctnum=%u, cttime=%lu", loctnum, locttime) << std::endl;
+  std::cout << "===> mid=" << mid << " cid=" << cid << '\n'
+            << " dlength=" << dlen << ", ttype=" << ttype << '\n'
+            << " tnum =" << tnum << ", ttime =" << ttime << '\n'
+            << " ctnum=" << loctnum << ", cttime=" << locttime << std::endl;
 }

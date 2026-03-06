@@ -120,7 +120,7 @@ bool CupFADCS::Configure()
     return false;
   }
 
-  if (!TString(fConfig->GetName()).EqualTo("FADCS")) {
+  if (std::string_view(fConfig->GetName()) != "FADCS") {
     ERROR("FADCS [sid=%d]: configuration not matched with FADCS", fSID);
     return false;
   }

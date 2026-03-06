@@ -17,7 +17,7 @@ void printusage(const char * daqname)
        << "  -f, --fadc              for FADC500\n"
        << "  -g, --gadc              for FADC125 (16 channels)\n"
        << "  -m, --madc              for FADC125 (4 channels)\n"
-       << "  -i, --iadc              for SIADC\n"
+       << "  -i, --iadc              for IADC\n"
        << "  -s, --sadc              for SADC\n"
        << "  -c, --config            [daq config file]\n"
        << "  -o, --output            [output file]\n"

@@ -36,7 +36,7 @@ AbsConf * AbsConfList::FindConfig(const char * name, int mid) const
   int nadc = GetAbsLast() + 1;
   for (int i = 0; i < nadc; ++i) {
     auto * conf = static_cast<AbsConf *>(fCont[i]);
-    if (TString(conf->GetName()).EqualTo(name) && conf->MID() == mid) return conf;
+    if (std::string_view(conf->GetName()) == name && conf->MID() == mid) return conf;
   }
   return nullptr;
 }

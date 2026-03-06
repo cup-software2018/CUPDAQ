@@ -1,7 +1,7 @@
 #ifndef STRGConf_hh
 #define STRGConf_hh
 
-#include "TString.h"
+#include <string>
 
 #include "DAQConfig/AbsConf.hh"
 #include "OnlConsts/adcconsts.hh"
@@ -26,9 +26,9 @@ public:
   void PrintConf() const override {}
 
 private:
-  int fZSUMode{};
-  int fPrescale{};
-  TString fFilename;
+  int fZSUMode{0};
+  int fPrescale{0};
+  std::string fFilename{};
 
   ClassDef(STRGConf, 1)
 };
@@ -38,6 +38,6 @@ inline void STRGConf::SetPrescale(int val) { fPrescale = val; }
 inline void STRGConf::SetInputCard(const char * fname) { fFilename = fname; }
 inline int STRGConf::GetZSUMode() const { return fZSUMode; }
 inline int STRGConf::GetPrescale() const { return fPrescale; }
-inline const char * STRGConf::GetInputCard() const { return fFilename.Data(); }
+inline const char * STRGConf::GetInputCard() const { return fFilename.c_str(); }
 
 #endif

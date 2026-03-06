@@ -1,3 +1,5 @@
+#include <filesystem>
+
 #include "TMessage.h"
 
 #include "DAQ/CupDAQManager.hh"
@@ -5,7 +7,10 @@
 
 void CupDAQManager::Run()
 {
-  if (IsForcedEndRunFile()) { gSystem->Exec(Form("rm -f %s", kFORCEDENDRUNFILE)); }
+  if (IsForcedEndRunFile()) {
+    std::error_code ec;
+    std::filesystem::remove(kFORCEDENDRUNFILE, ec);
+  }
 
   auto runConfig = std::make_unique<RunConfig>();
   if (fConfigFilename.empty()) {

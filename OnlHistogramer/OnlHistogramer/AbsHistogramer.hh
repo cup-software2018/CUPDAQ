@@ -1,13 +1,12 @@
-#ifndef AbsHistogramer_hh
-#define AbsHistogramer_hh
+#pragma once
 
+#include <ctime>
 #include <iostream>
-#include <time.h>
+#include <string>
 #include <vector>
 
 #include "TFile.h"
 #include "TObjArray.h"
-#include "TString.h"
 
 #include "DAQConfig/AbsConfList.hh"
 #include "DAQUtils/ELog.hh"
@@ -42,9 +41,9 @@ protected:
 
   time_t fStartDatime{};
 
-  TString fROOTFilename;
+  std::string fROOTFilename;
   TFile * fROOTFile{nullptr};
-  std::vector<const char *> fROOTFileList;
+  std::vector<std::string> fROOTFileList;
 
   HistProxy * fHistProxy{nullptr};
 
@@ -57,4 +56,3 @@ inline void AbsHistogramer::SetConfigList(AbsConfList * configs) { fConfigList =
 inline void AbsHistogramer::SetStartDatime(time_t time) { fStartDatime = time; }
 inline void AbsHistogramer::SetVerboseLevel(int level) { fVerboseLevel = level; }
 inline void AbsHistogramer::SetFilename(const char * fname) { fROOTFilename = fname; }
-#endif

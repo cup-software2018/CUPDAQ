@@ -125,8 +125,8 @@ bool CupGADCS::Configure()
     return false;
   }
 
-  if (!TString(fConfig->GetName()).EqualTo("GADCS")) {
-    ERROR("GADCS [sid=%d]: configuration not matched with GADCS", fSID);
+  if (std::string_view(fConfig->GetName()) != "GADCS") {
+    ERROR("FADCS [sid=%d]: configuration not matched with GADCS", fSID);
     return false;
   }
 

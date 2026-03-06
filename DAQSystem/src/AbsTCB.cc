@@ -1,7 +1,5 @@
 #include <iostream>
 
-#include "TSystem.h"
-
 #include "DAQSystem/AbsTCB.hh"
 #include "OnlConsts/adcconsts.hh"
 
