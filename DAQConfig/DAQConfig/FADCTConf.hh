@@ -1,8 +1,6 @@
-#ifndef FADCTConf_hh
-#define FADCTConf_hh
+#pragma once
 
 #include "DAQConfig/AbsConf.hh"
-#include "OnlConsts/adcconsts.hh"
 
 class FADCTConf : public AbsConf {
 public:
@@ -171,5 +169,3 @@ inline double FADCTConf::GetPMTQEff(int ch) const { return fPMTQEff[ch]; }
 
 inline void FADCTConf::SetTRGON(int val) { fTRGON = val; }
 inline int FADCTConf::TRGON() const { return fTRGON; }
-
-#endif

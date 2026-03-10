@@ -5,50 +5,15 @@
 ClassImp(FADCTConf)
 
 FADCTConf::FADCTConf()
-  : AbsConf()
+  : AbsConf(0, ADC::FADCT)
 {
+  SetNameTitle("FADCT", "TCB controlled flash ADC 500MHz");
 }
 
 FADCTConf::FADCTConf(int sid)
   : AbsConf(sid, ADC::FADCT)
 {
-  SetNameTitle("FADCT", "TCB controlled fadc 500MHz");
-
-  fNCH = kNCHFADC;
-  fRL = 8;
-  fTLT = 0xFFFE;
-  fDSR = 1;
-  fTRGON = 0;
-
-  unsigned long pct = 1;
-  unsigned long pwt = 0;
-  unsigned long pst = 0;
-  unsigned long pstor = 0;
-  unsigned long tm = (pstor << 3) | (pst << 2) | (pwt << 1) | pct;
-
-  for (int i = 0; i < kNCHFADC; i++) {
-    fCID[i] = i + 1;
-    fPID[i] = 0;
-    fPOL[i] = 0;
-    fDACOFF[i] = 4000;
-    fAMD[i] = 0;
-    fDLY[i] = 0;
-    fDT[i] = 0;
-    fCW[i] = 1000;
-    fTM[i] = tm;
-    fTHR[i] = 10;
-    fPCT[i] = 1;
-    fPCI[i] = 1000;
-    fPWT[i] = 0;
-    fPSW[i] = 0;
-    fPedRMS[i] = 0;
-    fPMTGain[i] = 0;
-    fPMTGainScale[i] = 0;
-    fPMTFallTime[i] = 0;
-    fPMTTransitTime[i] = 0;
-    fPMTTTS[i] = 0;
-    fPMTQEff[i] = 0;
-  }
+  SetNameTitle("FADCT", "TCB controlled flash ADC 500MHz");
 }
 
 void FADCTConf::PrintConf() const

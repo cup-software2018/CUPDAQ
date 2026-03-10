@@ -10,5 +10,7 @@
 /*.C
 /*.py
 /*.config
+/*.yml
+/*.yaml
 /*.root*
 /*.h5*

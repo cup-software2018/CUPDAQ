@@ -7,19 +7,18 @@ ClassImp(FADCSConf)
 FADCSConf::FADCSConf()
   : FADCTConf()
 {
+  SetNameTitle("FADCS", "Standalone flash ADC 500MHz");
+  fADCType = ADC::FADCS;
+
   SetLink();
 }
 
 FADCSConf::FADCSConf(int sid)
   : FADCTConf(sid)
 {
-  SetNameTitle("FADCS", "Standalone fadc 500MHz");
-  fIsLinked = true;
-  fTRGON = 1;
-  fPTRG = 0;
-  fPSC = 1;
+  SetNameTitle("FADCS", "Standalone flash ADC 500MHz");
   fADCType = ADC::FADCS;
-  
+
   SetLink();
 }
 

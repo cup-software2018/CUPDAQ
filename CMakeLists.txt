@@ -24,6 +24,9 @@ pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
 # ---- yaml parser for config ----
 find_package(yaml-cpp REQUIRED)
 
+# ---- zeromq c++ for massage server ----
+find_package(cppzmq REQUIRED)
+
 # ---- HDF5 (optional) ----
 option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" ON )
 if ( CUPDAQ_ENABLE_HDF5 )

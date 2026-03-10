@@ -140,7 +140,6 @@ protected:
   void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt, int * status);
   virtual void PrintDAQSummary();
 
-  bool ThreadWait(bool ontcb = false) const;
   bool ThreadWait(unsigned long & state, bool & exit) const;
   void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
                    double ki = 0.01);

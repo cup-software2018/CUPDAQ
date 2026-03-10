@@ -7,34 +7,14 @@ ClassImp(IADCTConf)
 IADCTConf::IADCTConf()
   : AbsConf()
 {
+  SetNameTitle("IADCT", "TCB controlled flash ADC reading SiPM");
+  fADCType = ADC::IADCT;  
 }
 
 IADCTConf::IADCTConf(int sid)
   : AbsConf(sid, ADC::IADCT)
 {
-  SetNameTitle("IADCT", "TCB controlled SiPM adc");
-
-  fNCH = kNCHIADC;
-  fMODE = 0;
-  fRL = 8;
-  fCW = 1028;
-  fGW = 256;
-  fPSW = 256;
-
-  for (int i = 0; i < kNCHIADC; i++) {
-    fCID[i] = i + 1;
-    fPID[i] = 0;
-    fDLY[i] = 6150;
-    fTHR[i] = 100;
-  }
-
-  for (int i = 0; i < 10; i++) {
-    fTLT[i] = 0x8000;
-  }
-
-  for (int i = 0; i < 5; i++) {
-    fHV[i] = 0.0f;
-  }
+  SetNameTitle("IADCT", "TCB controlled flash ADC reading SiPM");
 }
 
 void IADCTConf::PrintConf() const

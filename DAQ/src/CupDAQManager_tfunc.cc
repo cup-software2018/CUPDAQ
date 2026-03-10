@@ -144,7 +144,7 @@ void CupDAQManager::TF_TriggerMon()
       double insrate = dtime > 0.0 ? dnevent / dtime : 0.0;
       double accrate = triggertime > 0.0 ? triggernumber / triggertime : 0.0;
 
-      STATS("%4d events triggered [%8d | %8d / %5.1f(%5.1f) Hz / %s]", static_cast<int>(dnevent),
+      STATS("%5d events triggered [%7d | %7d / %5.1f(%5.1f) Hz / %s]", static_cast<int>(dnevent),
             triggernumber, fNBuiltEvent, insrate, accrate, get_hms(triggertime).c_str());
 
       dummynevent = static_cast<unsigned int>(triggernumber);

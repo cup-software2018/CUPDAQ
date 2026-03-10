@@ -4,43 +4,11 @@
 
 ClassImp(TCBConf)
 
-TCBConf::TCBConf()
-  : AbsConf(0)
-{
-}
-
 TCBConf::TCBConf(int sid)
   : AbsConf(sid, ADC::TCB)
 {
   SetNameTitle("TCB", "Trigger Control Board");
   SetEnable();
-
-  fTM = 1;
-  fCW = 1000;
-  fDLY = 0;
-  fPTRG = 1000;
-
-  fMTHRF = 1;
-  fPSCF = 1;
-  fDTF = 0;
-  fSWF = 0;
-
-  fMTHRSM = 1;
-  fPSCSM = 1;
-  fDTSM = 0;
-  fSWSM = 0;
-
-  fMTHRSL = 1;
-  fPSCSL = 1;
-  fDTSL = 0;
-  fSWSL = 0;
-
-  fMTHRI = 1;
-  fPSCI = 1;
-  fDTI = 0;
-  fSWI = 0;
-
-  fTCBTYPE = TCB::V1;
 }
 
 void TCBConf::PrintConf() const
@@ -78,8 +46,8 @@ void TCBConf::PrintConf() const
                  "                  MTHRSM(%d) PSCSM(%d) DTSM(%d) TSWSM(%s) \n"
                  "                  MTHRSL(%d) PSCSL(%d) DTSL(%d) TSWSL(%s) \n"
                  "                  MTHRI(%d)  PSCI(%d)  DTI(%d)  TSWI(%s)",
-                 fSID, fTM, fCW, fDLY, fPTRG, fMTHRF, fPSCF, fDTF, swf, fMTHRSM, fPSCSM, fDTSM, swsm, fMTHRSL, fPSCSL,
-                 fDTSL, swsl, fMTHRI, fPSCI, fDTI, swi)
+                 fSID, fTM, fCW, fDLY, fPTRG, fMTHRF, fPSCF, fDTF, swf, fMTHRSM, fPSCSM, fDTSM,
+                 swsm, fMTHRSL, fPSCSL, fDTSL, swsl, fMTHRI, fPSCI, fDTI, swi)
          << endl;
   }
   else {

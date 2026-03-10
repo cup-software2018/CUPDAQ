@@ -7,29 +7,14 @@ ClassImp(SADCTConf)
 SADCTConf::SADCTConf()
   : AbsConf()
 {
+  SetNameTitle("SADCT", "TCB controlled flash ADC 64MHz");
+  fADCType = ADC::SADCT;  
 }
 
 SADCTConf::SADCTConf(int sid)
   : AbsConf(sid, ADC::SADCT)
 {
-  SetNameTitle("SADCT", "TCB controlled sadc 64MHz");
-
-  fNCH = kNCHSADC;
-  fCW = 1024;
-  fGW = 256;
-  fPSW = 256;
-  fSUBPED = 1;
-
-  for (int i = 0; i < kNCHSADC; i++) {
-    fCID[i] = i + 1;
-    fPID[i] = 0;
-    fDLY[i] = 6150;
-    fTHR[i] = 50;
-  }
-
-  for (int i = 0; i < 8; i++) {
-    fTLT[i] = 0xFFFE;
-  }
+  SetNameTitle("SADCT", "TCB controlled flash ADC 64MHz");
 }
 
 void SADCTConf::PrintConf() const

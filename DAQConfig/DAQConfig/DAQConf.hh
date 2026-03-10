@@ -1,5 +1,4 @@
-#ifndef DAQConf_hh
-#define DAQConf_hh
+#pragma once
 
 #include <string>
 #include <tuple>
@@ -32,4 +31,3 @@ private:
   ClassDef(DAQConf, 1)
 };
 
-#endif

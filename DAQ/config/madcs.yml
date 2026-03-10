@@ -1,0 +1,41 @@
+MADCS:
+  SID: 1              # Module System ID
+  NCH: 4              # Number of Channels
+  ENABLED: 1          # 1: Enable, 0: Disable
+  
+  # --- Channel Mapping ---
+  CID: [1, 2, 3, 4]   # Channel ID
+  PID: [1, 2, 3, 4]   # Physics ID
+  POL: 0              # Polarity: 0 (Neg), 1 (Pos)
+  
+  # --- Trigger Settings ---
+  TRGON: 2            # Global Trigger: Normal(1), Random(2), External(4)
+  PTRG: 100             # Random trigger rate (1 / 1 ms)
+  PSC: 1              # Prescale
+  TLT: "1+2+3+4"      # Trigger Lookup Table logic
+  TM: 1               # Self-trigger Mode: Count(1), Width(2), Sum(4)
+  
+  # --- Acquisition Parameters ---
+  DACOFF: 3900        # Pedestal offset
+  DLY: 500            # Signal delay (ns)
+  THR: 85             # Threshold (ADC counts)
+  CW: 64              # Coincidence Width
+  
+  # --- Extended Record Length ---
+  RL: 256             
+
+  # --- Pulse Count Settings ---
+  PCT: 1              # Pulse Count Threshold
+  PCI: 1000           # Pulse Count Interval
+
+
+# ==============================================================================
+# CUPDAQ YAML Configuration Tutorial
+# ==============================================================================
+# 1. INDENTATION: Use 'Spaces' only. Never use Tabs! (Standard is 2 spaces).
+# 2. COLON (:): There MUST be a space after the colon. (e.g., SID: 1)
+# 3. LISTS: Use a hyphen (-) to define multiple modules in a sequence.
+# 4. ARRAYS: Use square brackets [ ] for channel settings (CID, PID, etc.).
+# 5. COMMENTS: Anything after '#' is ignored by the program.
+# 6. QUOTES: Use " " for logic strings like TLT to avoid parsing errors.
+# =============================================================================

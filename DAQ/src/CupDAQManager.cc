@@ -148,9 +148,13 @@ bool CupDAQManager::AddADC(AbsConf * conf)
 {
   AbsADC * adc = nullptr;
 
-  if (!conf->IsEnabled()) { return true; }
+  if (!conf->IsEnabled()) { 
+    WARNING("%s[sid=%2d] disabled in config", GetADCName(fADCType), conf->SID());    
+    return true; 
+  }
   if (!conf->IsLinked()) {
-    WARNING("%s[sid=%2d] enabled but not linked", GetADCName(fADCType), conf->SID());
+    ERROR("%s[sid=%2d] enabled but not linked", GetADCName(fADCType), conf->SID());
+    return false;
   }
 
   switch (fADCType) {
@@ -162,7 +166,7 @@ bool CupDAQManager::AddADC(AbsConf * conf)
     case ADC::IADCT: adc = new CupIADCT(conf); break;
     default: break;
   }
-  Add(adc);
+  AddADC(adc);
 
   return true;
 }

@@ -1,8 +1,6 @@
-#ifndef FADCSConf_hh
-#define FADCSConf_hh
+#pragma once
 
 #include "DAQConfig/FADCTConf.hh"
-#include "OnlConsts/adcconsts.hh"
 
 class FADCSConf : public FADCTConf {
 public:
@@ -39,5 +37,3 @@ inline int FADCSConf::TRGON() const { return fTRGON; }
 inline int FADCSConf::PTRG() const { return fPTRG; }
 
 inline int FADCSConf::PSC() const { return fPSC; }
-
-#endif

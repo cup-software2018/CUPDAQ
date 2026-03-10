@@ -2,11 +2,6 @@
 
 ClassImp(AbsConf)
 
-AbsConf::AbsConf()
-  : TNamed()
-{
-}
-
 AbsConf::AbsConf(int sid, ADC::TYPE type)
   : TNamed(),
     fSID(sid),
@@ -24,10 +19,12 @@ AbsConf::AbsConf(int sid, ADC::TYPE type)
 
 int AbsConf::Compare(const TObject * object) const
 {
-  auto * comp = static_cast<const AbsConf *>(object);
-  if (fMID > comp->MID()) return 1;
-  if (fMID < comp->MID()) return -1;
+  if (const auto * comp = dynamic_cast<const AbsConf *>(object)) {
+    if (fMID > comp->MID()) return 1;
+    if (fMID < comp->MID()) return -1;
+    return 0;
+  }
   return 0;
 }
 
-const char * AbsConf::InfoStr() const { return Form("%5s [sid=%d mid=%d]", fName.Data(), fSID, fMID); }
+const char * AbsConf::InfoStr() const { return Form("%5s [sid=%d mid=%d]", GetName(), fSID, fMID); }

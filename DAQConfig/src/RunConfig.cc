@@ -137,7 +137,7 @@ void RunConfig::ConfigTCB(YAML::Node ymlnode)
 {
   if (!ymlnode["TCB"]) return;
 
-  auto * conf = new TCBConf();
+  auto * conf = new TCBConf(0);
   auto tcb = ymlnode["TCB"];
 
   auto setSafeSW = [](YAML::Node node, std::function<void(int, int, int, int)> setter) {
@@ -197,11 +197,8 @@ void RunConfig::ConfigFADCT(YAML::Node ymlnode)
     int nch = 0;
 
     FADCTConf * conf = new FADCTConf();
-    conf->SetName("FADCT");
-    conf->SetADCType(ADC::FADCT);
 
     if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
-
     if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());
 
     if (node["SID"]) {
@@ -260,11 +257,8 @@ void RunConfig::ConfigIADCT(YAML::Node ymlnode)
     int nch = 0;
 
     IADCTConf * conf = new IADCTConf();
-    conf->SetName("IADCT");
-    conf->SetADCType(ADC::IADCT);
 
     if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
-
     if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());
 
     if (node["SID"]) {
@@ -333,11 +327,8 @@ void RunConfig::ConfigSADCT(YAML::Node ymlnode)
     int nch = 0;
 
     SADCTConf * conf = new SADCTConf();
-    conf->SetName("SADCT");
-    conf->SetADCType(ADC::SADCT);
 
     if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
-
     if (node["DAQID"]) conf->SetDAQID(node["DAQID"].as<int>());
 
     if (node["SID"]) {
@@ -390,8 +381,6 @@ void RunConfig::ConfigFADCS(YAML::Node ymlnode)
   int nch = 0;
 
   FADCSConf * conf = new FADCSConf();
-  conf->SetName("FADCS");
-  conf->SetADCType(ADC::FADCS);
 
   if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
@@ -405,16 +394,18 @@ void RunConfig::ConfigFADCS(YAML::Node ymlnode)
     conf->SetNCH(nch);
   }
 
+  if (node["RL"]) conf->SetRL(node["RL"].as<int>());
+  if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
+  
+  if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
+  if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
+  if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
+
   if (node["TLT"]) {
     std::string tlt_str = node["TLT"].as<std::string>();
     unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_str.c_str());
     conf->SetTLT(tlt_val);
   }
-
-  if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
-  if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
-  if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
-  if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
 
   if (nch > 0) {
     FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
@@ -443,8 +434,6 @@ void RunConfig::ConfigGADCS(YAML::Node ymlnode)
   int nch = 0;
 
   GADCSConf * conf = new GADCSConf();
-  conf->SetName("GADCS");
-  conf->SetADCType(ADC::GADCS);
 
   if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 
@@ -497,8 +486,6 @@ void RunConfig::ConfigMADCS(YAML::Node ymlnode)
   int nch = 0;
 
   auto * conf = new MADCSConf();
-  conf->SetName("MADCS");
-  conf->SetADCType(ADC::MADCS);
 
   if (node["ENABLED"] && node["ENABLED"].as<int>()) { conf->SetEnable(); }
 

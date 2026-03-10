@@ -1,5 +1,4 @@
-#ifndef AbsConf_hh
-#define AbsConf_hh
+#pragma once
 
 #include "TNamed.h"
 
@@ -7,7 +6,7 @@
 
 class AbsConf : public TNamed {
 public:
-  AbsConf();
+  AbsConf() = default;
   AbsConf(int sid, ADC::TYPE type = ADC::TCB);
   ~AbsConf() override = default;
 
@@ -36,6 +35,7 @@ public:
   int GetDAQID() const;
 
   int Compare(const TObject * object) const override;
+  bool IsSortable() const override { return true; }
   const char * InfoStr() const;
 
   virtual void PrintConf() const = 0;
@@ -69,5 +69,3 @@ inline ADC::TYPE AbsConf::GetADCType() const { return fADCType; }
 
 inline void AbsConf::SetDAQID(int id) { fDAQID = id; }
 inline int AbsConf::GetDAQID() const { return fDAQID; }
-
-#endif
