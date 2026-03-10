@@ -23,6 +23,8 @@ int CupSADCT::Open()
     return stat;
   }
 
+  fEventDataSize = kBYTESPEREVENTSADC;
+
   INFO("SADCT [sid=%d]: opened", fSID);
   return stat;
 }
