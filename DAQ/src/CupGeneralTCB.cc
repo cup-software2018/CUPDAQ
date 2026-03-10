@@ -22,8 +22,6 @@ CupGeneralTCB::CupGeneralTCB()
 {
 }
 
-CupGeneralTCB::~CupGeneralTCB() { delete fTCB; }
-
 int CupGeneralTCB::Open()
 {
   fTCBConfig = static_cast<TCBConf *>(fConfigs->GetTCBConfig());

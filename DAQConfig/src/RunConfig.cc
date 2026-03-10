@@ -211,14 +211,15 @@ void RunConfig::ConfigFADCT(YAML::Node ymlnode)
       conf->SetNCH(nch);
     }
 
+    if (node["RL"]) conf->SetRL(node["RL"].as<int>());
+    if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
+
     // TLT String Parsing
     if (node["TLT"]) {
       std::string tlt_str = node["TLT"].as<std::string>();
       unsigned short tlt_val = TriggerLookupTable::Instance().GetTLT(tlt_str.c_str());
       conf->SetTLT(tlt_val);
     }
-
-    if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
 
     if (nch > 0) {
       FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
@@ -396,7 +397,7 @@ void RunConfig::ConfigFADCS(YAML::Node ymlnode)
 
   if (node["RL"]) conf->SetRL(node["RL"].as<int>());
   if (node["DSR"]) conf->SetDSR(node["DSR"].as<int>());
-  
+
   if (node["TRGON"]) conf->SetTRGON(node["TRGON"].as<int>());
   if (node["PTRG"]) conf->SetPTRG(node["PTRG"].as<int>());
   if (node["PSC"]) conf->SetPSC(node["PSC"].as<int>());
