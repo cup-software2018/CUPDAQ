@@ -152,7 +152,7 @@ void RunConfig::ConfigTCB(YAML::Node ymlnode)
 
   if (tcb["DAQID"]) conf->SetDAQID(tcb["DAQID"].as<int>());
   if (tcb["TYPE"]) conf->SetTCBTYPE(static_cast<TCB::TYPE>(tcb["TYPE"].as<int>()));
-  if (tcb["TM"]) conf->SetTM(tcb["TM"].as<int>());
+  if (tcb["TRGON"]) conf->SetTM(tcb["TRGON"].as<int>());
   if (tcb["CW"]) conf->SetCW(tcb["CW"].as<int>());
   if (tcb["DLY"]) conf->SetDLY(tcb["DLY"].as<int>());
   if (tcb["PTRG"]) conf->SetPTRG(tcb["PTRG"].as<int>());
