@@ -76,7 +76,6 @@ void CupDAQManager::ReadData_GLT()
           break;
         }
       }
-      StopBenchmark("ReadData");
 
       if (RUNSTATE::CheckError(fRunStatus)) { break; }
 
@@ -90,6 +89,7 @@ void CupDAQManager::ReadData_GLT()
       mlock.unlock();
 
       fTotalReadDataSize += static_cast<double>(nadc) * bcount * kKILOBYTES;
+      StopBenchmark("ReadData");
     }
 
     ThreadSleep(fReadSleep, perror, integral, size, 16);

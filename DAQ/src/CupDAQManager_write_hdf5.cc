@@ -163,6 +163,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
       if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
     }
     else {
+      StartBenchmark("WriteEvent");
       chdata.clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
@@ -221,6 +222,8 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
         RUNSTATE::SetError(fRunStatus);
         break;
       }
+
+      StopBenchmark("WriteEvent");
     }
 
     int size = fBuiltEventBuffer1.size();
