@@ -43,8 +43,8 @@ void IADCTConf::PrintConf() const
 
   cout << " -----------------------------------------------" << endl;
 
-  for (int step = 0; step < fNCH; step += 8) {
-    int end = (step + 8 > fNCH) ? fNCH : step + 8;
+  for (int step = 0; step < fNCH; step += 10) {
+    int end = (step + 10 > fNCH) ? fNCH : step + 10;
 
     auto print = [&](const char * label, const int * arr) {
       cout << Form("%8s :", label);
@@ -59,7 +59,7 @@ void IADCTConf::PrintConf() const
     print("THR", fTHR);
     print("DLY", fDLY);
 
-    if (step + 8 < fNCH) cout << endl;
+    if (step + 10 < fNCH) cout << endl;
   }
 
   cout << " -----------------------------------------------" << endl;
