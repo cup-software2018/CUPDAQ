@@ -175,7 +175,7 @@ bool CupDAQManager::AddADC(AbsConfList * conflist)
 {
   int nadc = conflist->GetNADC(fADCType);
   if (nadc == 0) {
-    ERROR("there is no %s", GetADCName(fADCType));
+    ERROR("there is no %s in config", GetADCName(fADCType));
     return false;
   }
 

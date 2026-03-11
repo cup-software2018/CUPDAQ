@@ -2,17 +2,17 @@
 TCB:
   TYPE: 0
   CW: 64
-  PTRIG: 10
+  PTRG: 10
   MTHRF: 38
   PSCF: 1
   TRGON: 3
 
 IADCT:
   - SID: 1
-    DAQID: 3
     NCH: 40
     ENABLED: 1
     MODE: 1
+    RL: 8
 
     # --- Channel Mapping ---
     # PID: zeros indicate disconnected channels as per your original text
@@ -43,10 +43,10 @@ IADCT:
     HV: [50, 50, 50, 50, 50]
 
   - SID: 2
-    DAQID: 3
     NCH: 40
     ENABLED: 1
     MODE: 1
+    RL: 8
 
     # --- Channel Mapping ---
     # PID: zeros indicate disconnected channels as per your original text

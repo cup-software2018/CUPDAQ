@@ -1,7 +1,7 @@
 TCB:
   TYPE: 0
   CW: 64
-  PTRIG: 5
+  PTRG: 5
   MTHRF: 38
   PSCF: 1
   TRGON: 3

@@ -4,7 +4,6 @@ FADCT:
     ENABLED: 1
     CID: [1, 2, 3, 4]
     PID: [1, 2, 3, 4]
-    TRGON: 1
     DACOFF: 3700
     DLY: 160
     CW: 64
@@ -21,7 +20,6 @@ FADCT:
     ENABLED: 1
     CID: [1, 2, 3, 4]
     PID: [5, 6, 7, 8]
-    TRGON: 1
     DACOFF: 3700
     DLY: 160
     CW: 64

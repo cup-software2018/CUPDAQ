@@ -301,19 +301,19 @@ void AbsTCB::PrintRegisterSADC(SADCTConf * conf)
   cout << " -----------------------------------------------" << endl;
     for (int j = 0; j < 4; j++) {
     if (j > 0) cout << endl;
-    cout << "        CID : ";
+    cout << "     CID : ";
     for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%8d", conf->CID(i));
+      cout << Form("%6d", conf->CID(i));
     }
     cout << endl;
-    cout << "        THR : ";
+    cout << "     THR : ";
     for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%8lu", ReadTHR(mid, conf->CID(i)));
+      cout << Form("%6lu", ReadTHR(mid, conf->CID(i)));
     }
     cout << endl;
-    cout << "        DLY : ";
+    cout << "     DLY : ";
     for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%8lu", ReadDLY(mid, conf->CID(i)));
+      cout << Form("%6lu", ReadDLY(mid, conf->CID(i)));
     }
     cout << endl;
   }
@@ -356,19 +356,19 @@ void AbsTCB::PrintRegisterIADC(IADCTConf * conf)
   cout << " -----------------------------------------------" << endl;
   for (int j = 0; j < 4; j++) {
     if (j > 0) cout << endl;
-    cout << "        CID : ";
+    cout << "     CID : ";
     for (int i = 10 * j; i < 10 * (j + 1); i++) {
-      cout << Form("%8d", conf->CID(i));
+      cout << Form("%6d", conf->CID(i));
     }
     cout << endl;
-    cout << "        THR : ";
+    cout << "     THR : ";
     for (int i = 10 * j; i < 10 * (j + 1); i++) {
-      cout << Form("%8lu", ReadTHR(mid, conf->CID(i)));
+      cout << Form("%6lu", ReadTHR(mid, conf->CID(i)));
     }
     cout << endl;
-    cout << "        DLY : ";
+    cout << "     DLY : ";
     for (int i = 10 * j; i < 10 * (j + 1); i++) {
-      cout << Form("%8lu", ReadDLY(mid, conf->CID(i)));
+      cout << Form("%6lu", ReadDLY(mid, conf->CID(i)));
     }
     cout << endl;
   }
