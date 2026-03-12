@@ -54,8 +54,8 @@ void optparse(daqopt & daq, int argc, char ** argv)
       case 'x': daq.dosend = true; break;
       case 'c': daq.config = optarg; break;
       case 'o': daq.output = optarg; break;
-      case 'a': daq.format = OUTPUT::ROOT;
-      case 'b': daq.format = OUTPUT::HDF5;
+      case 'a': daq.format = OUTPUT::ROOT; break;
+      case 'b': daq.format = OUTPUT::HDF5; break;
       case 'd': daq.daqid = TString(optarg).Atoi(); break;
       case 'n': daq.daqevent = TString(optarg).Atoi(); break;
       case 't': daq.daqtime = TString(optarg).Atoi(); break;
