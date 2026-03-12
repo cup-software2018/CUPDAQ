@@ -308,8 +308,8 @@ bool CupDAQManager::PrepareDAQ()
 
   Sort();
 
-  std::string report = "\n";
-  report += "============ CupDAQManager Prepare Report ==============\n";
+  std::string report = "\n\n";
+  report += "============ CupDAQManager Preparation Report ==============\n";
   report += Form("                            type: %s\n", GetADCName(fADCType));
   report += Form("                   number of ADC: %d\n", nadc);
   report += Form("           minimum buffer count : %d\n", fMinimumBCount);
@@ -318,7 +318,7 @@ bool CupDAQManager::PrepareDAQ()
   report += Form("  minimum data size for reading : %d\n", GetADCEventDataSize());
   report += Form("         preset number of event : %d\n", fSetNEvent);
   report += Form("            preset daq time [s] : %d\n", fSetDAQTime);
-  report += "=======================================================\n";
+  report += "============================================================\n";
 
   INFO("%s", report.c_str());
 

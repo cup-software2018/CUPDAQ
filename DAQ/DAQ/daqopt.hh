@@ -1,4 +1,3 @@
-
 #pragma once
 
 #include <climits>
@@ -6,7 +5,10 @@
 #include <iostream>
 #include <vector>
 
+#include "TString.h"
+
 #include "OnlConsts/adcconsts.hh"
+#include "OnlConsts/onlconsts.hh"
 
 struct daqopt {
   std::vector<ADC::TYPE> adctype;
@@ -18,31 +20,30 @@ struct daqopt {
   int sptime;
   const char * config;
   const char * output;
+  OUTPUT::FORMAT format;
   bool dohist;
   bool dosend;
   int vlevel;
 
   void init()
   {
-    adctype.clear();
     runnum = 0;
     daqid = 0;
     daqevent = 0;
     daqtime = 0;
     rfreq = 1;
     sptime = 60 * 60;
-    config = nullptr;
-    output = nullptr;
+    format = OUTPUT::ROOT;
     dohist = false;
     dosend = false;
     vlevel = 0;
   }
 
-  void print() const
+  void print()
   {
-    std::cout << "run=" << runnum << " daqid=" << daqid << " ndaq=" << daqevent
-              << " tdaq=" << daqtime << " rfre=" << rfreq << " spt=" << sptime
-              << " conf=" << (config ? config : "none") << std::endl;
+    std::cout << Form("run=%d daqid=%d ndaq=%d tdaq=%d rfre=%d spt=%d conf=%s", runnum, daqid,
+                      daqevent, daqtime, rfreq, sptime, config)
+              << std::endl;
   }
 };
 
@@ -55,6 +56,8 @@ static struct option const long_options[] = {{"fadc", no_argument, nullptr, 'f'}
                                              {"dosend", no_argument, nullptr, 'x'},
                                              {"config", required_argument, nullptr, 'c'},
                                              {"output", required_argument, nullptr, 'o'},
+                                             {"root", required_argument, nullptr, 'a'},
+                                             {"hdf5", required_argument, nullptr, 'b'},
                                              {"daqid", required_argument, nullptr, 'd'},
                                              {"daq-event", required_argument, nullptr, 'n'},
                                              {"daq-time", required_argument, nullptr, 't'},
@@ -64,7 +67,7 @@ static struct option const long_options[] = {{"fadc", no_argument, nullptr, 'f'}
                                              {"verbose-level", required_argument, nullptr, 'v'},
                                              {nullptr, 0, nullptr, 0}};
 
-const char * const short_options = "c:o:d:n:t:r:p:q:v:fgmishx";
+const char * const short_options = "c:o:d:n:t:r:p:q:v:fgmishxab";
 
 void printusage(const char * daqname);
 void optparse(daqopt & opt, int argc, char ** argv);

@@ -1,6 +1,6 @@
-#include <cstdlib>
-#include <filesystem>
 #include <iostream>
+
+#include "TSystem.h"
 
 #include "DAQ/daqopt.hh"
 
@@ -8,29 +8,33 @@ using namespace std;
 
 void printusage(const char * daqname)
 {
-  std::string name = std::filesystem::path(daqname).filename().string();
+  const char * name = gSystem->BaseName(daqname);
 
-  cout << "CUP DAQ program for NOTICE ADCs\n\n"
-       << "Usage: " << name << " [OPTION] [ARG] ...\n"
-       << "Example: " << name << " [-f/g/m/i/s] -c config.file -o output.root\n\n"
-       << "options:\n"
-       << "  -f, --fadc              for FADC500\n"
-       << "  -g, --gadc              for FADC125 (16 channels)\n"
-       << "  -m, --madc              for FADC125 (4 channels)\n"
-       << "  -i, --iadc              for IADC\n"
-       << "  -s, --sadc              for SADC\n"
-       << "  -c, --config            [daq config file]\n"
-       << "  -o, --output            [output file]\n"
-       << "  -r, --run-number        [run number]\n"
-       << "  -d, --daqid             [DAQ ID]\n"
-       << "  -t, --daq-time          [duration time for daq]\n"
-       << "  -n, --daq-event         [number of event for daq]\n"
-       << "  -h, --dohist            enable online histograming\n"
-       << "  -x, --dosend            doesn't write output, send event to merger\n"
-       << "  -p, --splitting-time    [time for splitting output file]\n"
-       << "  -q, --report-frequency  [reporting time]\n"
-       << "  -v, --verbose-level     [verbose level]\n"
-       << endl;
+  cout << "CUP DAQ program for NOTICE ADCs" << endl;
+  cout << endl;
+  cout << Form("Usage: %s [OPTION] [ARG] ...", name) << endl;
+  cout << Form("Example: %s [-f/g/m/i/s] -c config.file -o output.root", name) << endl;
+  cout << endl;
+  cout << "options:" << endl;
+  cout << "  -f, --fadc              for FADC500" << endl;
+  cout << "  -g, --gadc              for FADC125 (16 channels)" << endl;
+  cout << "  -m, --madc              for FADC125 (4 channels)" << endl;
+  cout << "  -i, --iadc              for SIADC" << endl;
+  cout << "  -s, --sadc              for SADC" << endl;
+  cout << "  -c, --config            [daq config file]" << endl;
+  cout << "  -o, --output            [output file]" << endl;
+  cout << "  -a, --root              ROOT format" << endl;
+  cout << "  -b, --hdf5              HDF5 format" << endl;
+  cout << "  -r, --run-number        [run number]" << endl;
+  cout << "  -d, --daqid             [DAQ ID]" << endl;
+  cout << "  -t, --daq-time          [duration time for daq]" << endl;
+  cout << "  -n, --daq-event         [number of event for daq]" << endl;
+  cout << "  -h, --dohist            enable online histograming" << endl;
+  cout << "  -x, --dosend            doesn't write output, send event to merger" << endl;
+  cout << "  -p, --splitting-time    [time for splitting output file]" << endl;
+  cout << "  -q, --report-frequency  [reporting time]" << endl;
+  cout << "  -v, --verbose-level     [verbose level]" << endl;
+  cout << endl;
 }
 
 void optparse(daqopt & daq, int argc, char ** argv)
@@ -50,13 +54,15 @@ void optparse(daqopt & daq, int argc, char ** argv)
       case 'x': daq.dosend = true; break;
       case 'c': daq.config = optarg; break;
       case 'o': daq.output = optarg; break;
-      case 'd': daq.daqid = std::atoi(optarg); break;
-      case 'n': daq.daqevent = std::atoi(optarg); break;
-      case 't': daq.daqtime = std::atoi(optarg); break;
-      case 'r': daq.runnum = std::atoi(optarg); break;
-      case 'q': daq.rfreq = std::atoi(optarg); break;
-      case 'p': daq.sptime = std::atoi(optarg); break;
-      case 'v': daq.vlevel = std::atoi(optarg); break;
+      case 'a': daq.format = OUTPUT::ROOT;
+      case 'b': daq.format = OUTPUT::HDF5;
+      case 'd': daq.daqid = TString(optarg).Atoi(); break;
+      case 'n': daq.daqevent = TString(optarg).Atoi(); break;
+      case 't': daq.daqtime = TString(optarg).Atoi(); break;
+      case 'r': daq.runnum = TString(optarg).Atoi(); break;
+      case 'q': daq.rfreq = TString(optarg).Atoi(); break;
+      case 'p': daq.sptime = TString(optarg).Atoi(); break;
+      case 'v': daq.vlevel = TString(optarg).Atoi(); break;
       default: printusage(argv[0]); break;
     }
   }

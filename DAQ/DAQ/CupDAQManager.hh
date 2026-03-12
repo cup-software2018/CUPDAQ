@@ -1,11 +1,11 @@
 // CupDAQManager.hh
 #pragma once
 
-#include <string>
 #include <chrono>
 #include <ctime>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <tuple>
 #include <vector>
@@ -72,6 +72,7 @@ public:
   int ReadADCData(int n, int bcount, unsigned char * databuffer = nullptr);
   int ReadData(int bcount, unsigned char ** databuffer);
 
+  void SetOutputFileFormat(OUTPUT::FORMAT format);
   void SetOutputFilename(const char * fname);
   void SetCompressionLevel(int level);
   void SetOutputSplitTime(int time);
@@ -332,6 +333,11 @@ inline void CupDAQManager::EnableHistograming() { fDoHistograming = true; }
 inline void CupDAQManager::SetVerboseLevel(int level) { fVerboseLevel = level; }
 
 inline void CupDAQManager::SetTriggerMonTime(int time) { fTriggerMonTime = time; }
+
+inline void CupDAQManager::SetOutputFileFormat(OUTPUT::FORMAT format)
+{
+  fOutputFileFormat = format;
+}
 
 inline void CupDAQManager::SetOutputFilename(const char * fname) { fOutputFilename = fname; }
 
