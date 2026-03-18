@@ -59,7 +59,7 @@ endif ()
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
     yaml-cpp
-#    cppzmq
+    cppzmq
     ${ROOT_LIBRARIES}
     OnlConsts
     Notice

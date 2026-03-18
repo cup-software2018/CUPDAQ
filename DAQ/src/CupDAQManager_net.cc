@@ -12,25 +12,25 @@ void CupDAQManager::TF_SendEvent()
   double perror = 0;
   double integral = 0;
 
-  char data[kMESSLEN];
-  EncodeMsg(data, kRECVEVENT);
-
   if (!ThreadWait(fRunStatus, fDoExit)) {
     WARNING("TF_SendEvent: exited by exit command");
     return;
   }
-  INFO("TF_SendEvent: sending event to merger started");
+  INFO("TF_SendEvent: Data Client started, connecting to Data Server...");
 
-  auto * socket = new TSocket(fMergeServerIPAddr.c_str(), fMergeServerPort);
+  auto socket = std::make_unique<TSocket>(fMergeServerIPAddr.c_str(), fMergeServerPort);
+  
   if (socket->GetErrorCode() < 0) {
     RUNSTATE::SetError(fRunStatus);
-    delete socket;
-    ERROR("TF_SendEvent: connection to merger failed");
+    ERROR("TF_SendEvent: connection to Data Server failed at %s:%d", 
+          fMergeServerIPAddr.c_str(), fMergeServerPort);
     return;
   }
-  INFO("TF_SendEvent: connection to merger succeeded");
+  
+  INFO("TF_SendEvent: connection to Data Server succeeded");
 
   fSendStatus = RUNNING;
+  
   while (true) {
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
 
@@ -43,14 +43,13 @@ void CupDAQManager::TF_SendEvent()
 
       BuiltEvent * bevent = bevent_opt->get();
 
-      socket->SendRaw(data, kMESSLEN);
       int state = socket->SendObject(bevent);
+      
       if (state < 0) {
         RUNSTATE::SetError(fRunStatus);
-        ERROR("TF_SendEvent: sending event failed (s)");
+        ERROR("TF_SendEvent: sending BuiltEvent to Data Server failed");
         break;
       }
-      // unique_ptr in bevent_opt is destroyed here
     }
 
     int size = static_cast<int>(fBuiltEventBuffer1.size());
@@ -58,7 +57,7 @@ void CupDAQManager::TF_SendEvent()
   }
 
   fSendStatus = ENDED;
-  INFO("TF_SendEvent: sending event ended");
+  INFO("TF_SendEvent: Data Client disconnected and ended");
 }
 
 void CupDAQManager::TF_MergeEvent()
@@ -86,6 +85,7 @@ void CupDAQManager::TF_MergeEvent()
   }
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
+  std::unique_lock<std::mutex> block(fRecvBufferMutex, std::defer_lock);
 
   int ndaq = static_cast<int>(fRecvEventBuffer.size());
   auto * size = new int[ndaq];
@@ -121,6 +121,8 @@ void CupDAQManager::TF_MergeEvent()
 
       nd = 0;
       bool iserror = false;
+
+      block.lock();
       for (auto & buf : fRecvEventBuffer) {
         auto bevent_opt = buf.second->pop_front();
         if (!bevent_opt.has_value()) {
@@ -131,7 +133,7 @@ void CupDAQManager::TF_MergeEvent()
         std::unique_ptr<BuiltEvent> & bevent_ptr = bevent_opt.value();
         BuiltEvent * bevent = bevent_ptr.get();
 
-        evtnum[nd] = bevent->GetEventNumber();
+        evtnum[nd] = bevent->GetEventNumber();std::lock_guard<std::mutex> lock(fRecvBufferMutex);
         evttime[nd] = bevent->GetTriggerTime();
 
         int nadc = bevent->GetEntries();
@@ -161,6 +163,7 @@ void CupDAQManager::TF_MergeEvent()
         }
         nd += 1;
       }
+      block.unlock();
 
       if (iserror) {
         RUNSTATE::SetError(fRunStatus);

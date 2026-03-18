@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cstring>
 #include <ctime>
-#include <fstream>
+#include <filesystem>
 #include <iostream>
 
 #include "DAQ/CupDAQManager.hh"
@@ -56,21 +56,22 @@ void CupDAQManager::PrintDAQSummary()
   std::cout << Form("%32s", "End Time : ") << TDatime(fEndDatime).AsSQLString() << std::endl;
   std::cout << std::endl;
   std::cout << Form("%32s", "Live time : ") << Form("%.1f", liveTime) << " [s]" << std::endl;
-  std::cout << Form("%32s", "Total number of trigger : ") << Form("%d", fTriggerNumber) << std::endl;
+  std::cout << Form("%32s", "Total number of trigger : ") << Form("%d", fTriggerNumber)
+            << std::endl;
   std::cout << Form("%32s", "Trigger rate : ") << Form("%.2f", trate) << " [Hz]" << std::endl;
   std::cout << Form("%32s", "Total number of event : ") << Form("%d", fNBuiltEvent) << std::endl;
-  std::cout << Form("%32s", "Software Trigger efficiency : ") << Form("%5.2f [%%]", fSoftTrigger->GetEfficiency())
-            << std::endl;
+  std::cout << Form("%32s", "Software Trigger efficiency : ")
+            << Form("%5.2f [%%]", fSoftTrigger->GetEfficiency()) << std::endl;
   std::cout << std::endl;
-  std::cout << Form("%32s", "Received data size : ") << Form("%.3f GBytes (%.3f MB/sec)", recvDataSize, drate)
-            << std::endl;
-  std::cout << Form("%32s", "Written data size : ") << Form("%.3f GBytes (%.3f MB/sec)", outputDataSize, orate)
-            << std::endl;
+  std::cout << Form("%32s", "Received data size : ")
+            << Form("%.3f GBytes (%.3f MB/sec)", recvDataSize, drate) << std::endl;
+  std::cout << Form("%32s", "Written data size : ")
+            << Form("%.3f GBytes (%.3f MB/sec)", outputDataSize, orate) << std::endl;
   std::cout << "***************************************************************" << std::endl;
   std::cout << std::endl;
 }
 
-bool CupDAQManager::ThreadWait(unsigned long & state, bool & exit) const
+bool CupDAQManager::ThreadWait(unsigned long & state, bool & exit)
 {
   while (true) {
     if (RUNSTATE::CheckState(state, RUNSTATE::kRUNNING)) { break; }
@@ -81,7 +82,8 @@ bool CupDAQManager::ThreadWait(unsigned long & state, bool & exit) const
   return true;
 }
 
-void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize, double ki)
+void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral, int size,
+                                int tsize, double ki)
 {
   if (!RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNNING)) { return; }
 
@@ -113,184 +115,219 @@ void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral,
   std::this_thread::sleep_for(std::chrono::microseconds(sleep));
 }
 
-unsigned long CupDAQManager::QueryDAQStatus(TSocket * socket) const
+nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                                               const std::string & cmd,
+                                               std::string & daq_name)
 {
-  char data[kMESSLEN];
-  unsigned long mess1 = 0;
-  unsigned long mess2 = 0;
-  unsigned long mess3 = 0;
-  unsigned long mess4 = 0;
+  nlohmann::json err_json = {{"status", "error"}};
 
-  EncodeMsg(data, kQUERYDAQSTATUS);
-  if (socket->SendRaw(data, kMESSLEN) < 0) { return 0; }
-  std::memset(data, 0, kMESSLEN);
-  if (socket->RecvRaw(data, kMESSLEN) < 0) { return 0; }
-  DecodeMsg(data, mess1, mess2, mess3, mess4);
+  if (!socket_ptr) {
+    daq_name = "Unknown";
+    return err_json;
+  }
 
-  return mess1;
+  nlohmann::json req_json;
+  req_json["command"] = cmd;
+  std::string req_str = req_json.dump();
+
+  zmq::message_t request(req_str.size());
+  std::memcpy(request.data(), req_str.c_str(), req_str.size());
+
+  if (!socket_ptr->send(request, zmq::send_flags::none)) {
+    daq_name = "Unknown";
+    return err_json;
+  }
+
+  zmq::message_t reply;
+  if (!socket_ptr->recv(reply, zmq::recv_flags::none)) {
+    daq_name = "Unknown";
+    return err_json;
+  }
+
+  std::string rep_str(static_cast<char *>(reply.data()), reply.size());
+  nlohmann::json rep_json = nlohmann::json::parse(rep_str, nullptr, false);
+
+  if (rep_json.is_discarded()) {
+    daq_name = "Unknown";
+    ERROR("CupDAQManager::SendCommandToDAQ: invalid JSON reply for %s", cmd.c_str());
+    return err_json;
+  }
+
+  daq_name = rep_json.value("name", "Unknown");
+
+  if (rep_json.value("status", "error") != "ok") {
+    ERROR("CupDAQManager::SendCommandToDAQ: command %s failed on %s", cmd.c_str(),
+          daq_name.c_str());
+  }
+
+  return rep_json;
 }
 
-void CupDAQManager::SendCommandToDAQ(unsigned long cmd) const
+nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                                               const std::string & cmd)
 {
-  char data[kMESSLEN];
-  EncodeMsg(data, cmd);
+  std::string dummy_name;
+  return SendCommandToDAQ(socket_ptr, cmd, dummy_name);
+}
 
-  for (auto * socket : fDAQSocket) {
-    if (socket == nullptr) { continue; }
-    socket->SendRaw(data, kMESSLEN);
+void CupDAQManager::SendCommandToDAQs(const std::string & cmd)
+{
+  for (auto & socket_ptr : fDAQSocket) {
+    if (!socket_ptr) { continue; }
+
+    SendCommandToDAQ(socket_ptr, cmd);
   }
 }
 
-bool CupDAQManager::WaitDAQStatus(RUNSTATE::STATE state) const
+unsigned long CupDAQManager::QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                                            std::string & daq_name)
+{
+  nlohmann::json reply = SendCommandToDAQ(socket_ptr, "kQUERYDAQSTATUS", daq_name);
+
+  if (reply.value("status", "error") == "ok") { return reply.value("run_status", 0ul); }
+
+  return 0;
+}
+
+unsigned long CupDAQManager::QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr)
+{
+  std::string dummy_name;
+  return QueryDAQStatus(socket_ptr, dummy_name);
+}
+
+
+bool CupDAQManager::WaitDAQStatus(RUNSTATE::STATE state)
 {
   while (true) {
     bool totalstate = true;
-    for (auto * socket : fDAQSocket) {
-      if (socket == nullptr) { continue; }
-      unsigned long daqstate = QueryDAQStatus(socket);
+    for (auto & socket_ptr : fDAQSocket) {
+      if (!socket_ptr) continue;
+
+      std::string daq_name;
+      unsigned long daqstate = QueryDAQStatus(socket_ptr, daq_name);
+
       if (daqstate == 0) {
-        ERROR("CupDAQManager::WaitDAQStatus: %s connection down", socket->GetName());
-        socket->Close();
-        delete socket;
-        socket = nullptr;
+        Error("%s connection down", daq_name.c_str());
+        socket_ptr.reset();
         return false;
       }
       if (RUNSTATE::CheckError(daqstate)) {
-        ERROR("CupDAQManager::WaitDAQStatus: %s got error", socket->GetName());
+        Error("%s got error", daq_name.c_str());
         return false;
       }
       if (!RUNSTATE::CheckState(daqstate, state)) { totalstate = false; }
     }
-    if (totalstate) { break; }
+    if (totalstate) break;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
   return true;
 }
 
-bool CupDAQManager::IsDAQRunning() const
+bool CupDAQManager::IsDAQRunning()
 {
   bool retval = true;
-  for (auto * socket : fDAQSocket) {
-    if (socket == nullptr) { continue; }
-    unsigned long daqstate = QueryDAQStatus(socket);
+  for (auto & socket_ptr : fDAQSocket) {
+    if (!socket_ptr) continue;
+
+    std::string daq_name;
+    unsigned long daqstate = QueryDAQStatus(socket_ptr, daq_name);
+
     if (daqstate == 0) {
-      ERROR("CupDAQManager::IsDAQRunning: %s connection down", socket->GetName());
-      socket->Close();
-      delete socket;
-      socket = nullptr;
+      Error("%s connection down", daq_name.c_str());
+      socket_ptr.reset();
       retval = false;
     }
     else if (!RUNSTATE::CheckState(daqstate, RUNSTATE::kRUNNING)) {
-      ERROR("CupDAQManager::IsDAQRunning: %s is not running", socket->GetName());
-      if (RUNSTATE::CheckError(daqstate)) { ERROR("CupDAQManager::IsDAQRunning: error in %s", socket->GetName()); }
+      Error("%s is not running", daq_name.c_str());
+      if (RUNSTATE::CheckError(daqstate)) { Error("error in %s", daq_name.c_str()); }
       retval = false;
     }
   }
+
   return retval;
 }
 
-bool CupDAQManager::IsDAQFail() const
+bool CupDAQManager::IsDAQFail()
 {
   bool retval = false;
-  for (auto * socket : fDAQSocket) {
-    if (socket == nullptr) { continue; }
-    unsigned long daqstate = QueryDAQStatus(socket);
+  for (auto & socket_ptr : fDAQSocket) {
+    if (!socket_ptr) continue;
+
+    std::string daq_name;
+    unsigned long daqstate = QueryDAQStatus(socket_ptr, daq_name);
+
     if (daqstate == 0) {
-      ERROR("CupDAQManager::IsDAQFail: %s connection down", socket->GetName());
-      socket->Close();
-      delete socket;
-      socket = nullptr;
+      Error("%s connection down", daq_name.c_str());
+      socket_ptr.reset();
       retval = true;
     }
     else if (RUNSTATE::CheckError(daqstate)) {
-      ERROR("CupDAQManager::IsDAQFail: error in %s", socket->GetName());
+      Error("error in %s", daq_name.c_str());
       retval = true;
     }
   }
+
   return retval;
 }
 
-bool CupDAQManager::WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit) const
+bool CupDAQManager::WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit)
 {
   while (true) {
-    if (RUNSTATE::CheckState(state, pstate)) { break; }
-    if (errorexit && RUNSTATE::CheckError(state)) { return false; }
+    if (RUNSTATE::CheckState(state, pstate)) break;
+    if (errorexit && RUNSTATE::CheckError(state)) return false;
+
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
   return true;
 }
 
-int CupDAQManager::WaitCommand(bool & isgo) const
+int CupDAQManager::WaitCommand(bool & isgo)
 {
   while (true) {
     if (IsDAQFail()) { return -1; }
     if (isgo) { break; }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
   return 0;
 }
 
-int CupDAQManager::WaitCommand(bool & isgo, bool & exit) const
+int CupDAQManager::WaitCommand(bool & isgo, bool & exit)
 {
   while (true) {
     if (IsDAQFail()) { return -1; }
     if (exit) { return 1; }
     if (isgo) { break; }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
   return 0;
 }
 
-int CupDAQManager::WaitCommand(bool & isgo, unsigned long & state) const
+int CupDAQManager::WaitCommand(bool & isgo, unsigned long & state)
 {
   while (true) {
     if (IsDAQFail()) { return -1; }
     if (RUNSTATE::CheckError(state)) { return 1; }
     if (isgo) { break; }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
+
   return 0;
 }
 
-void CupDAQManager::EncodeMsg(char * buffer, unsigned long message1, unsigned long message2, unsigned long message3,
-                              unsigned long message4) const
-{
-  std::memset(buffer, 0, kMESSLEN);
-
-  for (int i = 0; i < 8; ++i) {
-    buffer[i] = static_cast<char>((message1 >> (8 * i)) & 0xFF);
-    buffer[i + 8] = static_cast<char>((message2 >> (8 * i)) & 0xFF);
-    buffer[i + 16] = static_cast<char>((message3 >> (8 * i)) & 0xFF);
-    buffer[i + 24] = static_cast<char>((message4 >> (8 * i)) & 0xFF);
-  }
-}
-
-void CupDAQManager::DecodeMsg(char * buffer, unsigned long & message1, unsigned long & message2,
-                              unsigned long & message3, unsigned long & message4) const
-{
-  message1 = 0;
-  message2 = 0;
-  message3 = 0;
-  message4 = 0;
-
-  for (int i = 0; i < 8; ++i) {
-    message1 += static_cast<unsigned long>((static_cast<unsigned long>(buffer[i]) & 0xFFUL) << (8 * i));
-    message2 += static_cast<unsigned long>((static_cast<unsigned long>(buffer[i + 8]) & 0xFFUL) << (8 * i));
-    message3 += static_cast<unsigned long>((static_cast<unsigned long>(buffer[i + 16]) & 0xFFUL) << (8 * i));
-    message4 += static_cast<unsigned long>((static_cast<unsigned long>(buffer[i + 24]) & 0xFFUL) << (8 * i));
-  }
-}
-
-bool CupDAQManager::IsForcedEndRunFile(bool useRC) const
+bool CupDAQManager::IsForcedEndRunFile(bool useRC)
 {
   if (!useRC) {
-    std::ifstream status(kFORCEDENDRUNFILE);
-    if (status.is_open()) {
-      status.close();
-      return true;
-    }
+    if (std::filesystem::exists(kFORCEDENDRUNFILE)) { return true; }
   }
+
   return false;
 }
 

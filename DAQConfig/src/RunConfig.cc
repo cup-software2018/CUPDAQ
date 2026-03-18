@@ -2,44 +2,36 @@
 #include "DAQConfig/TriggerLookupTable.hh"
 #include "DAQUtils/ELog.hh"
 
-RunConfig::RunConfig() { fConfigs = new AbsConfList(); }
-
-RunConfig::~RunConfig() { delete fConfigs; }
+RunConfig::RunConfig() { fConfigs = std::make_unique<AbsConfList>(); }
 
 bool RunConfig::ReadConfig() { return ReadConfig(fConfigFilename.c_str()); }
 
 bool RunConfig::ReadConfig(const char * name)
 {
   std::string filename(name);
-
   if (filename.empty()) {
     ERROR("config filename is empty");
     return false;
   }
 
   try {
-    YAML::Node node = YAML::LoadFile(filename.c_str());
-    if (node.IsNull()) {
+    YAML::Node main_node = YAML::LoadFile(filename.c_str());
+    if (main_node.IsNull()) {
       ERROR("config file is empty");
       return false;
     }
 
-    if (node["Include"] && node["Include"].IsSequence()) {
-      for (const auto & inc : node["Include"]) {
+    YAML::Node merged_node = YAML::Clone(main_node);
+
+    // Process includes in-memory
+    if (main_node["Include"] && main_node["Include"].IsSequence()) {
+      for (const auto & inc : main_node["Include"]) {
         std::string inc_file = inc.as<std::string>();
         try {
           YAML::Node inc_node = YAML::LoadFile(inc_file.c_str());
-
-          ConfigDAQ(inc_node);
-          ConfigTCB(inc_node);
-          ConfigFADCT(inc_node);
-          ConfigIADCT(inc_node);
-          ConfigSADCT(inc_node);
-          ConfigFADCS(inc_node);
-          ConfigGADCS(inc_node);
-          ConfigMADCS(inc_node);
-
-          INFO("Included config %s is successfully loaded", inc_file.c_str());
+          // Merge the included node into the merged_node
+          merged_node = MergeNodes(merged_node, inc_node);
+          INFO("Included config %s is successfully loaded and merged", inc_file.c_str());
         }
         catch (const std::exception & e) {
           ERROR("Failed to load included file %s: %s", inc_file.c_str(), e.what());
@@ -48,17 +40,17 @@ bool RunConfig::ReadConfig(const char * name)
       }
     }
 
-    ConfigDAQ(node);
-    ConfigTCB(node);
-    ConfigFADCT(node);
-    ConfigIADCT(node);
-    ConfigSADCT(node);
-    ConfigFADCS(node);
-    ConfigGADCS(node);
-    ConfigMADCS(node);
+    // Now call the config functions only ONCE with the merged node
+    ConfigDAQ(merged_node);
+    ConfigTCB(merged_node);
+    ConfigFADCT(merged_node);
+    ConfigIADCT(merged_node);
+    ConfigSADCT(merged_node);
+    ConfigFADCS(merged_node);
+    ConfigGADCS(merged_node);
+    ConfigMADCS(merged_node);
 
     INFO("reading config %s is done", name);
-
     return true;
   }
   catch (const YAML::BadFile & e) {
@@ -74,6 +66,34 @@ bool RunConfig::ReadConfig(const char * name)
   }
 
   return false;
+}
+
+YAML::Node RunConfig::MergeNodes(YAML::Node target, YAML::Node source)
+{
+  if (!source.IsMap() || !target.IsMap()) {
+    // For simplicity, overwriting if it's not a map
+    return source;
+  }
+
+  for (YAML::const_iterator it = source.begin(); it != source.end(); ++it) {
+    std::string key = it->first.as<std::string>();
+
+    // If the key is sequence (like FADCT), append elements
+    if (target[key] && target[key].IsSequence() && it->second.IsSequence()) {
+      for (const auto & elem : it->second) {
+        target[key].push_back(elem);
+      }
+    }
+    // If both are maps, merge recursively
+    else if (target[key] && target[key].IsMap() && it->second.IsMap()) {
+      target[key] = MergeNodes(target[key], it->second);
+    }
+    // Otherwise, insert or overwrite
+    else {
+      target[key] = it->second;
+    }
+  }
+  return target;
 }
 
 template <typename T>

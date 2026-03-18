@@ -216,263 +216,214 @@ void CupDAQManager::TF_DebugMon()
   INFO("debug monitoring ended");
 }
 
+#include <mutex>
+#include <nlohmann/json.hpp>
+#include <string>
+#include <zmq.hpp>
+
 void CupDAQManager::TF_MsgServer()
 {
   int port = fDAQPort;
   std::string name = fDAQName;
   bool istcb = (fDAQID == 0);
 
-  const int max_clients = 10;
+  // Initialize ZeroMQ context and socket in Reply (REP) mode
+  zmq::context_t context(1);
+  zmq::socket_t zmq_socket(context, zmq::socket_type::rep);
 
-  int client_socket[max_clients];
-  auto ** root_socket = new TSocket *[max_clients];
-  for (int i = 0; i < max_clients; ++i) {
-    client_socket[i] = -1;
-    root_socket[i] = nullptr;
+  // Set receive timeout to 1000ms.
+  // This allows the while loop to check for exit flags periodically without blocking forever.
+  zmq_socket.set(zmq::sockopt::rcvtimeo, 1000);
+
+  std::string endpoint = "tcp://*:" + std::to_string(port);
+
+  try {
+    zmq_socket.bind(endpoint);
   }
-
-  int master_socket = socket(AF_INET, SOCK_STREAM, 0);
-  if (master_socket == 0) {
-    ERROR("[%s] socket failed", name.c_str());
+  catch (const zmq::error_t & e) {
+    ERROR("[%s] ZMQ socket bind failed on port %d: %s", name.c_str(), port, e.what());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
-    delete[] root_socket;
     return;
   }
 
-  int opt = 1;
-  if (setsockopt(master_socket, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&opt),
-                 sizeof(opt)) < 0) {
-    ERROR("[%s] setsockopt failed", name.c_str());
-    istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
-    close(master_socket);
-    delete[] root_socket;
-    return;
-  }
+  INFO("[%s] ZMQ Message Server started on port %d", name.c_str(), port);
 
-  sockaddr_in address{};
-  address.sin_family = AF_INET;
-  address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons(static_cast<uint16_t>(port));
-
-  socklen_t addrlen = sizeof(address);
-
-  if (bind(master_socket, reinterpret_cast<struct sockaddr *>(&address), addrlen) < 0) {
-    ERROR("[%s] socket bind failed on port %d", name.c_str(), port);
-    istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
-    close(master_socket);
-    delete[] root_socket;
-    return;
-  }
-  INFO("[%s] message server on port %d", name.c_str(), port);
-
-  if (listen(master_socket, 3) < 0) {
-    ERROR("[%s] socket listen error", name.c_str());
-    istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
-    close(master_socket);
-    delete[] root_socket;
-    return;
-  }
-
-  INFO("[%s] message server start", name.c_str());
-
-  char buffer[kMESSLEN];
-  timeval tv{};
-  fd_set readfds;
-
-  std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
-
+  // Main Event Loop
   while (true) {
+    // 1. Check exit flags
     if (fDoExit || fDoExitTCB) { break; }
 
-    FD_ZERO(&readfds);
-    FD_SET(master_socket, &readfds);
+    zmq::message_t request;
 
-    int max_sd = master_socket;
+    // 2. Wait for a message from clients
+    auto res = zmq_socket.recv(request, zmq::recv_flags::none);
 
-    for (int sd : client_socket) {
-      if (sd > 0) { FD_SET(sd, &readfds); }
-      if (sd > max_sd) { max_sd = sd; }
+    // If timeout occurs (no message for 1000ms), loop again to check exit flags
+    if (!res) { continue; }
+
+    // 3. Parse the received message as JSON
+    std::string msg_str(static_cast<char *>(request.data()), request.size());
+    nlohmann::json req_json = nlohmann::json::parse(msg_str, nullptr, false);
+    nlohmann::json rep_json;
+
+    if (req_json.is_discarded()) {
+      rep_json["status"] = "error";
+      rep_json["message"] = "Invalid JSON format received";
+      WARNING("[%s] Invalid JSON received from client", name.c_str());
     }
+    else {
+      std::string command = req_json.value("command", "UNKNOWN");
+      rep_json["status"] = "ok"; // Default success status
+      rep_json["name"] = name;   // Default success status
 
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-
-    int activity = select(max_sd + 1, &readfds, nullptr, nullptr, &tv);
-    if (activity == 0) { continue; }
-    else if (activity < 0 && errno != EINTR) {
-      // DEBUG("select error occurred for [%s]", name.c_str());
-      continue;
-    }
-
-    if (FD_ISSET(master_socket, &readfds)) {
-      int new_socket =
-          accept(master_socket, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
-
-      if (new_socket < 0) {
-        ERROR("[%s]: accept error occurred", name.c_str());
-        istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
-        close(master_socket);
-        for (int i = 0; i < max_clients; ++i) {
-          if (root_socket[i]) { delete root_socket[i]; }
-        }
-        delete[] root_socket;
-        return;
+      // -------------------------------------------------------------------
+      // Status & Information Queries
+      // -------------------------------------------------------------------
+      if (command == "kQUERYDAQSTATUS") {
+        rep_json["run_status"] = istcb ? fRunStatusTCB : fRunStatus;
+      }
+      else if (command == "kQUERYRUNINFO") {
+        rep_json["run_number"] = fRunNumber;
+        rep_json["subrun_number"] = fSubRunNumber;
+        rep_json["start_time"] = fStartDatime;
+        rep_json["end_time"] = fEndDatime;
+      }
+      else if (command == "kQUERYTRGINFO") {
+        // Protect shared variables with the existing monitor mutex
+        std::lock_guard<std::mutex> lock(fMonitorMutex);
+        rep_json["nevent"] = static_cast<unsigned long>(fTriggerNumber);
+        rep_json["daqtime"] = static_cast<unsigned long>(fTriggerTime);
+      }
+      else if (command == "kQUERYMONITOR") {
+        rep_json["monitor_server_on"] = fMonitorServerOn;
       }
 
-      INFO("[%s]: new client connection, socket fd: %d, ip: %s, port: %d", name.c_str(), new_socket,
-           inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-
-      for (int i = 0; i < max_clients; ++i) {
-        if (client_socket[i] == -1) {
-          client_socket[i] = new_socket;
-          root_socket[i] = new TSocket(new_socket);
-          INFO("[%s]: adding to list of sockets at %d", name.c_str(), i);
-          break;
-        }
+      // -------------------------------------------------------------------
+      // Run Control Commands
+      // -------------------------------------------------------------------
+      else if (command == "kCONFIGRUN") {
+        istcb ? fDoConfigRunTCB = true : fDoConfigRun = true;
+        INFO("[%s] CONFIGRUN command received via ZMQ", name.c_str());
+      }
+      else if (command == "kSTARTRUN") {
+        istcb ? fDoStartRunTCB = true : fDoStartRun = true;
+        INFO("[%s] STARTRUN command received via ZMQ", name.c_str());
+      }
+      else if (command == "kENDRUN") {
+        istcb ? fDoEndRunTCB = true : fDoEndRun = true;
+        INFO("[%s] ENDRUN command received via ZMQ", name.c_str());
+      }
+      else if (command == "kSPLITOUTPUTFILE") {
+        istcb ? fDoSplitOutputFileTCB = true : fDoSplitOutputFile = true;
+        INFO("[%s] SPLITOUTPUTFILE command received via ZMQ", name.c_str());
+      }
+      else if (command == "kSETERROR") {
+        RUNSTATE::SetError(fRunStatus);
+        INFO("[%s] SETERROR command received via ZMQ", name.c_str());
+      }
+      else if (command == "kEXIT") {
+        istcb ? fDoExitTCB = true : fDoExit = true;
+        INFO("[%s] EXIT command received via ZMQ", name.c_str());
+      }
+      // -------------------------------------------------------------------
+      // Unknown Command
+      // -------------------------------------------------------------------
+      else {
+        rep_json["status"] = "error";
+        rep_json["message"] = "Unknown command string";
+        WARNING("[%s] Unknown command [%s] received via ZMQ", name.c_str(), command.c_str());
       }
     }
 
-    for (int i = 0; i < max_clients; ++i) {
-      int sd = client_socket[i];
+    // 4. Send the JSON reply back to the client
+    std::string rep_str = rep_json.dump();
+    zmq::message_t reply(rep_str.size());
+    std::memcpy(reply.data(), rep_str.c_str(), rep_str.size());
+    zmq_socket.send(reply, zmq::send_flags::none);
+  }
 
-      if (sd > 0 && FD_ISSET(sd, &readfds)) {
-        std::memset(buffer, 0, kMESSLEN);
-        int valread = read(sd, buffer, kMESSLEN);
+  INFO("[%s] ZMQ Message Server ended cleanly", name.c_str());
+}
 
-        getpeername(sd, reinterpret_cast<struct sockaddr *>(&address), &addrlen);
+#include <algorithm>
+#include <memory>
+#include <mutex>
+#include <vector>
 
-        if (valread == 0) {
-          INFO("[%s]: host disconnected, socket fd: %d, ip: %s, port: %d", name.c_str(), sd,
-               inet_ntoa(address.sin_addr), ntohs(address.sin_port));
+void CupDAQManager::TF_DataServer()
+{
+  int data_port = fMergeServerPort;
+  std::string name = fDAQName;
 
-          close(sd);
-          client_socket[i] = -1;
-          delete root_socket[i];
-          root_socket[i] = nullptr;
-        }
-        else {
-          unsigned long command = 0;
-          unsigned long dummy = 0;
-          DecodeMsg(buffer, command, dummy, dummy, dummy);
+  auto server_socket = std::make_unique<TServerSocket>(data_port, kTRUE);
 
-          switch (command) {
-            case kQUERYDAQSTATUS: {
-              EncodeMsg(buffer, istcb ? fRunStatusTCB : fRunStatus);
-              root_socket[i]->SendRaw(buffer, kMESSLEN);
-              break;
-            }
-            case kQUERYRUNINFO: {
-              EncodeMsg(buffer, static_cast<unsigned long>(fRunNumber),
-                        static_cast<unsigned long>(fSubRunNumber),
-                        static_cast<unsigned long>(fStartDatime),
-                        static_cast<unsigned long>(fEndDatime));
-              root_socket[i]->SendRaw(buffer, kMESSLEN);
-              break;
-            }
-            case kQUERYTRGINFO: {
-              unsigned long nevent = 0;
-              unsigned long daqtime = 0;
+  if (!server_socket->IsValid()) {
+    ERROR("[%s] ROOT socket failed to bind on port %d", name.c_str(), data_port);
+    RUNSTATE::SetError(fRunStatus);
+    return;
+  }
 
-              mlock.lock();
-              nevent = static_cast<unsigned long>(fTriggerNumber);
-              daqtime = fTriggerTime;
-              mlock.unlock();
+  std::vector<std::unique_ptr<TSocket>> client_sockets;
 
-              EncodeMsg(buffer, nevent, daqtime);
-              root_socket[i]->SendRaw(buffer, kMESSLEN);
-              break;
-            }
-            case kREQUESTCONFIG: {
-              root_socket[i]->SendObject(fConfigList);
-              INFO("[%s] sent config list to DAQ", name.c_str());
-              break;
-            }
-            case kSPLITOUTPUTFILE: {
-              if (istcb) { fDoSplitOutputFileTCB = true; }
-              else {
-                fDoSplitOutputFile = true;
-              }
-              INFO("[%s] output file split command received", name.c_str());
-              break;
-            }
-            case kRECVEVENT: {
-              TMessage * mess = nullptr;
-              if (root_socket[i]->Recv(mess) > 0 && mess != nullptr) {
-                auto * event = static_cast<BuiltEvent *>(mess->ReadObject(mess->GetClass()));
-                int daqid = event->GetDAQID();
-                for (auto & buf : fRecvEventBuffer) {
-                  if (buf.first == daqid) {
-                    buf.second->push_back(std::unique_ptr<BuiltEvent>(event));
-                    break;
-                  }
-                }
-                delete mess;
-              }
-              else {
-                WARNING("[%s] error in event sender [ip=%s, port=%d]", name.c_str(),
-                        inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-              }
-              break;
-            }
-            case kSETERROR: {
-              RUNSTATE::SetError(fRunStatus);
-              break;
-            }
-            case kQUERYMONITOR: {
-              EncodeMsg(buffer, static_cast<unsigned long>(fMonitorServerOn));
-              root_socket[i]->SendRaw(buffer, kMESSLEN);
-              break;
-            }
-            case kCONFIGRUN: {
-              if (istcb) { fDoConfigRunTCB = true; }
-              else {
-                fDoConfigRun = true;
-              }
-              INFO("[%s] CONFIGRUN command received", name.c_str());
-              break;
-            }
-            case kSTARTRUN: {
-              if (istcb) { fDoStartRunTCB = true; }
-              else {
-                fDoStartRun = true;
-              }
-              INFO("[%s] STARTRUN command received", name.c_str());
-              break;
-            }
-            case kENDRUN: {
-              if (istcb) { fDoEndRunTCB = true; }
-              else {
-                fDoEndRun = true;
-              }
-              INFO("[%s] ENDRUN command received", name.c_str());
-              break;
-            }
-            case kEXIT: {
-              if (istcb) { fDoExitTCB = true; }
-              else {
-                fDoExit = true;
-              }
-              INFO("[%s] EXIT command received", name.c_str());
-              break;
-            }
-            default: {
-              WARNING("[%s] unknown command [%lu] received", name.c_str(), command);
-              break;
-            }
+  auto monitor = std::make_unique<TMonitor>();
+  monitor->Add(server_socket.get());
+
+  INFO("[%s] ROOT Data Server started on port %d", name.c_str(), data_port);
+
+  while (true) {
+    if (fDoExit) { break; }
+
+    TSocket * active_socket = monitor->Select(1000);
+    if (active_socket == (TSocket *)-1) { continue; }
+
+    if (active_socket->IsA() == TServerSocket::Class()) {
+      TSocket * raw_client = server_socket->Accept();
+      if (raw_client) {
+        monitor->Add(raw_client);
+        client_sockets.push_back(std::unique_ptr<TSocket>(raw_client));
+        INFO("[%s] New ROOT client connected", name.c_str());
+      }
+    }
+    else {
+      TMessage * raw_mess = nullptr;
+
+      // If client disconnects or an error occurs
+      if (active_socket->Recv(raw_mess) <= 0 || raw_mess == nullptr) {
+        INFO("[%s] ROOT client disconnected", name.c_str());
+
+        monitor->Remove(active_socket);
+
+        client_sockets.erase(std::remove_if(client_sockets.begin(), client_sockets.end(),
+                                            [&](const std::unique_ptr<TSocket> & p) {
+                                              return p.get() == active_socket;
+                                            }),
+                             client_sockets.end());
+        continue;
+      }
+
+      std::unique_ptr<TMessage> mess(raw_mess);
+
+      // Handle BuiltEvent object
+      if (mess->GetClass() && mess->GetClass()->InheritsFrom(BuiltEvent::Class())) {
+        auto * event = static_cast<BuiltEvent *>(mess->ReadObject(mess->GetClass()));
+        int daqid = event->GetDAQID();
+
+        // Critical: Protect the event buffer from concurrent access
+        std::lock_guard<std::mutex> lock(fRecvBufferMutex);
+        for (auto & buf : fRecvEventBuffer) {
+          if (buf.first == daqid) {
+            buf.second->push_back(std::unique_ptr<BuiltEvent>(event));
+            break;
           }
         }
       }
+      else {
+        WARNING("[%s] Received unknown TMessage format", name.c_str());
+      }
     }
   }
 
-  close(master_socket);
-
-  for (int i = 0; i < max_clients; ++i) {
-    if (root_socket[i]) { delete root_socket[i]; }
-  }
-  delete[] root_socket;
-
-  INFO("[%s] message server ended", name.c_str());
+  INFO("[%s] ROOT Data Server ended", name.c_str());
 }
 
 void CupDAQManager::TF_ShrinkToFit()
@@ -540,7 +491,7 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
       sw.Continue();
       if (elapsetime >= fOutputSplitTime) {
         sw.Start(true);
-        SendCommandToDAQ(kSPLITOUTPUTFILE);
+        SendCommandToDAQs("kSPLITOUTPUTFILE");
         fSubRunNumber += 1;
 
         if (fVerboseLevel >= 1) { INFO("output file will be split"); }

@@ -9,12 +9,11 @@
 #include <thread>
 #include <tuple>
 #include <vector>
+#include <zmq.hpp>
 
 #include "TBenchmark.h"
 #include "TFile.h"
 #include "TObjArray.h"
-#include "TSocket.h"
-#include "TStopwatch.h"
 #include "TTree.h"
 
 #include "DAQ/CupGeneralTCB.hh"
@@ -24,6 +23,7 @@
 #include "DAQTrigger/AbsSoftTrigger.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
 #include "DAQUtils/ELog.hh"
+#include "DAQUtils/Json.hh"
 #ifdef ENABLE_HDF5
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/H5DataWriter.hh"
@@ -89,6 +89,7 @@ public:
   void TF_DebugMon();
   void TF_RunManager();
   void TF_MsgServer();
+  void TF_DataServer();
   void TF_ReadData();
   void TF_SortEvent();
   void TF_BuildEvent();
@@ -141,24 +142,29 @@ protected:
   void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt, int * status);
   virtual void PrintDAQSummary();
 
-  bool ThreadWait(unsigned long & state, bool & exit) const;
+  bool ThreadWait(unsigned long & state, bool & exit);
   void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
                    double ki = 0.01);
-  bool WaitDAQStatus(RUNSTATE::STATE status) const;
-  bool IsDAQRunning() const;
-  bool IsDAQFail() const;
-  void SendCommandToDAQ(unsigned long cmd) const;
-  bool IsForcedEndRunFile(bool useRC = false) const;
-  bool WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit = true) const;
-  int WaitCommand(bool & isgo) const;
-  int WaitCommand(bool & isgo, bool & exit) const;
-  int WaitCommand(bool & isgo, unsigned long & state) const;
 
-  void EncodeMsg(char * buffer, unsigned long message1, unsigned long message2 = 0,
-                 unsigned long message3 = 0, unsigned long message4 = 0) const;
-  void DecodeMsg(char * buffer, unsigned long & message1, unsigned long & message2,
-                 unsigned long & message3, unsigned long & message4) const;
-  unsigned long QueryDAQStatus(TSocket * socket) const;
+  nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                                  const std::string & cmd, std::string & daq_name);
+  nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                                  const std::string & cmd);
+  void SendCommandToDAQs(const std::string & cmd);
+
+  unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+                               std::string & daq_name);
+  unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr);
+
+  bool WaitDAQStatus(RUNSTATE::STATE status);
+  bool IsDAQRunning();
+  bool IsDAQFail();
+
+  bool WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit = true);
+  int WaitCommand(bool & isgo);
+  int WaitCommand(bool & isgo, bool & exit);
+  int WaitCommand(bool & isgo, unsigned long & state);
+  bool IsForcedEndRunFile(bool useRC = false);
 
   const char * GetADCName() const;
   const char * GetADCName(ADC::TYPE type) const;
@@ -182,8 +188,10 @@ protected:
   std::string fConfigFilename;
   AbsConfList * fConfigList;
 
-  CupGeneralTCB * fTCB;
-  std::vector<TSocket *> fDAQSocket;
+  std::unique_ptr<CupGeneralTCB> fTCB;
+
+  zmq::context_t fZMQContext{1};
+  std::vector<std::unique_ptr<zmq::socket_t>> fDAQSocket;
 
   int fRecordLength;
   int fMinimumBCount;
@@ -262,10 +270,6 @@ protected:
   unsigned long fMonitorServerOn;
 
   TBenchmark * fBenchmark;
-  // TStopwatch fReadSW;
-  // TStopwatch fSortSW;
-  // TStopwatch fBuildSW;
-  // TStopwatch fWriteSW;
 
   AbsSoftTrigger * fSoftTrigger;
 
@@ -274,6 +278,7 @@ protected:
   std::mutex fSTDADCMutex;
   std::mutex fWriteFileMutex;
   std::mutex fBenchmarkMutex;
+  std::mutex fRecvBufferMutex;
 
   std::string fADCName;
 

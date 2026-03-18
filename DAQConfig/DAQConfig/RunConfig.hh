@@ -16,7 +16,7 @@
 class RunConfig {
 public:
   RunConfig();
-  virtual ~RunConfig();
+  virtual ~RunConfig() = default;
 
   void SetConfigFilename(const char * name);
   AbsConfList * GetConfigs() const;
@@ -25,6 +25,7 @@ public:
   virtual bool ReadConfig(const char * name);
 
 private:
+  YAML::Node MergeNodes(YAML::Node target, YAML::Node source);
   template <typename T>
   void FillConfigArray(YAML::Node node, int nch, std::function<void(int, T)> setter,
                        bool inc = false);
@@ -39,8 +40,8 @@ private:
 
 protected:
   std::string fConfigFilename;
-  AbsConfList * fConfigs;
+  std::unique_ptr<AbsConfList> fConfigs;
 };
 
 inline void RunConfig::SetConfigFilename(const char * name) { fConfigFilename = name; }
-inline AbsConfList * RunConfig::GetConfigs() const { return fConfigs; }
+inline AbsConfList * RunConfig::GetConfigs() const { return fConfigs.get(); }
