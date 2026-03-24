@@ -27,9 +27,9 @@ void FADCSConf::PrintConf() const
   using std::cout;
   using std::endl;
 
-  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) RL(%d) TLT(%X) "
-               "DSR(%d) TRGON(%d) PTRG(%d) PSCALE(%d)",
-               GetName(), fSID, fMID, fNCH, fRL, fTLT, fDSR, fTRGON, fPTRG, fPSC)
+  cout << Form(" ++ %s config: SID(%d) MID(%1d) NCH(%1d) RL(%d) DSR(%d) TLT(%X) "
+               "TRGON(%d) PTRG(%d) PSCALE(%d)",
+               GetName(), fSID, fMID, fNCH, fRL, fDSR, fTLT, fTRGON, fPTRG, fPSC)
        << endl;
   if (fIsEnabled) cout << Form(" ++ This %s is enabled", GetName()) << endl;
   else cout << Form(" ++ This %s is disabled", GetName()) << endl;

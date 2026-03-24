@@ -22,8 +22,8 @@ void FADCTConf::PrintConf() const
   using std::endl;
 
   cout << Form(" ++ FADC config: SID(%d) MID(%1d) NCH(%1d) RL(%d) "
-               "TLT(%X) DSR(%d) DAQID(%d)",
-               fSID, fMID, fNCH, fRL, fTLT, fDSR, fDAQID)
+               "DSR(%d) TLT(%X) DAQID(%d)",
+               fSID, fMID, fNCH, fRL, fDSR, fTLT, fDAQID)
        << endl;
 
   if (fIsEnabled) cout << Form(" ++ This %s is enabled", GetName()) << endl;

@@ -21,7 +21,7 @@
 #define LOG_COMPILE_LEVEL 0
 #endif
 
-enum class ELOGLEVEL : int { Info = 0, Warn, Error, Debug, Stats };
+enum class ELOGLEVEL : int { Info = 0, Warn, Error, Debug, Stats, None };
 
 class ELog {
 public:
@@ -240,6 +240,7 @@ private:
       case ELOGLEVEL::Error: return "ERROR";
       case ELOGLEVEL::Debug: return "DEBUG";
       case ELOGLEVEL::Stats: return "STATS";
+      case ELOGLEVEL::None: return "";
       default: return "UNKNOWN";
     }
   }
@@ -252,6 +253,7 @@ private:
       case ELOGLEVEL::Error: return "\033[31m";
       case ELOGLEVEL::Debug: return "\033[36m";
       case ELOGLEVEL::Stats: return "\033[37m";
+      case ELOGLEVEL::None: return "";
       default: return "";
     }
   }
@@ -278,6 +280,7 @@ private:
 #define ERROR(fmt, ...) ELog::instance().logf(ELOGLEVEL::Error, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define DEBUG(fmt, ...) ELog::instance().logf(ELOGLEVEL::Debug, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define STATS(fmt, ...) ELog::instance().logf(ELOGLEVEL::Stats, "", fmt, ##__VA_ARGS__)
+#define FORM(fmt, ...) ELog::instance().logf(ELOGLEVEL::None, "", fmt, ##__VA_ARGS__)
 #define INFO_PROGRESS(base, token) ELog::instance().logf_flush(__PRETTY_FUNCTION__, base, token)
 #define INFO_PROGRESS_END(msg) ELog::instance().end_stream(msg)
 

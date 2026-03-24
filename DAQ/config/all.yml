@@ -21,8 +21,8 @@ TCB:
   TYPE: 2              # TCB_V2
   CW: 128              # Coincidence Width
   DLY: 0               # Delay
-  TM: 3                # Trigger Mode (mapped from TRGON)
-  PTRG: 10             # Periodic Trigger rate (mapped from PTRIG)
+  TRGON: 3             # Trigger Mode
+  PTRG: 10             # Pedestal Trigger rate
 
   # --- F: FADC Path ---
   MTHRF: 10            # Multiplicity

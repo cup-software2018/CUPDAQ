@@ -178,17 +178,18 @@ void AbsTCB::PrintRegisterTCB(TCBConf * conf)
                  "                  MTHRSL(%lu) PSCSL(%lu) DTSL(%lu) TSWSL(%s) "
                  "\n"
                  "                  MTHRI(%lu)  PSCI(%lu)  DTI(%lu)  TSWI(%s) ",
-                 ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(), ReadPSCALEFADC(),
-                 ReadDT(0, 0), swf, ReadMTHRSADCMU(), ReadPSCALESADCMU(), ReadDT(0, 1), swsm, ReadMTHRSADCLS(),
-                 ReadPSCALESADCLS(), ReadDT(0, 2), swsl, ReadMTHRIADC(), ReadPSCALEIADC(), ReadDT(0, 3), swi)
+                 ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(),
+                 ReadPSCALEFADC(), ReadDT(0, 0), swf, ReadMTHRSADCMU(), ReadPSCALESADCMU(),
+                 ReadDT(0, 1), swsm, ReadMTHRSADCLS(), ReadPSCALESADCLS(), ReadDT(0, 2), swsl,
+                 ReadMTHRIADC(), ReadPSCALEIADC(), ReadDT(0, 3), swi)
          << endl;
   }
   else {
     cout << Form(" ++ TCB register: SID(0) TRGON(%lu) CW(%lu) DLY(%lu) "
                  "PTRIG(%lu) \n"
                  "                  MTHR(%lu) PSC(%lu) DT(%lu)",
-                 ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(), ReadPSCALEFADC(),
-                 ReadDT(0, 0))
+                 ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(),
+                 ReadPSCALEFADC(), ReadDT(0, 0))
          << endl;
   }
 }
@@ -203,9 +204,8 @@ void AbsTCB::PrintRegisterFADC(FADCTConf * conf)
   uint32_t rTLT = ReadTLT(mid);
   uint32_t rDSR = ReadDSR(mid);
 
-  cout << Form(" ++ FADC register: SID(%d) MID(%1d) NCH(%1d) RL(%lu) TLT(%lX) "
-               "DSR(%lu)",
-               sid, mid, nch, rRL, rTLT, rDSR)
+  cout << Form(" ++ FADC register: SID(%d) MID(%1d) NCH(%1d) RL(%lu) DSR(%lu) TLT(%lX) ", sid, mid,
+               nch, rRL, rDSR, rTLT)
        << endl;
 
   cout << " -----------------------------------------------" << endl;
@@ -299,7 +299,7 @@ void AbsTCB::PrintRegisterSADC(SADCTConf * conf)
                ReadSTLT(mid, 6 * 4), ReadSTLT(mid, 7 * 4), ReadSTLT(mid, 8 * 4))
        << endl;
   cout << " -----------------------------------------------" << endl;
-    for (int j = 0; j < 4; j++) {
+  for (int j = 0; j < 4; j++) {
     if (j > 0) cout << endl;
     cout << "     CID : ";
     for (int i = 8 * j; i < 8 * (j + 1); i++) {
@@ -343,11 +343,13 @@ void AbsTCB::PrintRegisterIADC(IADCTConf * conf)
        << endl;
   cout << Form("                    TLT1(%lX) TLT2(%lX) TLT3(%lX) TLT4(%lX) "
                "TLT5(%lX)",
-               ReadSTLT(mid, 1), ReadSTLT(mid, 2), ReadSTLT(mid, 3), ReadSTLT(mid, 4), ReadSTLT(mid, 4))
+               ReadSTLT(mid, 1), ReadSTLT(mid, 2), ReadSTLT(mid, 3), ReadSTLT(mid, 4),
+               ReadSTLT(mid, 4))
        << endl;
   cout << Form("                    TLT6(%lX) TLT7(%lX) TLT8(%lX) TLT9(%lX) "
                "TLT10(%lX)",
-               ReadSTLT(mid, 5), ReadSTLT(mid, 6), ReadSTLT(mid, 7), ReadSTLT(mid, 8), ReadSTLT(mid, 4))
+               ReadSTLT(mid, 5), ReadSTLT(mid, 6), ReadSTLT(mid, 7), ReadSTLT(mid, 8),
+               ReadSTLT(mid, 4))
        << endl;
   cout << Form("                    HV1(%.1f) HV2(%.1f) HV3(%.1f) HV4(%.1f) "
                "HV5(%.1f)",

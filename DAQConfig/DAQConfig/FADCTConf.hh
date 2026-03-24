@@ -77,7 +77,7 @@ protected:
   int fNCH{};
   int fRL{};
   int fTLT{};
-  int fDSR{};
+  int fDSR{1};
 
   int fCID[kNCHFADC]{};
   int fPID[kNCHFADC]{};

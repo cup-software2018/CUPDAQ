@@ -14,12 +14,12 @@ void CupDAQManager::TF_WriteEvent()
   fWriteStatus = READY;
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
-    WARNING("CupDAQManager::TF_WriteEvent: exited by exit command");
+    WARNING("exited by exit command");
     return;
   }
 
   const char * adcmode = (fADCMode == ADC::SMODE) ? "SADC mode" : "FADC mode";
-  INFO("CupDAQManager::TF_WriteEvent: writing output data started as %s", adcmode);
+  INFO("writing output data started as %s", adcmode);
 
   if (!OpenNewOutputFile()) {
     RUNSTATE::SetError(fRunStatus);
@@ -51,14 +51,14 @@ void CupDAQManager::TF_WriteEvent()
     fTotalWrittenDataSize += fROOTFile->GetEND();
     std::string fname = fROOTFile->GetName();
     fROOTFile->Close();
-    INFO("CupDAQManager::TF_WriteEvent: output data %s closed", fname.c_str());
+    INFO("output data %s closed", fname.c_str());
   }
 
   // Close HDF5 file using the clean helper function (No #ifdef clutter here!)
   CloseHDF5Output();
 
   fWriteStatus = ENDED;
-  INFO("CupDAQManager::TF_WriteEvent: writing output data ended");
+  INFO("writing output data ended");
 }
 
 // =====================================================================
@@ -100,7 +100,7 @@ bool CupDAQManager::OpenNewOutputFile()
 
       const char * rawdata_dir_env = std::getenv("RAWDATA_DIR");
       if (!rawdata_dir_env) {
-        WARNING("CupDAQManager::OpenNewOutputFile: RAWDATA_DIR is not set");
+        WARNING("RAWDATA_DIR is not set");
         fname = adcname + "_" + std::string(run_str) + "." + extension;
       }
       else {
@@ -110,10 +110,10 @@ bool CupDAQManager::OpenNewOutputFile()
 
         if (!fs::exists(dirname)) {
           fs::create_directories(dirname);
-          INFO("CupDAQManager::OpenNewOutputFile: %s created", dirname.c_str());
+          INFO("%s created", dirname.c_str());
         }
         else {
-          INFO("CupDAQManager::OpenNewOutputFile: %s already exist", dirname.c_str());
+          INFO("%s already exist", dirname.c_str());
         }
 
         fs::path full_path = dirname / (adcname + "_" + std::string(run_str) + "." + extension);
@@ -134,8 +134,8 @@ bool CupDAQManager::OpenNewOutputFile()
       else if (fname.find(".gz") != std::string::npos || fname.find(".dat") != std::string::npos)
         fOutputFileFormat = OUTPUT::GZIP;
       else {
-        WARNING("CupDAQManager::OpenNewOutputFile: output file format is unclear");
-        INFO("CupDAQManager::OpenNewOutputFile: output file is going to be written by ROOT");
+        WARNING("output file format is unclear");
+        INFO("output file is going to be written by ROOT");
         fOutputFileFormat = OUTPUT::ROOT;
       }
     }
@@ -177,7 +177,7 @@ void CupDAQManager::CloseHDF5Output()
     fTotalWrittenDataSize += fHDF5File->GetFileSize();
     const char * fname = fHDF5File->GetFilename();
     fHDF5File->Close();
-    INFO("CupDAQManager::TF_WriteEvent: output data %s closed", fname);
+    INFO("output data %s closed", fname);
   }
 }
 

@@ -8,5 +8,7 @@ public:
   explicit GADCSConf(int sid);
   ~GADCSConf() override = default;
 
+  void PrintConf() const override;
+
   ClassDef(GADCSConf, 1)
 };

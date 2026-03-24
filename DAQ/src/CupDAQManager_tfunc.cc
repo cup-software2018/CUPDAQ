@@ -1,8 +1,10 @@
-#include <arpa/inet.h>
-#include <cstring>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#include <algorithm>
+#include <memory>
+#include <mutex>
+#include <nlohmann/json.hpp>
+#include <string>
+#include <vector>
+#include <zmq.hpp>
 
 #include "TMessage.h"
 #include "TMonitor.h"
@@ -216,11 +218,6 @@ void CupDAQManager::TF_DebugMon()
   INFO("debug monitoring ended");
 }
 
-#include <mutex>
-#include <nlohmann/json.hpp>
-#include <string>
-#include <zmq.hpp>
-
 void CupDAQManager::TF_MsgServer()
 {
   int port = fDAQPort;
@@ -241,12 +238,12 @@ void CupDAQManager::TF_MsgServer()
     zmq_socket.bind(endpoint);
   }
   catch (const zmq::error_t & e) {
-    ERROR("[%s] ZMQ socket bind failed on port %d: %s", name.c_str(), port, e.what());
+    ERROR("[%s] socket bind failed on port %d: %s", name.c_str(), port, e.what());
     istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
     return;
   }
 
-  INFO("[%s] ZMQ Message Server started on port %d", name.c_str(), port);
+  INFO("[%s] Message Server started on port %d", name.c_str(), port);
 
   // Main Event Loop
   while (true) {
@@ -303,27 +300,27 @@ void CupDAQManager::TF_MsgServer()
       // -------------------------------------------------------------------
       else if (command == "kCONFIGRUN") {
         istcb ? fDoConfigRunTCB = true : fDoConfigRun = true;
-        INFO("[%s] CONFIGRUN command received via ZMQ", name.c_str());
+        INFO("[%s] CONFIGRUN command received", name.c_str());
       }
       else if (command == "kSTARTRUN") {
         istcb ? fDoStartRunTCB = true : fDoStartRun = true;
-        INFO("[%s] STARTRUN command received via ZMQ", name.c_str());
+        INFO("[%s] STARTRUN command received", name.c_str());
       }
       else if (command == "kENDRUN") {
         istcb ? fDoEndRunTCB = true : fDoEndRun = true;
-        INFO("[%s] ENDRUN command received via ZMQ", name.c_str());
+        INFO("[%s] ENDRUN command received", name.c_str());
       }
       else if (command == "kSPLITOUTPUTFILE") {
         istcb ? fDoSplitOutputFileTCB = true : fDoSplitOutputFile = true;
-        INFO("[%s] SPLITOUTPUTFILE command received via ZMQ", name.c_str());
+        INFO("[%s] SPLITOUTPUTFILE command received", name.c_str());
       }
       else if (command == "kSETERROR") {
         RUNSTATE::SetError(fRunStatus);
-        INFO("[%s] SETERROR command received via ZMQ", name.c_str());
+        INFO("[%s] SETERROR command received", name.c_str());
       }
       else if (command == "kEXIT") {
         istcb ? fDoExitTCB = true : fDoExit = true;
-        INFO("[%s] EXIT command received via ZMQ", name.c_str());
+        INFO("[%s] EXIT command received", name.c_str());
       }
       // -------------------------------------------------------------------
       // Unknown Command
@@ -331,7 +328,7 @@ void CupDAQManager::TF_MsgServer()
       else {
         rep_json["status"] = "error";
         rep_json["message"] = "Unknown command string";
-        WARNING("[%s] Unknown command [%s] received via ZMQ", name.c_str(), command.c_str());
+        WARNING("[%s] Unknown command [%s] received", name.c_str(), command.c_str());
       }
     }
 
@@ -342,13 +339,8 @@ void CupDAQManager::TF_MsgServer()
     zmq_socket.send(reply, zmq::send_flags::none);
   }
 
-  INFO("[%s] ZMQ Message Server ended cleanly", name.c_str());
+  INFO("[%s] Message Server ended cleanly", name.c_str());
 }
-
-#include <algorithm>
-#include <memory>
-#include <mutex>
-#include <vector>
 
 void CupDAQManager::TF_DataServer()
 {
