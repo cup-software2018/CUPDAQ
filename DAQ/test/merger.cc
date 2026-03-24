@@ -25,11 +25,11 @@ int main(int argc, char ** argv)
   }
 
   daqopt option;
-  option.init();  
+  option.init();
   optparse(option, argc, argv);
 
   // for TCB controlled ADC
-  ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 10);  
+  ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 10);
 
   auto * DAQ = new CupDAQManager();
   DAQ->SetDAQType(DAQ::MERGER);
@@ -37,6 +37,7 @@ int main(int argc, char ** argv)
   DAQ->SetADCType(adctype);
   DAQ->SetDAQID(option.daqid);
   DAQ->SetConfigFilename(option.config);
+  DAQ->SetOutputFileFormat(option.format);
   DAQ->SetTriggerMonTime(option.rfreq);
   DAQ->SetVerboseLevel(option.vlevel);
   if (option.dohist) DAQ->EnableHistograming();

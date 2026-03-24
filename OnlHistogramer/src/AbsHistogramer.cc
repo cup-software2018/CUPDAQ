@@ -1,69 +1,62 @@
-#include "TTree.h"
+#include <cstdio>
+
 #include "TBranch.h"
 #include "TBranchRef.h"
+#include "TTree.h"
 
 #include "OnlHistogramer/AbsHistogramer.hh"
 
-AbsHistogramer::AbsHistogramer()
-{
-  fLog = ELogger::Instance();
-  fHistProxy = new HistProxy();
-}
+AbsHistogramer::AbsHistogramer() { fHistProxy = new HistProxy(); }
 
-AbsHistogramer::~AbsHistogramer()
-{
-  delete fHistProxy;
-}
+AbsHistogramer::~AbsHistogramer() { delete fHistProxy; }
 
 bool AbsHistogramer::Open()
 {
-  int nfile = fROOTFileList.size();
-  const char * fname = Form("%s.%05d", fROOTFilename.Data(), nfile);
+  int nfile = static_cast<int>(fROOTFileList.size());
+
+  char fname_buf[512];
+  std::snprintf(fname_buf, sizeof(fname_buf), "%s.%05d", fROOTFilename.c_str(), nfile);
+  std::string fname = fname_buf;
 
   if (nfile == 0) {
-    fROOTFile = new TFile(fname, "recreate", "", 0);
+    fROOTFile = new TFile(fname.c_str(), "recreate", "", 0);
     if (!fROOTFile->IsOpen()) {
-      fLog->Warning("AbsHistogramer::Open", "%s histogram file can\'t be opened", fname);
+      WARNING("%s histogram file can't be opened", fname.c_str());
       return false;
     }
-    fLog->Info("AbsHistogramer::Open", "%s histogram file is opened", fname);
+    INFO("%s histogram file is opened", fname.c_str());
   }
   else {
     TFile * oldfile = fROOTFile;
-    TFile * newfile = new TFile(fname, "recreate", "", 0);
+    TFile * newfile = new TFile(fname.c_str(), "recreate", "", 0);
     if (!newfile->IsOpen()) {
-      fLog->Warning("AbsHistogramer::Open", "%s histogram file can\'t be opened", fname);
+      WARNING("%s histogram file can't be opened", fname.c_str());
       return false;
     }
 
-    TBranch * branch = nullptr;
-    TObject * obj = oldfile->GetList()->First();
-
-    while (obj) {
+    TObject * obj;
+    while ((obj = oldfile->GetList()->First())) {
       oldfile->Remove(obj);
 
       if (obj->InheritsFrom(TTree::Class())) {
-        auto * t = (TTree *)obj;
+        auto * t = static_cast<TTree *>(obj);
         t->SetDirectory(newfile);
 
         TIter nextb(t->GetListOfBranches());
-        while ((branch = (TBranch *)nextb())) {
+        TBranch * branch = nullptr;
+        while ((branch = static_cast<TBranch *>(nextb()))) {
           branch->SetFile(newfile);
         }
 
-        if (t->GetBranchRef()) {
-          t->GetBranchRef()->SetFile(newfile);
-        }
-        continue;
+        if (t->GetBranchRef()) { t->GetBranchRef()->SetFile(newfile); }
       }
-
-      if (newfile) newfile->Append(obj);
-      oldfile->Remove(obj);
+      else {
+        if (newfile) newfile->Append(obj);
+      }
     }
 
     delete oldfile;
-    oldfile = nullptr;
-    oldfile = newfile;
+    fROOTFile = newfile;
   }
 
   fROOTFileList.push_back(fname);
@@ -72,12 +65,17 @@ bool AbsHistogramer::Open()
 
 void AbsHistogramer::Close()
 {
-  fROOTFile->Close();
-  delete fROOTFile;
+  if (fROOTFile) {
+    fROOTFile->Close();
+    delete fROOTFile;
+    fROOTFile = nullptr;
+  }
 }
 
 void AbsHistogramer::Update()
 {
+  if (!fROOTFile) return;
+
   fROOTFile->cd();
 
   int nobj = fHistProxy->GetEntries();
@@ -88,4 +86,3 @@ void AbsHistogramer::Update()
 
   fROOTFile->SaveSelf();
 }
-

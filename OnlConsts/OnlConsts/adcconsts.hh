@@ -38,7 +38,8 @@ enum TYPE {
   GADCS = 23,
   IADCS = 24,
   SADCS = 25,
-  AMOREADC = 9,
+  AMORETCB = 9,
+  AMOREADC = 19,
   NONE = 100
 };
 enum MODE { FMODE = 1, SMODE = 2 };

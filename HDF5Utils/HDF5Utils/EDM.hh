@@ -1,126 +1,242 @@
-#ifndef EDM_hh
-#define EDM_hh
+#pragma once
 
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <map>
+#include <string>
 
-#include "TString.h"
 #include "hdf5.h"
 
-const int kH5FADCNDP = 512;
-const int kH5AMORENDP = 30000;
+constexpr int kH5FADCNDPMAX = 16384;   // 64 us for FADC
+constexpr int kH5AMORENDPMAX = 500000; // 5 s for AMOREADC
 
 struct SubRun_t {
-  unsigned int subrun;
-  unsigned int nevent;
-  unsigned int first;
-  unsigned int last;
-  hid_t BuildType()
-  {
-    hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(SubRun_t));
-    H5Tinsert(type, "subrun", HOFFSET(SubRun_t, subrun), H5T_NATIVE_UINT);
-    H5Tinsert(type, "nevent", HOFFSET(SubRun_t, nevent), H5T_NATIVE_UINT);
-    H5Tinsert(type, "first", HOFFSET(SubRun_t, first), H5T_NATIVE_UINT);
-    H5Tinsert(type, "last", HOFFSET(SubRun_t, last), H5T_NATIVE_UINT);
-    return type;
-  }
-  hsize_t GetSize() { return 16; }
+  std::uint32_t subrun;
+  std::uint32_t nevent;
+  std::uint32_t first;
+  std::uint32_t last;
+
+  static hid_t BuildType();
+  hsize_t GetSize() const noexcept;
 };
 
 struct EventInfo_t {
-  unsigned short ttype;
-  unsigned short nhit;
-  unsigned int tnum;
-  unsigned long ttime;
-  hid_t BuildType()
-  {
-    hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(EventInfo_t));
-    H5Tinsert(type, "ttype", HOFFSET(EventInfo_t, ttype), H5T_NATIVE_USHORT);
-    H5Tinsert(type, "nhit", HOFFSET(EventInfo_t, nhit), H5T_NATIVE_USHORT);
-    H5Tinsert(type, "tnum", HOFFSET(EventInfo_t, tnum), H5T_NATIVE_UINT);
-    H5Tinsert(type, "ttime", HOFFSET(EventInfo_t, ttime), H5T_NATIVE_ULONG);
-    return type;
-  }
-  hsize_t GetSize() { return 16; }
+  std::uint16_t ttype;
+  std::uint16_t nhit;
+  std::uint32_t tnum;
+  std::uint64_t ttime;
+
+  static hid_t BuildType();
+  hsize_t GetSize() const noexcept;
 };
 
 struct FChannel_t {
-  unsigned short id;
-  unsigned short tbit;
-  unsigned short ped;
-  unsigned short waveform[kH5FADCNDP];
-  hid_t BuildType()
+  std::uint16_t id;
+  std::uint16_t tbit;
+  std::uint16_t ped;
+  std::uint16_t waveform[kH5FADCNDPMAX];
+
+  FChannel_t() noexcept
+    : id(0),
+      tbit(0),
+      ped(0)
   {
-    hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(FChannel_t));
-    H5Tinsert(type, "id", HOFFSET(FChannel_t, id), H5T_NATIVE_USHORT);
-    H5Tinsert(type, "bit", HOFFSET(FChannel_t, tbit), H5T_NATIVE_USHORT);
-    H5Tinsert(type, "ped", HOFFSET(FChannel_t, ped), H5T_NATIVE_USHORT);
-    hsize_t dim[1] = {kH5FADCNDP};
-    hid_t arrtype = H5Tarray_create2(H5T_NATIVE_USHORT, 1, dim);
-    H5Tinsert(type, "waveform", HOFFSET(FChannel_t, waveform), arrtype);
-    return type;
+    std::memset(waveform, 0, sizeof(waveform));
   }
-  void SetWaveform(unsigned short * wave)
-  {
-    memcpy(waveform, wave, kH5FADCNDP * sizeof(unsigned short));
-  }
-  hsize_t GetSize() { return 6 + kH5FADCNDP * 2; }
+
+  static hid_t BuildType();
+  hsize_t GetSize() const noexcept;
+
+  void SetWaveform(const std::uint16_t * wave, int ndp) noexcept;
+};
+
+struct FChannelHeader_t {
+  std::uint16_t id;
+  std::uint16_t tbit;
+  std::uint16_t ped;
+
+  static hid_t BuildType();
+  hsize_t GetSize() const noexcept;
 };
 
 struct AChannel_t {
-  unsigned short id;
-  unsigned short tbit;
-  unsigned int adc;
-  unsigned int time;
-  hid_t BuildType()
+  std::uint16_t id;
+  std::uint16_t tbit;
+  std::uint32_t adc;
+  std::uint32_t time;
+
+  AChannel_t() noexcept
+    : id(0),
+      tbit(0),
+      adc(0),
+      time(0)
   {
-    hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(AChannel_t));
-    H5Tinsert(type, "id", HOFFSET(AChannel_t, id), H5T_NATIVE_USHORT);
-    H5Tinsert(type, "bit", HOFFSET(AChannel_t, tbit), H5T_NATIVE_USHORT);
-    H5Tinsert(type, "adc", HOFFSET(AChannel_t, adc), H5T_NATIVE_UINT);
-    H5Tinsert(type, "time", HOFFSET(AChannel_t, time), H5T_NATIVE_UINT);
-    return type;
   }
-  hsize_t GetSize() { return 12; }
+
+  static hid_t BuildType();
+  hsize_t GetSize() const noexcept;
 };
 
 struct Crystal_t {
-  unsigned short id;
-  unsigned short phonon[kH5AMORENDP];
-  unsigned short photon[kH5AMORENDP];
-  unsigned long ttime;
-  hid_t BuildType()
+  std::uint16_t id;
+  std::uint16_t phonon[kH5AMORENDPMAX];
+  std::uint16_t photon[kH5AMORENDPMAX];
+  std::uint64_t ttime;
+
+  Crystal_t() noexcept
+    : id(0),
+      ttime(0)
   {
-    hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(Crystal_t));
-    H5Tinsert(type, "id", HOFFSET(Crystal_t, id), H5T_NATIVE_USHORT);
-    hsize_t dim[1] = {kH5AMORENDP};
-    hid_t arrtype = H5Tarray_create2(H5T_NATIVE_USHORT, 1, dim);
-    H5Tinsert(type, "phonon", HOFFSET(Crystal_t, phonon), arrtype);
-    H5Tinsert(type, "photon", HOFFSET(Crystal_t, photon), arrtype);
-    H5Tinsert(type, "ttime", HOFFSET(Crystal_t, ttime), H5T_NATIVE_ULONG);
-    return type;
+    std::memset(phonon, 0, sizeof(phonon));
+    std::memset(photon, 0, sizeof(photon));
   }
-  void SetPhonon(unsigned short * wave)
-  {
-    memcpy(phonon, wave, kH5AMORENDP * sizeof(unsigned short));
-  }
-  void SetPhoton(unsigned short * wave)
-  {
-    memcpy(photon, wave, kH5AMORENDP * sizeof(unsigned short));
-  }
-  void SetWaveform(unsigned short * pn, unsigned short * pt)
-  {
-    SetPhonon(pn);
-    SetPhoton(pt);
-  }
-  hsize_t GetSize() { return 10 + 2 * 2 * kH5AMORENDP; }
+
+  static hid_t BuildType();
+  hsize_t GetSize() const noexcept;
+
+  void SetPhonon(const std::uint16_t * wave, int ndp) noexcept;
+  void SetPhoton(const std::uint16_t * wave, int ndp) noexcept;
+  void SetWaveforms(const std::uint16_t * pn, const std::uint16_t * pt, int ndp) noexcept;
+};
+
+struct CrystalHeader_t {
+  std::uint16_t id;
+  std::uint64_t ttime;
+
+  static hid_t BuildType();
+  hsize_t GetSize() const noexcept;
 };
 
 struct DataFile_t {
   hid_t fid;
-  TString filename;
+  std::string filename;
   hsize_t memsize;
   hsize_t filesize;
-  std::map<int, int> entries;
+  //  std::map<int, int> entries;
+  int global_start;
+  int nevent;
+
+  DataFile_t()
+    : fid(H5I_INVALID_HID),
+      filename(),
+      memsize(0),
+      filesize(0),
+      global_start(0),
+      nevent(0)
+  {
+  }
 };
 
-#endif
+// === inline definitions ===
+
+inline hid_t SubRun_t::BuildType()
+{
+  hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(SubRun_t));
+  H5Tinsert(type, "subrun", HOFFSET(SubRun_t, subrun), H5T_STD_U32LE);
+  H5Tinsert(type, "nevent", HOFFSET(SubRun_t, nevent), H5T_STD_U32LE);
+  H5Tinsert(type, "first", HOFFSET(SubRun_t, first), H5T_STD_U32LE);
+  H5Tinsert(type, "last", HOFFSET(SubRun_t, last), H5T_STD_U32LE);
+  return type;
+}
+
+inline hsize_t SubRun_t::GetSize() const noexcept { return sizeof(SubRun_t); }
+
+inline hid_t EventInfo_t::BuildType()
+{
+  hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(EventInfo_t));
+  H5Tinsert(type, "ttype", HOFFSET(EventInfo_t, ttype), H5T_STD_U16LE);
+  H5Tinsert(type, "nhit", HOFFSET(EventInfo_t, nhit), H5T_STD_U16LE);
+  H5Tinsert(type, "tnum", HOFFSET(EventInfo_t, tnum), H5T_STD_U32LE);
+  H5Tinsert(type, "ttime", HOFFSET(EventInfo_t, ttime), H5T_STD_U64LE);
+  return type;
+}
+
+inline hsize_t EventInfo_t::GetSize() const noexcept { return sizeof(EventInfo_t); }
+
+inline hid_t FChannel_t::BuildType()
+{
+  hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(FChannel_t));
+  H5Tinsert(type, "id", HOFFSET(FChannel_t, id), H5T_STD_U16LE);
+  H5Tinsert(type, "bit", HOFFSET(FChannel_t, tbit), H5T_STD_U16LE);
+  H5Tinsert(type, "ped", HOFFSET(FChannel_t, ped), H5T_STD_U16LE);
+
+  hsize_t dim[1] = {kH5FADCNDPMAX};
+  hid_t arrtype = H5Tarray_create2(H5T_STD_U16LE, 1, dim);
+  H5Tinsert(type, "waveform", HOFFSET(FChannel_t, waveform), arrtype);
+
+  return type;
+}
+
+inline void FChannel_t::SetWaveform(const std::uint16_t * wave, int ndp) noexcept
+{
+  std::memcpy(waveform, wave, static_cast<std::size_t>(ndp) * sizeof(std::uint16_t));
+}
+
+inline hsize_t FChannel_t::GetSize() const noexcept { return sizeof(FChannel_t); }
+
+inline hid_t FChannelHeader_t::BuildType()
+{
+  hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(FChannelHeader_t));
+  H5Tinsert(type, "id", HOFFSET(FChannelHeader_t, id), H5T_STD_U16LE);
+  H5Tinsert(type, "tbit", HOFFSET(FChannelHeader_t, tbit), H5T_STD_U16LE);
+  H5Tinsert(type, "ped", HOFFSET(FChannelHeader_t, ped), H5T_STD_U16LE);
+  return type;
+}
+
+inline hsize_t FChannelHeader_t::GetSize() const noexcept { return sizeof(FChannelHeader_t); }
+
+inline hid_t AChannel_t::BuildType()
+{
+  hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(AChannel_t));
+  H5Tinsert(type, "id", HOFFSET(AChannel_t, id), H5T_STD_U16LE);
+  H5Tinsert(type, "tbit", HOFFSET(AChannel_t, tbit), H5T_STD_U16LE);
+  H5Tinsert(type, "adc", HOFFSET(AChannel_t, adc), H5T_STD_U32LE);
+  H5Tinsert(type, "time", HOFFSET(AChannel_t, time), H5T_STD_U32LE);
+  return type;
+}
+
+inline hsize_t AChannel_t::GetSize() const noexcept { return sizeof(AChannel_t); }
+
+inline hid_t Crystal_t::BuildType()
+{
+  hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(Crystal_t));
+  H5Tinsert(type, "id", HOFFSET(Crystal_t, id), H5T_STD_U16LE);
+
+  hsize_t dim[1] = {kH5AMORENDPMAX};
+  hid_t arrtype = H5Tarray_create2(H5T_STD_U16LE, 1, dim);
+  H5Tinsert(type, "phonon", HOFFSET(Crystal_t, phonon), arrtype);
+  H5Tinsert(type, "photon", HOFFSET(Crystal_t, photon), arrtype);
+  H5Tinsert(type, "ttime", HOFFSET(Crystal_t, ttime), H5T_STD_U64LE);
+
+  return type;
+}
+
+inline void Crystal_t::SetPhonon(const std::uint16_t * wave, int ndp) noexcept
+{
+  std::memcpy(phonon, wave, static_cast<std::size_t>(ndp) * sizeof(std::uint16_t));
+}
+
+inline void Crystal_t::SetPhoton(const std::uint16_t * wave, int ndp) noexcept
+{
+  std::memcpy(photon, wave, static_cast<std::size_t>(ndp) * sizeof(std::uint16_t));
+}
+
+inline void Crystal_t::SetWaveforms(const std::uint16_t * pn, const std::uint16_t * pt,
+                                    int ndp) noexcept
+{
+  SetPhonon(pn, ndp);
+  SetPhoton(pt, ndp);
+}
+
+inline hsize_t Crystal_t::GetSize() const noexcept { return sizeof(Crystal_t); }
+
+inline hid_t CrystalHeader_t::BuildType()
+{
+  hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(CrystalHeader_t));
+  H5Tinsert(type, "id", HOFFSET(CrystalHeader_t, id), H5T_STD_U16LE);
+  H5Tinsert(type, "ttime", HOFFSET(CrystalHeader_t, ttime), H5T_STD_U64LE);
+  return type;
+}
+
+inline hsize_t CrystalHeader_t::GetSize() const noexcept { return sizeof(CrystalHeader_t); }

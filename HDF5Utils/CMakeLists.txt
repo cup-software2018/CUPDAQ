@@ -16,7 +16,7 @@ set ( DICT_I_FLAGS
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
-    OPTIONS ${DICT_I_FLAGS}
+    OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
 # Build shared library
@@ -56,3 +56,11 @@ install ( DIRECTORY ${MODULE_NAME}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
     FILES_MATCHING PATTERN "*.hh"
 )
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}_rdict.pcm
+    ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}.rootmap
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    OPTIONAL
+)
+
+#add_subdirectory ( test )

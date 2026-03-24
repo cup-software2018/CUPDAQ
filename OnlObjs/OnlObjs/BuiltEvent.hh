@@ -2,6 +2,7 @@
 #define BuiltEvent_hh
 
 #include "TObjArray.h"
+
 #include "OnlObjs/AbsADCRaw.hh"
 
 class BuiltEvent : public TObjArray {
@@ -12,7 +13,7 @@ private:
 public:
   BuiltEvent();
   BuiltEvent(const BuiltEvent & event);
-  virtual ~BuiltEvent();
+  ~BuiltEvent() override;
 
   void SetDAQID(int id);
   void SetEventNumber(unsigned int n);
@@ -21,11 +22,11 @@ public:
   int GetDAQID() const;
   unsigned int GetEventNumber() const;
   unsigned int GetTriggerNumber() const;
-  unsigned int GetTriggerType() const;  
+  unsigned int GetTriggerType() const;
   unsigned long GetTriggerTime() const;
 
-  virtual bool IsSortable() const { return true; }
-  virtual int Compare(const TObject * object) const;
+  bool IsSortable() const override;
+  int Compare(const TObject * object) const override;
 
   ClassDef(BuiltEvent, 1)
 };
@@ -34,13 +35,12 @@ inline void BuiltEvent::SetDAQID(int id) { fDAQID = id; }
 
 inline void BuiltEvent::SetEventNumber(unsigned int n) { fEventNumber = n; }
 
-inline void BuiltEvent::AddADCEvent(AbsADCRaw * event)
-{
-  Add(event);
-}
+inline void BuiltEvent::AddADCEvent(AbsADCRaw * event) { Add(event); }
 
 inline int BuiltEvent::GetDAQID() const { return fDAQID; }
 
 inline unsigned int BuiltEvent::GetEventNumber() const { return fEventNumber; }
+
+inline bool BuiltEvent::IsSortable() const { return true; }
 
 #endif

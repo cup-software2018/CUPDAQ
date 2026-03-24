@@ -1,0 +1,38 @@
+TCB:
+  # Basic Settings
+  TYPE: 2              # TCB_V2
+  CW: 128              # Coincidence Width
+  DLY: 0               # Delay
+  TRGON: 3             # Trigger Mode
+  PTRG: 10             # Pedestal Trigger rate
+
+  # --- F: FADC Path ---
+  MTHRF: 10            # Multiplicity
+  PSCF: 1              # Prescale
+  DTF: 0               # Dead Time
+  SWF: [1, 0, 0, 0]    # Trigger Switch (F, SM, SL, I)
+
+  # --- SM: M64ADC for Muon ---
+  MTHRSM: 10
+  PSCSM: 1
+  DTSM: 0
+  SWSM: [0, 1, 0, 0]
+
+  # --- SL: M64ADC for LS ---
+  MTHRSL: 10
+  PSCSL: 1
+  DTSL: 0
+  SWSL: [1, 1, 0, 0]   # Passive LS trigger logic
+
+  # --- I: SiPM ADC ---
+  MTHRI: 4
+  PSCI: 1
+  DTI: 0
+  SWI: [0, 0, 0, 1]
+
+#  Trigger Switch Usage Guide:
+#  [ FADC, Muon(SM), LS(SL), SiPM(I) ]
+# SWF:  [1, 0, 0, 0]  # TRGF path: Only FADC fires
+# SWSM: [0, 1, 0, 0]  # TRGSM path: Only Muon fires
+# SWSL: [1, 1, 0, 0]  # TRGSL path: LS fires when F or SM fires (Coincidence)
+# SWI:  [0, 0, 0, 0]  # TRGI path: Disabled

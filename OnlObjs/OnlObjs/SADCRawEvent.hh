@@ -6,16 +6,16 @@
 class SADCRawEvent : public AbsADCRaw {
 private:
   int fNCH;
-  unsigned int * fADC;  //[fNCH]
-  unsigned int * fTime; //[fNCH]
+  unsigned int * fADC;  // [fNCH]
+  unsigned int * fTime; // [fNCH]
 
 public:
   SADCRawEvent();
   SADCRawEvent(int s, ADC::TYPE type);
   SADCRawEvent(const SADCRawEvent & raw);
-  virtual ~SADCRawEvent();
+  ~SADCRawEvent() override;
 
-  virtual void Unpack(AbsConf * config, int verbose = 0);
+  void Unpack(AbsConf * config, int verbose = 0) override;
 
   int GetNCH() const;
   unsigned int GetADC(int n) const;

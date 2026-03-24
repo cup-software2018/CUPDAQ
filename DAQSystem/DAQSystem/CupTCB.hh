@@ -1,151 +1,195 @@
-#ifndef CupTCB_HH
-#define CupTCB_HH
+#pragma once
 
 #include <mutex>
 
 #include "DAQSystem/AbsTCB.hh"
-#include "Notice/usb3tcbroot.hh"
+#include "Notice/NKTCB.hh"
 
 class CupTCB : public AbsTCB {
 public:
-  CupTCB();
-  virtual ~CupTCB();
+  // Deleted copy constructor and assignment operator for Singleton
+  CupTCB(const CupTCB &) = delete;
+  CupTCB & operator=(const CupTCB &) = delete;
 
+  // Singleton Access
   static CupTCB * Instance();
+
+  // Legacy cleanup (No-op in modern singleton, kept for API compatibility)
   static void DeleteInstance();
 
-  virtual int Open();
-  virtual void Close();
+  int Open() override;
+  void Close() override;
 
-  // tcb
-  virtual void Reset();
-  virtual void ResetTIMER();
-  virtual void TriggerStart();
-  virtual void TriggerStop();
-  
-  virtual unsigned long ReadBCOUNT(unsigned long mid);
-  virtual int ReadDATA(unsigned long mid, unsigned long bcount,
-                       unsigned char * data);
+  // -----------------------------------------------------------------------
+  // Core TCB Control
+  // -----------------------------------------------------------------------
+  void Reset() override;
+  void ResetTimer() override;
+  void TriggerStart() override;
+  void TriggerStop() override;
 
-  virtual void WriteCW(unsigned long mid, unsigned long ch, unsigned long data);
-  virtual unsigned long ReadCW(unsigned long mid, unsigned long ch);
-  virtual void WriteGW(unsigned long mid, unsigned long data);
-  virtual unsigned long ReadGW(unsigned long mid);
-  virtual void WriteRL(unsigned long mid, unsigned long data);
-  virtual unsigned long ReadRL(unsigned long mid);
-  virtual void WriteDRAMON(unsigned long mid, unsigned long data);
-  virtual unsigned long ReadDRAMON(unsigned long mid);
-  virtual void WriteDACOFF(unsigned long mid, unsigned long ch,
-                           unsigned long data);
-  virtual unsigned long ReadDACOFF(unsigned long mid, unsigned long ch);
-  virtual void MeasurePED(unsigned long mid, unsigned long ch);
-  virtual unsigned long ReadPED(unsigned long mid, unsigned long ch);
-  virtual void WriteDLY(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadDLY(unsigned long mid, unsigned long ch);
-  virtual void WriteTHR(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadTHR(unsigned long mid, unsigned long ch);
-  virtual void WritePOL(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadPOL(unsigned long mid, unsigned long ch);
-  virtual void WritePSW(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadPSW(unsigned long mid, unsigned long ch);
-  virtual void WriteAMODE(unsigned long mid, unsigned long ch,
-                          unsigned long data);
-  virtual unsigned long ReadAMODE(unsigned long mid, unsigned long ch);
-  virtual void WritePCT(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadPCT(unsigned long mid, unsigned long ch);
-  virtual void WritePCI(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadPCI(unsigned long mid, unsigned long ch);
-  virtual void WritePWT(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadPWT(unsigned long mid, unsigned long ch);
-  virtual void WriteDT(unsigned long mid, unsigned long ch, unsigned long data);
-  virtual unsigned long ReadDT(unsigned long mid, unsigned long ch);
-  virtual void WritePSS(unsigned long mid, unsigned long ch,
-                        unsigned long data);
-  virtual unsigned long ReadPSS(unsigned long mid, unsigned long ch);  
-  virtual void WriteTM(unsigned long mid, unsigned long ch, unsigned long data);
-  virtual unsigned long ReadTM(unsigned long mid, unsigned long ch);
-  virtual void WriteTLT(unsigned long mid, unsigned long data);
-  virtual unsigned long ReadTLT(unsigned long mid);
-  virtual void WriteSTLT(unsigned long mid, unsigned long ch,
-                         unsigned long data);
-  virtual unsigned long ReadSTLT(unsigned long mid, unsigned long ch);
-  virtual void WriteDSR(unsigned long mid, unsigned long data);
-  virtual unsigned long ReadDSR(unsigned long mid);
-  virtual void AlignFADC(unsigned long mid);
-  virtual void AlignSADC(unsigned long mid);
-  virtual void AlignGADC(unsigned long mid);
+  // -----------------------------------------------------------------------
+  // Data Readout
+  // -----------------------------------------------------------------------
+  uint32_t ReadBCount(uint32_t mid) override;
+  int ReadData(uint32_t mid, uint32_t bcount, unsigned char * data) override;
 
-  // iadc
-  virtual void WriteDAQMODE(unsigned long mid, unsigned long data);
-  virtual unsigned long ReadDAQMODE(unsigned long mid);
-  virtual void WriteHV(unsigned long mid, unsigned long ch, float data);
-  virtual float ReadHV(unsigned long mid, unsigned long ch);
-  virtual float ReadTEMP(unsigned long mid, unsigned long ch);
-  virtual void AlignIADC(unsigned long mid);
+  // -----------------------------------------------------------------------
+  // Register Access (Read/Write)
+  // -----------------------------------------------------------------------
+  void WriteCW(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadCW(uint32_t mid, uint32_t ch) override;
 
-  // tcb
-  virtual void WritePTRIG(unsigned long data);
-  virtual unsigned long ReadPTRIG();
-  virtual void WriteTRIGENABLE(unsigned long mid, unsigned long data);
-  virtual unsigned long ReadTRIGENABLE(unsigned long mid);
-  virtual void WriteMTHRFADC(unsigned long data);
-  virtual unsigned long ReadMTHRFADC();
-  virtual void WritePSCALEFADC(unsigned long data);
-  virtual unsigned long ReadPSCALEFADC();
-  virtual void WriteMTHRSADCMU(unsigned long data);
-  virtual unsigned long ReadMTHRSADCMU();
-  virtual void WritePSCALESADCMU(unsigned long data);
-  virtual unsigned long ReadPSCALESADCMU();
-  virtual void WriteMTHRSADCLS(unsigned long data);
-  virtual unsigned long ReadMTHRSADCLS();
-  virtual void WritePSCALESADCLS(unsigned long data);
-  virtual unsigned long ReadPSCALESADCLS();
-  virtual void WriteMTHRIADC(unsigned long data);
-  virtual unsigned long ReadMTHRIADC();
-  virtual void WritePSCALEIADC(unsigned long data);
-  virtual unsigned long ReadPSCALEIADC(); 
-  virtual void WriteEXTOUT(unsigned long data);
-  virtual unsigned long ReadEXTOUT();
-  virtual void WriteGATEDLY(unsigned long data);
-  virtual unsigned long ReadGATEDLY();
-  virtual void WriteGATEWIDTH(unsigned long data);
-  virtual unsigned long ReadGATEWIDTH();
-  virtual void WriteEXTOUTWIDTH(unsigned long data);
-  virtual unsigned long ReadEXTOUTWIDTH();
-  virtual void SendTRIG();
-  virtual void ReadLNSTAT(unsigned long * data);
-  virtual void ReadMIDS(unsigned long * data);
-  virtual void AlignDRAM(unsigned long mid);
+  void WriteGW(uint32_t mid, uint32_t data) override;
+  uint32_t ReadGW(uint32_t mid) override;
 
-  virtual void WriteTRGSWFADC(unsigned long fadc, unsigned long sadcmu,
-                              unsigned long sadcls, unsigned long iadc);
-  virtual void WriteTRGSWSADCMU(unsigned long fadc, unsigned long sadcmu,
-                              unsigned long sadcls, unsigned long iadc);
-  virtual void WriteTRGSWSADCLS(unsigned long fadc, unsigned long sadcmu,
-                              unsigned long sadcls, unsigned long iadc);
-  virtual void WriteTRGSWIADC(unsigned long fadc, unsigned long sadcmu,
-                              unsigned long sadcls, unsigned long iadc);
-  virtual unsigned long ReadTRGSWFADC();
-  virtual unsigned long ReadTRGSWSADCMU();
-  virtual unsigned long ReadTRGSWSADCLS();
-  virtual unsigned long ReadTRGSWIADC();  
+  void WriteRL(uint32_t mid, uint32_t data) override;
+  uint32_t ReadRL(uint32_t mid) override;
 
-protected:
-  static CupTCB * fTCB;
+  void WriteDRAMON(uint32_t mid, uint32_t data) override;
+  uint32_t ReadDRAMON(uint32_t mid) override;
 
-  int fSID;
-  usb3tcbroot * fUSB;
+  void WriteDACOFF(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadDACOFF(uint32_t mid, uint32_t ch) override;
 
-  std::mutex * fMutex;
+  void MeasurePED(uint32_t mid, uint32_t ch) override;
+  uint32_t ReadPED(uint32_t mid, uint32_t ch) override;
+
+  void WriteDLY(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadDLY(uint32_t mid, uint32_t ch) override;
+
+  void WriteTHR(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadTHR(uint32_t mid, uint32_t ch) override;
+
+  void WritePOL(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadPOL(uint32_t mid, uint32_t ch) override;
+
+  void WritePSW(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadPSW(uint32_t mid, uint32_t ch) override;
+
+  void WriteAMODE(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadAMODE(uint32_t mid, uint32_t ch) override;
+
+  void WritePCT(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadPCT(uint32_t mid, uint32_t ch) override;
+
+  void WritePCI(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadPCI(uint32_t mid, uint32_t ch) override;
+
+  void WritePWT(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadPWT(uint32_t mid, uint32_t ch) override;
+
+  void WriteDT(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadDT(uint32_t mid, uint32_t ch) override;
+
+  void WritePSS(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadPSS(uint32_t mid, uint32_t ch) override;
+
+  void WriteTM(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadTM(uint32_t mid, uint32_t ch) override;
+
+  void WriteTLT(uint32_t mid, uint32_t data) override;
+  uint32_t ReadTLT(uint32_t mid) override;
+
+  void WriteSTLT(uint32_t mid, uint32_t ch, uint32_t data) override;
+  uint32_t ReadSTLT(uint32_t mid, uint32_t ch) override;
+
+  void WriteDSR(uint32_t mid, uint32_t data) override;
+  uint32_t ReadDSR(uint32_t mid) override;
+
+  // -----------------------------------------------------------------------
+  // Alignment Functions
+  // -----------------------------------------------------------------------
+  void AlignFADC(uint32_t mid) override;
+  void AlignSADC(uint32_t mid) override;
+  void AlignGADC(uint32_t mid) override; // FADC125
+  void AlignIADC(uint32_t mid) override;
+  void AlignDRAM(uint32_t mid) override;
+
+  // -----------------------------------------------------------------------
+  // IADC Specific
+  // -----------------------------------------------------------------------
+  void WriteDAQMODE(uint32_t mid, uint32_t data) override;
+  uint32_t ReadDAQMODE(uint32_t mid) override;
+
+  void WriteHV(uint32_t mid, uint32_t ch, float data) override;
+  float ReadHV(uint32_t mid, uint32_t ch) override;
+  float ReadTEMP(uint32_t mid, uint32_t ch) override;
+
+  // -----------------------------------------------------------------------
+  // Trigger Configuration
+  // -----------------------------------------------------------------------
+  void WritePTRIG(uint32_t data) override;
+  uint32_t ReadPTRIG() override;
+
+  void WriteTRIGENABLE(uint32_t mid, uint32_t data) override;
+  uint32_t ReadTRIGENABLE(uint32_t mid) override;
+
+  void WriteMTHRFADC(uint32_t data) override;
+  uint32_t ReadMTHRFADC() override;
+
+  void WritePSCALEFADC(uint32_t data) override;
+  uint32_t ReadPSCALEFADC() override;
+
+  void WriteMTHRSADCMU(uint32_t data) override;
+  uint32_t ReadMTHRSADCMU() override;
+
+  void WritePSCALESADCMU(uint32_t data) override;
+  uint32_t ReadPSCALESADCMU() override;
+
+  void WriteMTHRSADCLS(uint32_t data) override;
+  uint32_t ReadMTHRSADCLS() override;
+
+  void WritePSCALESADCLS(uint32_t data) override;
+  uint32_t ReadPSCALESADCLS() override;
+
+  void WriteMTHRIADC(uint32_t data) override;
+  uint32_t ReadMTHRIADC() override;
+
+  void WritePSCALEIADC(uint32_t data) override;
+  uint32_t ReadPSCALEIADC() override;
+
+  void WriteEXTOUT(uint32_t data) override;
+  uint32_t ReadEXTOUT() override;
+
+  void WriteGATEDLY(uint32_t data) override;
+  uint32_t ReadGATEDLY() override;
+
+  void WriteGATEWIDTH(uint32_t data) override;
+  uint32_t ReadGATEWIDTH() override;
+
+  void WriteEXTOUTWIDTH(uint32_t data) override;
+  uint32_t ReadEXTOUTWIDTH() override;
+
+  void SendTRIG() override;
+
+  void ReadLNSTAT(uint32_t * data) override;
+  void ReadMIDS(uint32_t * data) override;
+
+  // -----------------------------------------------------------------------
+  // Trigger Switches
+  // -----------------------------------------------------------------------
+  void WriteTRGSWFADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                      uint32_t iadc) override;
+  void WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                        uint32_t iadc) override;
+  void WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                        uint32_t iadc) override;
+  void WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                      uint32_t iadc) override;
+
+  uint32_t ReadTRGSWFADC() override;
+  uint32_t ReadTRGSWSADCMU() override;
+  uint32_t ReadTRGSWSADCLS() override;
+  uint32_t ReadTRGSWIADC() override;
+
+private:
+  // Private Constructor for Singleton
+  CupTCB() = default;
+  ~CupTCB() override = default;
+
+  std::mutex fMutex;
+  NKTCB fNKTCB{};
 
   ClassDef(CupTCB, 0)
 };
-
-#endif

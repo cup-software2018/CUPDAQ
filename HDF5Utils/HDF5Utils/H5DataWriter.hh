@@ -1,20 +1,19 @@
-#ifndef H5DataWriter_hh
-#define H5DataWriter_hh
+#pragma once
 
-#include <vector>
+#include <string>
 
 #include "TObject.h"
-#include "TString.h"
-#include "hdf5.h"
 
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/EDM.hh"
+
+#include "hdf5.h"
 
 class H5DataWriter : public TObject {
 public:
   H5DataWriter();
   H5DataWriter(const char * fname, int compress = 1);
-  virtual ~H5DataWriter();
+  ~H5DataWriter() override;
 
   bool Open();
   void Close();
@@ -34,10 +33,13 @@ public:
   void PrintStats() const;
 
 private:
-  TString fFilename;
+  std::string fFilename;
+
   hid_t fFileId;
   int fCompressionLevel;
+
   AbsH5Event * fEvent;
+
   hsize_t fFileSize;
   hsize_t fMemorySize;
   int fSubrun;
@@ -45,12 +47,9 @@ private:
   ClassDef(H5DataWriter, 0)
 };
 
-inline void H5DataWriter::SetFilename(const char * fname) { fFilename = fname; }
+inline void H5DataWriter::SetFilename(const char * fname) { fFilename = fname ? fname : ""; }
 
-inline void H5DataWriter::SetCompressionLevel(int level)
-{
-  fCompressionLevel = level;
-}
+inline void H5DataWriter::SetCompressionLevel(int level) { fCompressionLevel = level; }
 
 inline void H5DataWriter::SetEvent(AbsH5Event * event) { fEvent = event; }
 
@@ -60,24 +59,15 @@ inline hid_t H5DataWriter::GetFileId() const { return fFileId; }
 
 inline hsize_t H5DataWriter::GetFileSize() const
 {
-  hsize_t size;
-  H5Fget_filesize(fFileId, &size);
+  hsize_t size = 0;
+  if (fFileId >= 0) { H5Fget_filesize(fFileId, &size); }
   return size;
 }
 
-inline hsize_t H5DataWriter::GetMemorySize() const { return fEvent->GetSize(); }
+inline hsize_t H5DataWriter::GetMemorySize() const { return fEvent ? fEvent->GetSize() : 0; }
 
 inline AbsH5Event * H5DataWriter::GetEvent() { return fEvent; }
 
-inline const char * H5DataWriter::GetFilename() const
-{
-  return fFilename.Data();
-}
+inline const char * H5DataWriter::GetFilename() const { return fFilename.c_str(); }
 
-inline bool H5DataWriter::IsOpen() const
-{
-  if (fFileId) return true;
-  return false;
-}
-
-#endif
+inline bool H5DataWriter::IsOpen() const { return fFileId >= 0; }

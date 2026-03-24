@@ -1,0 +1,77 @@
+# Trigger Control Board Configuration
+TCB:
+  TYPE: 0
+  CW: 64
+  PTRG: 10
+  MTHRF: 38
+  PSCF: 1
+  TRGON: 3
+
+IADCT:
+  - SID: 1
+    NCH: 40
+    ENABLED: 1
+    MODE: 1
+    RL: 8
+
+    # --- Channel Mapping ---
+    # PID: zeros indicate disconnected channels as per your original text
+    CID: [1]
+    PID: [1]
+
+    # --- Timing & Thresholds ---
+    CW: 256
+    GW: 2000
+    DLY: 2000
+    PSW: 256
+    THR: 100
+
+    # --- Trigger Lookup Table (Sequence) ---
+    TLT: [
+      "1x2x3x4", 
+      "1x2x4", 
+      "1x2x3", 
+      "1x2x3", 
+      "1x2x3", 
+      "1x2x3", 
+      "1x2+3x4", 
+      "1x2+3x4",
+      "1x2+3x4",
+      "1x2+3x4"
+    ]
+
+    HV: [50, 50, 50, 50, 50]
+
+  - SID: 2
+    NCH: 40
+    ENABLED: 1
+    MODE: 1
+    RL: 8
+
+    # --- Channel Mapping ---
+    # PID: zeros indicate disconnected channels as per your original text
+    CID: [1]
+    PID: [41]
+
+    # --- Timing & Thresholds ---
+    CW: 256
+    GW: 2000
+    DLY: 2000
+    PSW: 256
+    THR: 100
+
+    # --- Trigger Lookup Table (Sequence) ---
+    TLT: [
+      "1x2x3x4", 
+      "1x2x4", 
+      "1x2x3", 
+      "1x2x3", 
+      "1x2x3", 
+      "1x2x3", 
+      "1x2+3x4", 
+      "1x2+3x4",
+      "1x2+3x4",
+      "1x2+3x4"
+    ]
+
+    HV: [50, 50, 50, 50, 50]    

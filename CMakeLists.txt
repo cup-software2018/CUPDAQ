@@ -21,12 +21,18 @@ include ( ${ROOT_USE_FILE} )
 find_package ( PkgConfig REQUIRED )
 pkg_check_modules ( LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0 )
 
+# ---- yaml parser for config ----
+find_package(yaml-cpp REQUIRED)
+
+# ---- zeromq c++ for massage server ----
+find_package(cppzmq REQUIRED)
+
 # ---- HDF5 (optional) ----
-option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" OFF )
+option ( CUPDAQ_ENABLE_HDF5 "Enable HDF5-based utilities" ON )
 if ( CUPDAQ_ENABLE_HDF5 )
   find_package ( HDF5 QUIET COMPONENTS C CXX HL )
   if ( HDF5_FOUND )
-    message ( STATUS "HDF5 found: enabling HDF5Utils module" )
+    message ( STATUS "HDF5 found (${HDF5_VERSION}): enabling HDF5Utils module" )
     set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2" )
     add_definitions ( -DENABLE_HDF5 )
     add_subdirectory ( HDF5Utils )
@@ -41,8 +47,8 @@ endif ()
 # ---- Submodules ----
 add_subdirectory ( OnlConsts )
 add_subdirectory ( DAQUtils )
-add_subdirectory ( Notice )
 add_subdirectory ( DAQConfig )
+add_subdirectory ( Notice )
 add_subdirectory ( DAQSystem )
 add_subdirectory ( OnlObjs )
 add_subdirectory ( DAQTrigger )

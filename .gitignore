@@ -7,3 +7,10 @@
 /lib/
 /.clang-format
 /ld.sh
+/*.C
+/*.py
+/*.config
+/*.yml
+/*.yaml
+/*.root*
+/*.h5*

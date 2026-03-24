@@ -1,5 +1,4 @@
-#ifndef AmoreADC_hh
-#define AmoreADC_hh
+#pragma once
 
 #include "TObject.h"
 
@@ -12,25 +11,25 @@ public:
   AmoreADC();
   AmoreADC(int sid);
   AmoreADC(AbsConf * config);
-  virtual ~AmoreADC();
+  ~AmoreADC() override = default;
 
-  virtual int Open() { return 0; }
-  virtual void Close() {}
+  int Open() override { return 0; }
+  void Close() override {}
 
-  virtual bool Configure() { return true; }
-  virtual bool Initialize() { return true; }
-  virtual void StartTrigger() {}
-  virtual void StopTrigger() {}
+  bool Configure() override { return true; }
+  bool Initialize() override { return true; }
+  void StartTrigger() override {}
+  void StopTrigger() override {}
 
-  virtual int ReadBCount();
-  virtual int ReadData(int bcount, unsigned char * data);
-  virtual int ReadData(int bcount);
+  int ReadBCount() override;
+  int ReadData(int bcount, unsigned char * data) override;
+  int ReadData(int bcount) override;
 
 private:
+  void UpdateCurrentTime(const unsigned char * data, int bcount);
+
   int fMID;
   CupTCB * fTCB;
 
-  ClassDef(AmoreADC, 0) // AmoreADC wrapper class for root
+  ClassDef(AmoreADC, 0)
 };
-
-#endif

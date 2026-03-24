@@ -1,53 +1,65 @@
-#include "DAQConfig/DAQConf.hh"
+#include <iostream>
 
-using namespace std;
+#include "DAQConfig/DAQConf.hh"
 
 ClassImp(DAQConf)
 
 DAQConf::DAQConf()
-    : AbsConf()
+  : AbsConf()
 {
   SetNameTitle("DAQ", "DAQ machine");
 }
 
-DAQConf::~DAQConf() {}
-
-void DAQConf::AddDAQ(int id, string name, string ipaddr, int port)
+void DAQConf::AddDAQ(int id, std::string name, std::string ipaddr, int port)
 {
-  auto daq = std::make_tuple(id, name, ipaddr, port);
-  fDAQs.push_back(daq);
+  fDAQs.emplace_back(id, std::move(name), std::move(ipaddr), port);
 }
 
-int DAQConf::GetN() const
-{
-  return fDAQs.size();
-}
+int DAQConf::GetN() const { return static_cast<int>(fDAQs.size()); }
 
-int DAQConf::GetID(int i) const
-{
-  return get<0>(fDAQs.at(i));
-}
+int DAQConf::GetID(int i) const { return std::get<0>(fDAQs.at(i)); }
 
-string DAQConf::GetDAQName(int id) const
+std::string DAQConf::GetDAQName(int id) const
 {
-  for (auto daq : fDAQs) {
-    if (get<0>(daq) == id) return get<1>(daq);
-  }
+  for (const auto & daq : fDAQs)
+    if (std::get<0>(daq) == id) return std::get<1>(daq);
   return "none";
 }
 
-string DAQConf::GetIPAddr(int id) const
+std::string DAQConf::GetIPAddr(int id) const
 {
-  for (auto daq : fDAQs) {
-    if (get<0>(daq) == id) return get<2>(daq);
-  }
+  for (const auto & daq : fDAQs)
+    if (std::get<0>(daq) == id) return std::get<2>(daq);
   return "none";
 }
 
 int DAQConf::GetPort(int id) const
 {
-  for (auto daq : fDAQs) {
-    if (get<0>(daq) == id) return get<3>(daq);
+  for (const auto & daq : fDAQs)
+    if (std::get<0>(daq) == id) return std::get<3>(daq);
+  return 0;
+}
+
+void DAQConf::PrintConf() const
+{
+  using std::cout;
+  using std::endl;
+
+  cout << "++ DAQ SERVER report" << endl;
+  cout << "----------------------------------------------------------------------" << endl;
+  cout << Form(" %-4s | %-12s | %-15s | %-6s", "ID", "Name", "IP Address", "Port") << endl;
+  cout << "----------------------------------------------------------------------" << endl;
+
+  if (fDAQs.empty()) { cout << " No DAQ servers configured." << endl; }
+  else {
+    for (const auto & daq : fDAQs) {
+      int id = std::get<0>(daq);
+      std::string name = std::get<1>(daq);
+      std::string ip = std::get<2>(daq);
+      int port = std::get<3>(daq);
+
+      cout << Form(" %-4d | %-12s | %-15s | %-6d", id, name.c_str(), ip.c_str(), port) << endl;
+    }
   }
-  return 0;  
+  cout << "----------------------------------------------------------------------" << endl;
 }

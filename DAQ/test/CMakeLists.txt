@@ -4,6 +4,9 @@ set ( TEST_SOURCES
     merger.cc
     tcbdaq.cc
     stddaq.cc
+#    nulltcb.cc
+#    nulldaq.cc
+#    nullmerger.cc
 )
 
 foreach ( src ${TEST_SOURCES} )

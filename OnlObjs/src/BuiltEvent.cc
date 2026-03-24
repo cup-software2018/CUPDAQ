@@ -1,3 +1,5 @@
+#include <limits>
+
 #include "OnlObjs/BuiltEvent.hh"
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
@@ -5,29 +7,31 @@
 ClassImp(BuiltEvent)
 
 BuiltEvent::BuiltEvent()
-    : TObjArray()
+  : TObjArray(),
+    fDAQID(0),
+    fEventNumber(0)
 {
-  fDAQID = 0;
-  fEventNumber = 0;
 }
 
 BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
-    : TObjArray(builtevent)
+  : TObjArray(builtevent),
+    fDAQID(builtevent.GetDAQID()),
+    fEventNumber(builtevent.GetEventNumber())
 {
-  fDAQID = builtevent.GetDAQID();
-  fEventNumber = builtevent.GetEventNumber();
+  const int nent = builtevent.GetEntries();
+  for (int i = 0; i < nent; ++i) {
+    auto * event = static_cast<AbsADCRaw *>(builtevent.At(i));
+    if (!event) continue;
 
-  for (int i = 0; i < builtevent.GetEntries(); i++) {
-    auto * event = (AbsADCRaw *)builtevent.At(i);
     switch (event->GetADCMode()) {
       case ADC::FMODE: {
-        auto * adc = (FADCRawEvent *)event;
+        auto * adc = static_cast<FADCRawEvent *>(event);
         auto * newadc = new FADCRawEvent(*adc);
         Add(newadc);
         break;
       }
       case ADC::SMODE: {
-        auto * adc = (SADCRawEvent *)event;
+        auto * adc = static_cast<SADCRawEvent *>(event);
         auto * newadc = new SADCRawEvent(*adc);
         Add(newadc);
         break;
@@ -37,43 +41,51 @@ BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
   }
 }
 
-BuiltEvent::~BuiltEvent() 
-{
-  Delete();
-}
+BuiltEvent::~BuiltEvent() { Delete(); }
 
 unsigned int BuiltEvent::GetTriggerType() const
 {
-  auto * adcevent = (AbsADCRaw *)At(0);
-  return adcevent->GetTriggerType();
-}
+  if (GetEntries() == 0) { return 0U; }
 
+  auto * adcevent = static_cast<AbsADCRaw *>(At(0));
+  return adcevent ? adcevent->GetTriggerType() : 0U;
+}
 
 unsigned int BuiltEvent::GetTriggerNumber() const
 {
-  auto * adcevent = (AbsADCRaw *)At(0);
-  return adcevent->GetTriggerNumber();
-}
+  if (GetEntries() == 0) { return 0U; }
 
+  auto * adcevent = static_cast<AbsADCRaw *>(At(0));
+  return adcevent ? adcevent->GetTriggerNumber() : 0U;
+}
 
 unsigned long BuiltEvent::GetTriggerTime() const
 {
-  unsigned long fastttime = UINT64_MAX;
-  int nevt = GetEntries();
-  for (int i = 0; i < nevt; i++) {
-    auto * adcevent = (AbsADCRaw *)At(i);
-    unsigned long ttime = adcevent->GetTriggerTime();
+  const int nevt = GetEntries();
+  if (nevt <= 0) { return 0UL; }
+
+  unsigned long fastttime = std::numeric_limits<unsigned long>::max();
+
+  for (int i = 0; i < nevt; ++i) {
+    auto * adcevent = static_cast<AbsADCRaw *>(At(i));
+    if (!adcevent) continue;
+
+    const unsigned long ttime = adcevent->GetTriggerTime();
     if (ttime < fastttime) { fastttime = ttime; }
   }
+
   return fastttime;
 }
 
 int BuiltEvent::Compare(const TObject * object) const
 {
-  auto * comp = (BuiltEvent *)object;
-  if (this->GetTriggerTime() > comp->GetTriggerTime()) { return 1; }
-  else if (this->GetTriggerTime() < comp->GetTriggerTime()) {
-    return -1;
-  }
+  auto * comp = static_cast<const BuiltEvent *>(object);
+  if (!comp) { return 0; }
+
+  const unsigned long t1 = GetTriggerTime();
+  const unsigned long t2 = comp->GetTriggerTime();
+
+  if (t1 > t2) { return 1; }
+  if (t1 < t2) { return -1; }
   return 0;
 }

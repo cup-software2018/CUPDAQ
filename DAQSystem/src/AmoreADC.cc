@@ -3,95 +3,66 @@
 ClassImp(AmoreADC)
 
 AmoreADC::AmoreADC()
-    : AbsADC()
+  : AbsADC(),
+    fMID(0),
+    fTCB(CupTCB::Instance())
 {
-  fTCB = CupTCB::Instance();
 }
 
 AmoreADC::AmoreADC(int sid)
-    : AbsADC(sid)
+  : AbsADC(sid),
+    fMID(sid + 128),
+    fTCB(CupTCB::Instance())
 {
-  fMID = sid + 128;
-  fTCB = CupTCB::Instance();
 }
 
 AmoreADC::AmoreADC(AbsConf * conf)
-    : AbsADC(conf)
+  : AbsADC(conf),
+    fMID(conf->MID()),
+    fTCB(CupTCB::Instance())
 {
-  fMID = conf->MID();
-  fTCB = CupTCB::Instance();
 }
 
-AmoreADC::~AmoreADC() {}
-
-int AmoreADC::ReadBCount() { return fTCB->ReadBCOUNT(fMID); }
+int AmoreADC::ReadBCount() { return fTCB->ReadBCount(fMID); }
 
 int AmoreADC::ReadData(int bcount, unsigned char * data)
 {
-  int state = fTCB->ReadDATA(fMID, bcount, data);
+  int state = fTCB->ReadData(fMID, bcount, data);
 
   fTotalBCount += bcount;
 
-  unsigned long ltmp;
-  int j = kKILOBYTES * bcount - 64;
-
-  std::unique_lock<std::mutex> lock(fMutex);
-  // get local starting coarse time
-  ltmp = data[j + 48] & 0xFF;
-  fCurrentTime = ltmp * 1000;
-  ltmp = data[j + 49] & 0xFF;
-  ltmp = ltmp << 8;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 50] & 0xFF;
-  ltmp = ltmp << 16;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 51] & 0xFF;
-  ltmp = ltmp << 24;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 52] & 0xFF;
-  ltmp = ltmp << 32;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 53] & 0xFF;
-  ltmp = ltmp << 40;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  lock.unlock();
+  UpdateCurrentTime(data, bcount);
 
   return state;
 }
 
 int AmoreADC::ReadData(int bcount)
 {
-  auto * chunk = new ChunkData(bcount);
-  int state = fTCB->ReadDATA(fMID, bcount, chunk->data);
-  fChunkDataBuffer.push_back(chunk);
+  auto chunk = std::make_unique<ChunkData>(bcount);
+  int state = fTCB->ReadData(fMID, bcount, chunk->data);
 
   fTotalBCount += bcount;
 
-  unsigned char * data = chunk->data;
+  UpdateCurrentTime(chunk->data, bcount);
 
-  unsigned long ltmp;
+  fChunkDataBuffer.push_back(std::move(chunk));
+
+  return state;
+}
+
+void AmoreADC::UpdateCurrentTime(const unsigned char * data, int bcount)
+{
+  unsigned long coarsetime = 0;
   int j = kKILOBYTES * bcount - 64;
 
   std::unique_lock<std::mutex> lock(fMutex);
-  // get local starting coarse time
-  ltmp = data[j + 48] & 0xFF;
-  fCurrentTime = ltmp * 1000;
-  ltmp = data[j + 49] & 0xFF;
-  ltmp = ltmp << 8;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 50] & 0xFF;
-  ltmp = ltmp << 16;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 51] & 0xFF;
-  ltmp = ltmp << 24;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 52] & 0xFF;
-  ltmp = ltmp << 32;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  ltmp = data[j + 53] & 0xFF;
-  ltmp = ltmp << 40;
-  fCurrentTime = fCurrentTime + ltmp * 1000;
-  lock.unlock();
 
-  return state;
+  coarsetime = static_cast<unsigned long>(data[j + 48] & 0xFFu);
+  coarsetime |= static_cast<unsigned long>(data[j + 49] & 0xFFu) << 8;
+  coarsetime |= static_cast<unsigned long>(data[j + 50] & 0xFFu) << 16;
+  coarsetime |= static_cast<unsigned long>(data[j + 51] & 0xFFu) << 24;
+  coarsetime |= static_cast<unsigned long>(data[j + 52] & 0xFFu) << 32;
+  coarsetime |= static_cast<unsigned long>(data[j + 53] & 0xFFu) << 40;
+
+  fCurrentTime = coarsetime * 1000ul;
 }

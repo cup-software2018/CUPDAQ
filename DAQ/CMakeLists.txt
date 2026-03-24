@@ -6,6 +6,7 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 
 # --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
 set ( DICT_I_FLAGS
+    -I${LIBUSB_INCLUDE_DIRS}
     -I${CMAKE_SOURCE_DIR}/OnlConsts
     -I${CMAKE_SOURCE_DIR}/Notice
     -I${CMAKE_SOURCE_DIR}/DAQUtils
@@ -33,7 +34,7 @@ set ( DICT_HEADERS
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${DICT_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
-    OPTIONS ${DICT_I_FLAGS}
+    OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
 # Build shared library (add dictionary source)
@@ -57,6 +58,8 @@ endif ()
 # Link ROOT and apply its compile defs
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
+    yaml-cpp
+    cppzmq
     ${ROOT_LIBRARIES}
     OnlConsts
     Notice

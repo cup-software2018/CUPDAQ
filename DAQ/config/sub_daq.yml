@@ -1,0 +1,17 @@
+DAQ:
+  - ID: 0
+    NAME: "TCBSERVER"
+    IP: "192.168.0.12"
+    PORT: 7809
+  - ID: 1
+    NAME: "FADCDAQ"
+    IP: "192.168.0.12"
+    PORT: 7810
+  - ID: 2
+    NAME: "SADCDAQ"
+    IP: "192.168.0.13"
+    PORT: 7811  
+  - ID: 3
+    NAME: "IADCDAQ"
+    IP: "192.168.0.13"
+    PORT: 7812  

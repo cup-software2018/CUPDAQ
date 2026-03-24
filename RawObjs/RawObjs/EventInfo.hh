@@ -1,5 +1,4 @@
-#ifndef EventInfo_hh
-#define EventInfo_hh
+#pragma once
 
 #include "TObject.h"
 
@@ -7,7 +6,7 @@ class EventInfo : public TObject {
 public:
   EventInfo();
   EventInfo(const EventInfo & info);
-  virtual ~EventInfo();
+  ~EventInfo() override = default;
 
   void SetTriggerType(unsigned short type);
   void SetNHit(unsigned short n);
@@ -31,15 +30,16 @@ private:
   ClassDef(EventInfo, 1)
 };
 
+// Inline functions
+
 inline void EventInfo::SetTriggerType(unsigned short type) { fTrgType = type; }
 inline void EventInfo::SetNHit(unsigned short n) { fNHit = n; }
 inline void EventInfo::SetTriggerNumber(unsigned int n) { fTrgNum = n; }
 inline void EventInfo::SetEventNumber(unsigned int n) { fEvtNum = n; }
 inline void EventInfo::SetTriggerTime(unsigned long t) { fTrgTime = t; }
+
 inline unsigned short EventInfo::GetTriggerType() const { return fTrgType; }
 inline unsigned short EventInfo::GetNHit() const { return fNHit; }
 inline unsigned int EventInfo::GetTriggerNumber() const { return fTrgNum; }
 inline unsigned int EventInfo::GetEventNumber() const { return fEvtNum; }
 inline unsigned long EventInfo::GetTriggerTime() const { return fTrgTime; }
-
-#endif

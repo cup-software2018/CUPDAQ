@@ -1,20 +1,19 @@
-#ifndef AbsHistogramer_hh
-#define AbsHistogramer_hh
+#pragma once
 
+#include <ctime>
 #include <iostream>
-#include <time.h>
+#include <string>
 #include <vector>
 
 #include "TFile.h"
 #include "TObjArray.h"
-#include "TString.h"
 
 #include "DAQConfig/AbsConfList.hh"
-#include "DAQUtils/ELogger.hh"
+#include "DAQUtils/ELog.hh"
 #include "OnlConsts/adcconsts.hh"
 #include "OnlObjs/BuiltEvent.hh"
 
-typedef TObjArray HistProxy;
+using HistProxy = TObjArray;
 
 class AbsHistogramer {
 public:
@@ -36,36 +35,24 @@ public:
   virtual void SetFilename(const char * fname);
 
 protected:
-  ELogger * fLog;
+  int fRunNumber{};
+  ADC::TYPE fADCType{};
+  AbsConfList * fConfigList{nullptr};
 
-  int fRunNumber;
-  ADC::TYPE fADCType;
-  AbsConfList * fConfigList;
+  time_t fStartDatime{};
 
-  time_t fStartDatime;
+  std::string fROOTFilename;
+  TFile * fROOTFile{nullptr};
+  std::vector<std::string> fROOTFileList;
 
-  TString fROOTFilename;
-  TFile * fROOTFile;
-  std::vector<const char *> fROOTFileList;
+  HistProxy * fHistProxy{nullptr};
 
-  HistProxy * fHistProxy;
-
-  int fVerboseLevel;
+  int fVerboseLevel{};
 };
 
 inline void AbsHistogramer::SetRunNumber(int run) { fRunNumber = run; }
 inline void AbsHistogramer::SetADCType(ADC::TYPE type) { fADCType = type; }
-inline void AbsHistogramer::SetConfigList(AbsConfList * configs)
-{
-  fConfigList = configs;
-}
+inline void AbsHistogramer::SetConfigList(AbsConfList * configs) { fConfigList = configs; }
 inline void AbsHistogramer::SetStartDatime(time_t time) { fStartDatime = time; }
-inline void AbsHistogramer::SetVerboseLevel(int level)
-{
-  fVerboseLevel = level;
-}
-inline void AbsHistogramer::SetFilename(const char * fname)
-{
-  fROOTFilename = fname;
-}
-#endif
+inline void AbsHistogramer::SetVerboseLevel(int level) { fVerboseLevel = level; }
+inline void AbsHistogramer::SetFilename(const char * fname) { fROOTFilename = fname; }

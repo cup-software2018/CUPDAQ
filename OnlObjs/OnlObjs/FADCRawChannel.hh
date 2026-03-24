@@ -1,25 +1,27 @@
 #ifndef FADCRawChannel_hh
 #define FADCRawChannel_hh
 
+#include <cstring>
+
 #include "TObject.h"
 
 class FADCRawChannel : public TObject {
 private:
   int fNDP;
-  unsigned short * fADC; //[fNDP]
+  unsigned short * fADC;
 
 public:
   FADCRawChannel();
-  FADCRawChannel(int ndp);
+  explicit FADCRawChannel(int ndp);
   FADCRawChannel(const FADCRawChannel & ch);
-  virtual ~FADCRawChannel();
+  ~FADCRawChannel() override;
 
   void SetADC(int i, unsigned short adc);
 
   int GetNDP() const;
   unsigned short * GetADC() const;
 
-  virtual void Print(Option_t * opt = "") const;
+  void Print(Option_t * opt = "") const override;
 
   ClassDef(FADCRawChannel, 1)
 };

@@ -1,16 +1,22 @@
-#include "TList.h"
-#include "TObjString.h"
-#include "TRegexp.h"
-#include "TSystem.h"
+#include <algorithm>
+#include <cstring> // for std::strcmp
+#include <filesystem>
+#include <regex>
+#include <string>
+#include <vector>
 
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/H5DataReader.hh"
 
+//------------------------------------------------------------------------------
+// H5ChainFile
+//------------------------------------------------------------------------------
+
 ClassImp(H5ChainFile)
 
 H5ChainFile::H5ChainFile()
+  : fFiles()
 {
-  fCurrentFile = -1;
 }
 
 H5ChainFile::~H5ChainFile()
@@ -24,30 +30,43 @@ void H5ChainFile::AddFile(DataFile_t * file) { fFiles.push_back(file); }
 
 void H5ChainFile::Close()
 {
+  // Close all open HDF5 file handles
   for (auto * file : fFiles) {
-    hid_t fid = file->fid;
-    H5Fclose(fid);
+    if (file->fid >= 0) {
+      H5Fclose(file->fid);
+      file->fid = -1;
+    }
   }
 }
 
-int H5ChainFile::GetNFile() const { return fFiles.size(); }
+int H5ChainFile::GetNFile() const { return static_cast<int>(fFiles.size()); }
 
-hid_t H5ChainFile::GetFileId(int entno, int & evtno)
+hid_t H5ChainFile::GetFileId(int entno, int & evtno, bool * file_changed)
 {
-  hid_t fid = -1;
+  hid_t fid = H5I_INVALID_HID;
+  if (file_changed) { *file_changed = false; }
+
   for (auto * file : fFiles) {
-    auto search = file->entries.find(entno);
-    if (search != file->entries.end()) {
-      if (file->fid < 0) {
-        if (fCurrentFile > 0) H5Fclose(fCurrentFile);
-        fid = H5Fopen(file->filename, H5F_ACC_RDONLY, H5P_DEFAULT);
-        file->fid = fid;
-        fCurrentFile = fid;
+    // Range check instead of heavy std::map lookup
+    if (entno >= file->global_start && entno < file->global_start + file->nevent) {
+
+      if (fCurrentFilePtr != file) {
+        if (file_changed) { *file_changed = true; }
+
+        // Close the previous file if it was open
+        if (fCurrentFilePtr && fCurrentFilePtr->fid >= 0) {
+          H5Fclose(fCurrentFilePtr->fid);
+          fCurrentFilePtr->fid = -1;
+        }
+
+        // Open the new file
+        file->fid = H5Fopen(file->filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+        fCurrentFilePtr = file;
       }
-      else {
-        fid = file->fid;
-      }
-      evtno = search->second;
+
+      fid = file->fid;
+      // Calculate local offset linearly
+      evtno = entno - file->global_start;
       break;
     }
   }
@@ -55,30 +74,32 @@ hid_t H5ChainFile::GetFileId(int entno, int & evtno)
   return fid;
 }
 
+//------------------------------------------------------------------------------
+// H5DataReader
+//------------------------------------------------------------------------------
 
-ClassImp(H5DataReader) 
+ClassImp(H5DataReader)
 
 H5DataReader::H5DataReader()
+  : fFiles(new H5ChainFile()),
+    fEvent(nullptr),
+    fNEvent(0),
+    fSubType(SubRun_t::BuildType())
 {
-  SubRun_t sub;
-  fSubType = sub.BuildType();
-
-  fFiles = new H5ChainFile();
-  fNEvent = 0;
 }
 
 H5DataReader::H5DataReader(const char * fname)
+  : fFiles(new H5ChainFile()),
+    fEvent(nullptr),
+    fNEvent(0),
+    fSubType(SubRun_t::BuildType())
 {
-  SubRun_t sub;
-  fSubType = sub.BuildType();
-
-  fFiles = new H5ChainFile();
-  fNEvent = 0;
+  SetFilename(fname);
 }
 
 H5DataReader::~H5DataReader()
 {
-  H5Tclose(fSubType);
+  if (fSubType >= 0) { H5Tclose(fSubType); }
   delete fFiles;
 }
 
@@ -86,54 +107,66 @@ void H5DataReader::SetFilename(const char * fname) { AddFile(fname); }
 
 bool H5DataReader::Add(const char * fname)
 {
-  TString basename = fname;
+  if (!fname || fname[0] == '\0') { return false; }
 
-  // case with one single file
-  if (!basename.MaybeWildcard()) { return AddFile(fname); }
+  std::string path_str = fname;
 
-  // wildcarding used in name
-  Int_t slashpos = basename.Last('/');
-  TString directory;
-  if (slashpos >= 0) {
-    directory = basename(0, slashpos); // Copy the directory name
-    basename.Remove(0, slashpos + 1);  // and remove it from basename
+  if (path_str.find('*') == std::string::npos && path_str.find('?') == std::string::npos) {
+    return AddFile(fname);
+  }
+
+  namespace fs = std::filesystem;
+  fs::path filepath(path_str);
+
+  fs::path directory = filepath.parent_path();
+  std::string pattern = filepath.filename().string();
+
+  if (directory.empty()) { directory = fs::current_path(); }
+
+  std::string regex_str = "^";
+  for (char c : pattern) {
+    if (c == '.') { regex_str += "\\."; }
+    else if (c == '*') {
+      regex_str += ".*";
+    }
+    else if (c == '?') {
+      regex_str += ".";
+    }
+    else {
+      regex_str += c;
+    }
+  }
+  regex_str += "$";
+
+  std::regex re(regex_str);
+  std::vector<std::string> matched_files;
+
+  if (fs::exists(directory) && fs::is_directory(directory)) {
+    for (const auto & entry : fs::directory_iterator(directory)) {
+      if (entry.is_regular_file()) {
+        std::string filename = entry.path().filename().string();
+        if (std::regex_match(filename, re)) { matched_files.push_back(entry.path().string()); }
+      }
+    }
   }
   else {
-    directory = gSystem->UnixPathName(gSystem->WorkingDirectory());
+    Error("Add", "Directory does not exist: %s", directory.string().c_str());
+    return false;
   }
 
-  const char * file;
-  const char * epath = gSystem->ExpandPathName(directory.Data());
-  void * dir = gSystem->OpenDirectory(epath);
-  delete[] epath;
+  std::sort(matched_files.begin(), matched_files.end());
 
-  if (dir) {
-    // create a TList to store the file names (not yet sorted)
-    TList l;
-    TRegexp re(basename, kTRUE);
-    while ((file = gSystem->GetDirEntry(dir))) {
-      if (!strcmp(file, ".") || !strcmp(file, "..")) continue;
-      TString s = file;
-      if ((basename != file) && s.Index(re) == kNPOS) continue;
-      l.Add(new TObjString(file));
-    }
-    gSystem->FreeDirectory(dir);
-    // sort the files in alphanumeric order
-    l.Sort();
-    TIter next(&l);
-    TObjString * obj;
-    while ((obj = (TObjString *)next())) {
-      file = obj->GetName();
-      AddFile(TString::Format("%s/%s", directory.Data(), file).Data());
-    }
-    l.Delete();
+  bool success = true;
+  for (const auto & file : matched_files) {
+    if (!AddFile(file.c_str())) { success = false; }
   }
 
-  return true;
+  return success;
 }
 
 bool H5DataReader::AddFile(const char * fname)
 {
+  // Open HDF5 file and register its subrun/event mapping
   if (!fname || fname[0] == '\0') {
     Error("AddFile", "no file name; no files connected");
     return false;
@@ -145,34 +178,44 @@ bool H5DataReader::AddFile(const char * fname)
     return false;
   }
 
-  DataFile_t * file = new DataFile_t;
-  file->filename = fname;
+  auto * file = new DataFile_t;
+  file->filename = std::string(fname);
 
-  hsize_t fsize;
+  hsize_t fsize = 0;
   H5Fget_filesize(fid, &fsize);
   file->filesize = fsize;
 
-  SubRun_t subrun;
+  SubRun_t subrun{};
   hid_t did = H5Dopen2(fid, "subrun", H5P_DEFAULT);
-  herr_t err = H5Dread(did, fSubType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &subrun);
-  if (err < 0) {
-    Error("AddFile", "fail to read dataset[subrun]");
+  if (did < 0) {
+    Error("AddFile", "fail to open dataset[subrun]");
+    H5Fclose(fid);
+    delete file;
     return false;
   }
+
+  herr_t err = H5Dread(did, fSubType, H5S_ALL, H5S_ALL, H5P_DEFAULT, &subrun);
   H5Dclose(did);
 
-  int nevt = subrun.nevent;
-  int ient = fNEvent;
-  int ievt = subrun.first;
-
-  for (int i = 0; i < nevt; i++) {
-    file->entries.insert(std::pair{ient + i, ievt + i});
+  if (err < 0) {
+    Error("AddFile", "fail to read dataset[subrun]");
+    H5Fclose(fid);
+    delete file;
+    return false;
   }
 
-  file->fid = -1;
+  const int nevt = static_cast<int>(subrun.nevent);
+  int ient = fNEvent;
+
+  file->global_start = ient;
+  file->nevent = nevt;
+
+  file->fid = -1; // will be opened lazily in H5ChainFile::GetFileId
   fFiles->AddFile(file);
 
-  fNEvent += subrun.nevent;
+  fNEvent += nevt;
+
+  H5Fclose(fid);
 
   return true;
 }
@@ -189,6 +232,7 @@ bool H5DataReader::Open()
     return false;
   }
 
+  // Connect chain information to the AbsH5Event instance
   fEvent->SetChainFile(fFiles);
   fEvent->Open();
 
@@ -197,6 +241,5 @@ bool H5DataReader::Open()
 
 void H5DataReader::Close()
 {
-  fEvent->Close();
-  // fFiles->Close();
+  if (fEvent) { fEvent->Close(); }
 }

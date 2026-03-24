@@ -6,9 +6,11 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 
 # --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
 set(DICT_I_FLAGS
+    -I${LIBUSB_INCLUDE_DIRS}
     -I${CMAKE_SOURCE_DIR}/OnlConsts
     -I${CMAKE_SOURCE_DIR}/DAQUtils
     -I${CMAKE_SOURCE_DIR}/Notice    
+
     -I${CMAKE_SOURCE_DIR}/DAQConfig
 )
 
@@ -16,7 +18,7 @@ set(DICT_I_FLAGS
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
-    OPTIONS ${DICT_I_FLAGS}
+    OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
 add_library ( ${MODULE_NAME} SHARED

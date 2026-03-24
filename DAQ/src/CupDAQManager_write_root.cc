@@ -1,5 +1,7 @@
+#include <cstdlib>
+#include <string>
+
 #include "TBranchRef.h"
-#include "TObjString.h"
 
 #include "DAQ/CupDAQManager.hh"
 #include "OnlObjs/ADCHeader.hh"
@@ -37,28 +39,36 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
 
   fWriteStatus = RUNNING;
   while (true) {
-    // for emergent exit
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
     if (fBuiltEventBuffer1.empty()) {
       if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
     }
-    else {    
+    else {
+      StartBenchmark("WriteEvent");
       chdata->Clear();
 
-      BuiltEvent * bevent = fBuiltEventBuffer1.popfront();
-      eventinfo->SetTriggerNumber(bevent->GetTriggerNumber());
-      eventinfo->SetTriggerTime(bevent->GetTriggerTime());
-      eventinfo->SetTriggerType(bevent->GetTriggerType());
+      auto bevent_opt = fBuiltEventBuffer1.pop_front();
+      if (!bevent_opt.has_value()) {
+        int size_empty = fBuiltEventBuffer1.size();
+        ThreadSleep(fWriteSleep, perror, integral, size_empty);
+        continue;
+      }
+      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
+      BuiltEvent * ev = bevent.get();
+
+      eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
+      eventinfo->SetTriggerTime(ev->GetTriggerTime());
+      eventinfo->SetTriggerType(ev->GetTriggerType());
       eventinfo->SetEventNumber(fNBuiltEvent);
 
-      int nadc = bevent->GetEntries();
+      int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
-        auto * adcraw = (FADCRawEvent *)bevent->At(j);
+        auto * adcraw = static_cast<FADCRawEvent *>(ev->At(j));
         auto * header = adcraw->GetADCHeader();
 
         AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
         if (!conf) {
-          fLog->Error("CupDAQManager::WriteFADC_MOD_ROOT", "no config for mid=%d", header->GetMID());
+          ERROR("no config for mid=%d", header->GetMID());
           RUNSTATE::SetError(fRunStatus);
           break;
         }
@@ -73,11 +83,12 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
           channel->SetBit(header->GetTriggerBit(i));
         }
       }
-      delete bevent;
 
       wlock.lock();
       fROOTTree->Fill();
       wlock.unlock();
+
+      StopBenchmark("WriteEvent");
     }
 
     int size = fBuiltEventBuffer1.size();
@@ -102,34 +113,42 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
     case ADC::SADC: nadcch = 32; break;
     case ADC::IADC: nadcch = 40; break;
     default: break;
-  }  
+  }
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
   fWriteStatus = RUNNING;
   while (true) {
-    // for emergent exit
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
     if (fBuiltEventBuffer1.empty()) {
       if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
     }
     else {
+      StartBenchmark("WriteEvent");
       chdata->Clear();
 
-      BuiltEvent * bevent = fBuiltEventBuffer1.popfront();
-      eventinfo->SetTriggerNumber(bevent->GetTriggerNumber());
-      eventinfo->SetTriggerTime(bevent->GetTriggerTime());
-      eventinfo->SetTriggerType(bevent->GetTriggerType());
+      auto bevent_opt = fBuiltEventBuffer1.pop_front();
+      if (!bevent_opt.has_value()) {
+        int size_empty = fBuiltEventBuffer1.size();
+        ThreadSleep(fWriteSleep, perror, integral, size_empty);
+        continue;
+      }
+      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
+      BuiltEvent * ev = bevent.get();
+
+      eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
+      eventinfo->SetTriggerTime(ev->GetTriggerTime());
+      eventinfo->SetTriggerType(ev->GetTriggerType());
       eventinfo->SetEventNumber(fNBuiltEvent);
 
-      int nadc = bevent->GetEntries();
+      int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
-        auto * adcraw = (SADCRawEvent *)bevent->At(j);
+        auto * adcraw = static_cast<SADCRawEvent *>(ev->At(j));
         auto * header = adcraw->GetADCHeader();
 
-        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());        
+        AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
         if (!conf) {
-          fLog->Error("CupDAQManager::WriteFADC_MOD_ROOT", "no config for mid=%d", header->GetMID());
+          ERROR("no config for mid=%d", header->GetMID());
           RUNSTATE::SetError(fRunStatus);
           break;
         }
@@ -143,11 +162,12 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
           channel->SetTime(adcraw->GetTime(i));
         }
       }
-      delete bevent;
 
       wlock.lock();
       fROOTTree->Fill();
       wlock.unlock();
+      
+      StopBenchmark("WriteEvent");
     }
 
     int size = fBuiltEventBuffer1.size();
@@ -159,37 +179,41 @@ long CupDAQManager::OpenNewROOTFile(const char * filename)
 {
   long retval = 0;
 
-  TString bname = gSystem->BaseName(filename);
-  TObjArray * objs = bname.Tokenize(".");
-  int subnum =
-      TString(((TObjString *)objs->At(objs->GetEntries() - 1))->GetName())
-          .Atoi();
+  std::string filepath(filename);
+
+  std::size_t slash_pos = filepath.find_last_of("/\\");
+  std::string bname = (slash_pos == std::string::npos) ? filepath : filepath.substr(slash_pos + 1);
+
+  int subnum = 0;
+  std::size_t dot_pos = bname.find_last_of('.');
+  if (dot_pos != std::string::npos && dot_pos + 1 < bname.length()) {
+    subnum = std::atoi(bname.substr(dot_pos + 1).c_str());
+  }
 
   if (subnum == 0) {
     fROOTFile = new TFile(filename, "recreate", "", fCompressionLevel);
     if (!fROOTFile->IsOpen()) {
-      fLog->Error("CupDAQManager::OpenNewROOTFile",
-                  "can\'t open output file %s", filename);
+      ERROR("can't open output file %s", filename);
       return -1;
     }
     fROOTTree = new TTree("AbsEvent", "AbsEvent");
   }
   else {
+
     fROOTFile->cd();
     fROOTTree->Write();
     fROOTTree->Reset();
 
     auto * newfile = new TFile(filename, "recreate", "", fCompressionLevel);
-    if (!fROOTFile->IsOpen()) {
-      fLog->Error("CupDAQManager::OpenNewROOTFile",
-                  "can\'t open output file %s", filename);
+    if (!newfile->IsOpen()) {
+      ERROR("can't open output file %s", filename);
       return -1;
     }
 
     retval = SwitchRootFile(fROOTFile, newfile);
   }
 
-  fLog->Info("CupDAQManager::OpenNewROOTFile", "%s opened", filename);
+  INFO("%s opened", filename);
   return retval;
 }
 
@@ -204,15 +228,15 @@ long CupDAQManager::SwitchRootFile(TFile *& oldfile, TFile * newfile)
     oldfile->Remove(obj);
 
     if (obj->InheritsFrom(TTree::Class())) {
-      auto * t = (TTree *)obj;
+      auto * t = static_cast<TTree *>(obj);
       t->SetDirectory(newfile);
 
       TIter nextb(t->GetListOfBranches());
-      while ((branch = (TBranch *)nextb())) {
+      while ((branch = static_cast<TBranch *>(nextb()))) {
         branch->SetFile(newfile);
       }
 
-      if (t->GetBranchRef()) { t->GetBranchRef()->SetFile(newfile); }
+      if (t->GetBranchRef()) t->GetBranchRef()->SetFile(newfile);
       continue;
     }
 
@@ -221,7 +245,6 @@ long CupDAQManager::SwitchRootFile(TFile *& oldfile, TFile * newfile)
   }
 
   delete oldfile;
-  oldfile = nullptr;
   oldfile = newfile;
 
   return fsize;
