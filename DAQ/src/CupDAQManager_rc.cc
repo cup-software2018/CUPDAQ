@@ -1,6 +1,7 @@
 #include <filesystem>
 
 #include "TMessage.h"
+#include "TServerSocket.h"
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQConfig/RunConfig.hh"
@@ -132,7 +133,63 @@ void CupDAQManager::RC_TCB()
       return;
     }
 
+    //// generating TServersocket (port = fDAQPort + 10)
+    int config_port = fDAQPort + 10;
+    auto * configServer = new TServerSocket(config_port, kTRUE);
+    if (!configServer->IsValid()) {
+      ERROR("Failed to start TServerSocket on port %d", config_port);
+      RUNSTATE::SetError(fRunStatusTCB);
+      return;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
     SendCommandToDAQs("kCONFIGRUN");
+
+    int expected_clients = 0;
+    for (int i = 0; i < daq->GetN(); i++) {
+      int id = daq->GetID(i);
+      std::string name = daq->GetDAQName(id);
+
+      // If the name contains "DAQ", it is a client
+      if (name.find("DAQ") != std::string::npos) { expected_clients++; }
+    }
+
+    INFO("Waiting for %d DAQ clients to connect for configuration...", expected_clients);
+
+    int connected_clients = 0;
+    for (int i = 0; i < expected_clients; i++) {
+      TSocket * sock = configServer->Accept();
+      if (sock && sock->IsValid()) {
+        TMessage * req = nullptr;
+        if (sock->Recv(req) > 0 && req != nullptr) {
+          char client_name[256];
+          req->ReadString(client_name, 256);
+          INFO("Config Server accepted connection from: %s", client_name);
+          delete req;
+        }
+        else {
+          WARNING("Config Server accepted connection from UNKNOWN client");
+        }
+
+        TMessage mess(kMESS_OBJECT);
+        mess.WriteObject(fConfigList);
+        sock->Send(mess);
+
+        delete sock;
+        connected_clients++;
+      }
+    }
+
+    if (connected_clients != expected_clients) {
+      ERROR("Not all DAQs connected for configuration (%d/%d)", connected_clients,
+            expected_clients);
+      delete configServer;
+      RUNSTATE::SetError(fRunStatusTCB);
+      return;
+    }
+
+    delete configServer; // Close server socket after all DAQs received the list
 
     // checking DAQs' status == kCONFIGURED
     if (!WaitDAQStatus(RUNSTATE::kCONFIGURED)) {
@@ -248,6 +305,53 @@ void CupDAQManager::RC_TCBCTRLDAQ()
     WARNING("run=%d exited by TCB", fRunNumber);
     return;
   }
+
+  // ----------------------------------------------
+  // Request fConfigList to server and receive
+  // ----------------------------------------------
+  std::string tcb_ip = daq->GetIPAddr(0);
+  int config_port = daq->GetPort(0) + 10;
+
+  TSocket * configSock = nullptr;
+
+  // Retry logic to ensure connection even if server is slightly delayed
+  for (int retry = 0; retry < 10; ++retry) {
+    configSock = new TSocket(tcb_ip.c_str(), config_port);
+    if (configSock->IsValid()) { break; }
+
+    delete configSock;
+    configSock = nullptr;
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
+
+  if (!configSock || !configSock->IsValid()) {
+    ERROR("Failed to connect to TCB Config Server at %s:%d", tcb_ip.c_str(), config_port);
+    RUNSTATE::SetError(fRunStatus);
+    return;
+  }
+
+  // 1. Send Handshake to Server
+  TMessage req(kMESS_STRING);
+  TString myName = fDAQName.c_str();
+  req.WriteString(myName.Data());
+  configSock->Send(req);
+
+  // 2. Receive updated fConfigList
+  TMessage * mess = nullptr;
+  if (configSock->Recv(mess) <= 0 || mess == nullptr) {
+    ERROR("Failed to receive fConfigList message from TCB");
+    delete configSock;
+    RUNSTATE::SetError(fRunStatus);
+    return;
+  }
+
+  // Read object from TMessage and cast it back
+  fConfigList = (decltype(fConfigList))mess->ReadObject(mess->GetClass());
+
+  delete mess;
+  delete configSock;
+  INFO("Successfully received updated fConfigList from TCB");
+  // -------------------------------------------------------------------
 
   auto execute_run = [&]() {
     if (!AddADC(fConfigList)) {
