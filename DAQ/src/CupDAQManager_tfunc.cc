@@ -289,7 +289,7 @@ void CupDAQManager::TF_MsgServer()
         // Protect shared variables with the existing monitor mutex
         std::lock_guard<std::mutex> lock(fMonitorMutex);
         rep_json["nevent"] = static_cast<unsigned long>(fTriggerNumber);
-        rep_json["daqtime"] = static_cast<unsigned long>(fTriggerTime);
+        rep_json["trgtime"] = static_cast<unsigned long>(fTriggerTime);
       }
       else if (command == "kQUERYMONITOR") {
         rep_json["monitor_server_on"] = fMonitorServerOn;
