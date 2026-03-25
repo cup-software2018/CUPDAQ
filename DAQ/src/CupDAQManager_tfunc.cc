@@ -344,7 +344,7 @@ void CupDAQManager::TF_MsgServer()
 
 void CupDAQManager::TF_DataServer()
 {
-  int data_port = fMergeServerPort;
+  int data_port = fDAQPort + PORT_OFFSET::DATA;
   std::string name = fDAQName;
 
   auto server_socket = std::make_unique<TServerSocket>(data_port, kTRUE);

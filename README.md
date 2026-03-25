@@ -7,6 +7,10 @@
    ```bash
    dnf install yaml-cpp yaml-cpp-devel
 
+- **ZeroMQ** for message server
+   ```bash
+   dnf install zeromq zeromq-devel cppzmq-devel
+
 - **(Optional)** **HDF5** — tested with version **1.14**
 
 

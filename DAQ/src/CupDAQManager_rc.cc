@@ -133,8 +133,8 @@ void CupDAQManager::RC_TCB()
       return;
     }
 
-    //// generating TServersocket (port = fDAQPort + 10)
-    int config_port = fDAQPort + 10;
+    //// generating TServersocket
+    int config_port = fDAQPort + PORT_OFFSET::CONFIG;
     auto * configServer = new TServerSocket(config_port, kTRUE);
     if (!configServer->IsValid()) {
       ERROR("Failed to start TServerSocket on port %d", config_port);
@@ -295,7 +295,7 @@ void CupDAQManager::RC_TCBCTRLDAQ()
 
       if (daq_name.find(target_name) != std::string::npos) {
         fMergeServerIPAddr = daq->GetIPAddr(id);
-        fMergeServerPort = daq->GetPort(id);
+        fMergeServerPort = daq->GetPort(id) + PORT_OFFSET::DATA;
       }
     }
   }
@@ -310,7 +310,7 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   // Request fConfigList to server and receive
   // ----------------------------------------------
   std::string tcb_ip = daq->GetIPAddr(0);
-  int config_port = daq->GetPort(0) + 10;
+  int config_port = daq->GetPort(0) + PORT_OFFSET::CONFIG;
 
   TSocket * configSock = nullptr;
 

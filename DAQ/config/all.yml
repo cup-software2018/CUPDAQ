@@ -2,19 +2,19 @@ DAQ:
   - ID: 0
     NAME: "TCBSERVER"
     IP: "192.168.0.12"
-    PORT: 7809
+    PORT: 7100
   - ID: 1
     NAME: "FADCDAQ"
     IP: "192.168.0.12"
-    PORT: 7810
+    PORT: 7201
   - ID: 2
     NAME: "SADCDAQ"
     IP: "192.168.0.13"
-    PORT: 7811  
+    PORT: 7301  
   - ID: 3
     NAME: "IADCDAQ"
     IP: "192.168.0.13"
-    PORT: 7812  
+    PORT: 7401  
 
 TCB:
   # Basic Settings
