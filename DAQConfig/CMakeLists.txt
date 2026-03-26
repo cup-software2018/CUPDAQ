@@ -6,8 +6,8 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 
 # --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
 set ( DICT_I_FLAGS
-    -I${PROJECT_SOURCE_DIR}/OnlConsts
-    -I${PROJECT_SOURCE_DIR}/DAQUtils
+    -I${CMAKE_SOURCE_DIR}/OnlConsts
+    -I${CMAKE_SOURCE_DIR}/DAQUtils
 )
 
 # Generate ROOT dictionary (pass -I for OnlConsts)

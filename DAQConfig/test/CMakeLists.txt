@@ -9,8 +9,8 @@ foreach ( src ${TEST_SOURCES} )
 
     target_include_directories ( ${test_name}
         PRIVATE
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/DAQ>
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/DAQTrigger>
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/DAQ>
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/DAQTrigger>
     )
 
     target_link_libraries ( ${test_name}

@@ -7,11 +7,11 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 # --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
 set(DICT_I_FLAGS
     -I${LIBUSB_INCLUDE_DIRS}
-    -I${PROJECT_SOURCE_DIR}/OnlConsts
-    -I${PROJECT_SOURCE_DIR}/DAQUtils
-    -I${PROJECT_SOURCE_DIR}/Notice    
+    -I${CMAKE_SOURCE_DIR}/OnlConsts
+    -I${CMAKE_SOURCE_DIR}/DAQUtils
+    -I${CMAKE_SOURCE_DIR}/Notice    
 
-    -I${PROJECT_SOURCE_DIR}/DAQConfig
+    -I${CMAKE_SOURCE_DIR}/DAQConfig
 )
 
 # Generate ROOT dictionary (pass -I for OnlConsts)
