@@ -1,28 +1,29 @@
-# CUPDAQ — Data Acquisition Software for CUP (Center for Underground Physics)
+
+
+# CUPDAQ — Data Acquisition Software for CUP
+
+CUPDAQ is a C++ based data acquisition system designed for the **Center for Underground Physics (CUP)**. It supports various digitizers and TCB (Trigger Control Board) modules used in neutrino and dark matter search experiments.
 
 ## Requirements
-- **ROOT** ≥ 6.00  
-- **libusb-1.0**  
-- **yaml-cpp** for parsing config file
-   ```bash
-   dnf install yaml-cpp yaml-cpp-devel
 
-- **ZeroMQ** for message server
-   ```bash
-   dnf install zeromq zeromq-devel cppzmq-devel
+* **ROOT** >= 6.00 (Core, RIO, Hist, Gpad)
+* **libusb-1.0** (USB communication for Notice Korea boards)
+* **yaml-cpp** (Configuration file parsing)
+  * Command: `sudo dnf install yaml-cpp yaml-cpp-devel`
+* **ZeroMQ & cppzmq** (Message server and network communication)
+  * Command: `sudo dnf install zeromq zeromq-devel cppzmq-devel`
+* **(Optional) HDF5** (High-performance data writing, tested with 1.14.2)
 
-- **(Optional)** **HDF5** — tested with version **1.14**
+---
 
+## Prerequisite: USB Access (udev rules)
 
-## Prerequisite
+To allow CUPDAQ to access connected USB devices without root privileges, configure the udev rules as follows:
 
-To allow CUPDAQ to access connected USB devices without root privileges:
+1. **Create a new rule file**
+   `sudo vi /etc/udev/rules.d/88-notice.rules`
 
-1. Create a new file at  
-   `/etc/udev/rules.d/88-notice.rules`
-
-2. Copy the following lines into the file:
-
+2. **Copy the following lines into the file**
    ```text
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1000", MODE="0666"
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1501", MODE="0666"
@@ -31,17 +32,53 @@ To allow CUPDAQ to access connected USB devices without root privileges:
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1903", MODE="0666"
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="2010", MODE="0666"
 
-3. Reload udev rules with root privileges:
-   
-   ```bash
-     sudo udevadm control --reload-rules && sudo udevadm trigger
+3. **Reload the udev rules**
+   `sudo udevadm control --reload-rules && sudo udevadm trigger`
+
+---
 
 ## Build and Installation
 
-   ```bash
-     git clone https://github.com/cup-software2018/CUPDAQ.git
-     cd CUPDAQ
-     cmake -S . -B build
-     cmake --build build -j
-     cmake --install build --prefix [installation_path]
+CUPDAQ uses a modern CMake build system that supports **relocatable** installations via RPATH.
+
+```bash
+# Clone the repository
+git clone [https://github.com/cup-software2018/CUPDAQ.git](https://github.com/cup-software2018/CUPDAQ.git)
+cd CUPDAQ
+
+# Configure the build
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
+
+# Build using all available cores
+cmake --build build -j$(nproc)
+
+# Install to the prefix directory
+cmake --install build
+
+## Environment Setup
+
+After installation, you must source the environment setup script. This script is **relocatable**; if you move the installation directory to another location or server, simply source the script from the new path.
+
+```bash
+cd [your_installation_path]
+source setup_cupdaq.sh
+
+### What this script does:
+* Sets **CUPDAQ_DIR** to the current installation root.
+* Updates **PATH** to include DAQ binaries (e.g., `daq`, `tcb`, `merger`).
+* Updates **LD_LIBRARY_PATH** for CUPDAQ shared libraries.
+* Updates **ROOT_INCLUDE_PATH** to ensure ROOT can find CUPDAQ classes at runtime.
+
+---
+
+## Directory Structure
+
+Upon successful installation, the directory will look like this:
+
+```text
+install/
+├── bin/                # Executables (daq, tcb, test_utils...)
+├── include/            # Header files for all modules
+├── lib64/              # Shared libraries (.so) and ROOT dicts (.pcm)
+└── setup_cupdaq.sh     # Environment initialization script
 
