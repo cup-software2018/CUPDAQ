@@ -7,20 +7,20 @@ file ( GLOB MODULE_SOURCES src/*.cc )
 # --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
 set ( DICT_I_FLAGS
     -I${LIBUSB_INCLUDE_DIRS}
-    -I${CMAKE_SOURCE_DIR}/OnlConsts
-    -I${CMAKE_SOURCE_DIR}/Notice
-    -I${CMAKE_SOURCE_DIR}/DAQUtils
-    -I${CMAKE_SOURCE_DIR}/DAQSystem
-    -I${CMAKE_SOURCE_DIR}/DAQConfig
-    -I${CMAKE_SOURCE_DIR}/DAQTrigger
-    -I${CMAKE_SOURCE_DIR}/OnlObjs
-    -I${CMAKE_SOURCE_DIR}/RawObjs
-    -I${CMAKE_SOURCE_DIR}/OnlHistogramer
+    -I${PROJECT_SOURCE_DIR}/OnlConsts
+    -I${PROJECT_SOURCE_DIR}/Notice
+    -I${PROJECT_SOURCE_DIR}/DAQUtils
+    -I${PROJECT_SOURCE_DIR}/DAQSystem
+    -I${PROJECT_SOURCE_DIR}/DAQConfig
+    -I${PROJECT_SOURCE_DIR}/DAQTrigger
+    -I${PROJECT_SOURCE_DIR}/OnlObjs
+    -I${PROJECT_SOURCE_DIR}/RawObjs
+    -I${PROJECT_SOURCE_DIR}/OnlHistogramer
 )
 
 if ( CUPDAQ_ENABLE_HDF5 )
     list ( APPEND DICT_I_FLAGS -I${HDF5_INCLUDE_DIRS} )
-    list ( APPEND DICT_I_FLAGS -I${CMAKE_SOURCE_DIR}/HDF5Utils )
+    list ( APPEND DICT_I_FLAGS -I${PROJECT_SOURCE_DIR}/HDF5Utils )
 endif ()
 
 # ---- Specify exactly the headers for dictionary ----
