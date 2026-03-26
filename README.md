@@ -31,7 +31,8 @@ To allow CUPDAQ to access connected USB devices without root privileges, configu
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1503", MODE="0666"
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1903", MODE="0666"
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="2010", MODE="0666"
-
+   ```
+   
 3. **Reload the udev rules**
    `sudo udevadm control --reload-rules && sudo udevadm trigger`
 
@@ -54,7 +55,7 @@ CUPDAQ uses a modern CMake build system that supports **relocatable** installati
 
    # Install to the prefix directory
    cmake --install build
-
+   ```
 
 ## Environment Setup
 
@@ -63,6 +64,7 @@ After installation, you must source the environment setup script. This script is
    ```bash
    cd [your_installation_path]
    source setup_cupdaq.sh
+   ```
 
 ### What this script does:
 * Sets **CUPDAQ_DIR** to the current installation root.
@@ -82,4 +84,4 @@ Upon successful installation, the directory will look like this:
    ├── include/            # Header files for all modules
    ├── lib64/              # Shared libraries (.so) and ROOT dicts (.pcm)
    └── setup_cupdaq.sh     # Environment initialization script
-
+   ```
