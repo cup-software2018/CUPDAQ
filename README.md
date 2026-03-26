@@ -41,27 +41,28 @@ To allow CUPDAQ to access connected USB devices without root privileges, configu
 
 CUPDAQ uses a modern CMake build system that supports **relocatable** installations via RPATH.
 
-```bash
-# Clone the repository
-git clone [https://github.com/cup-software2018/CUPDAQ.git](https://github.com/cup-software2018/CUPDAQ.git)
-cd CUPDAQ
+   ```bash
+   # Clone the repository
+   git clone [https://github.com/cup-software2018/CUPDAQ.git](https://github.com/cup-software2018/CUPDAQ.git)
+   cd CUPDAQ
 
-# Configure the build
-cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
+   # Configure the build
+   cmake -S . -B build -DCMAKE_INSTALL_PREFIX=./install
 
-# Build using all available cores
-cmake --build build -j$(nproc)
+   # Build using all available cores
+   cmake --build build -j$(nproc)
 
-# Install to the prefix directory
-cmake --install build
+   # Install to the prefix directory
+   cmake --install build
+
 
 ## Environment Setup
 
 After installation, you must source the environment setup script. This script is **relocatable**; if you move the installation directory to another location or server, simply source the script from the new path.
 
-```bash
-cd [your_installation_path]
-source setup_cupdaq.sh
+   ```bash
+   cd [your_installation_path]
+   source setup_cupdaq.sh
 
 ### What this script does:
 * Sets **CUPDAQ_DIR** to the current installation root.
@@ -75,10 +76,10 @@ source setup_cupdaq.sh
 
 Upon successful installation, the directory will look like this:
 
-```text
-install/
-├── bin/                # Executables (daq, tcb, test_utils...)
-├── include/            # Header files for all modules
-├── lib64/              # Shared libraries (.so) and ROOT dicts (.pcm)
-└── setup_cupdaq.sh     # Environment initialization script
+   ```text
+   install/
+   ├── bin/                # Executables (daq, tcb, test_utils...)
+   ├── include/            # Header files for all modules
+   ├── lib64/              # Shared libraries (.so) and ROOT dicts (.pcm)
+   └── setup_cupdaq.sh     # Environment initialization script
 
