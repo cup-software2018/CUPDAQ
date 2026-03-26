@@ -9,7 +9,7 @@ foreach ( src ${TEST_SOURCES} )
 
     target_include_directories ( ${test_name}
         PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/RawObjs>
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/RawObjs>
     )
 
     target_link_libraries ( ${test_name}

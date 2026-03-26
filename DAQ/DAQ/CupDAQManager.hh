@@ -51,26 +51,26 @@ public:
 
   void UseEventMerger();
 
-  void AddADC(AbsADC * adc);
-  bool AddADC(AbsConf * conf);
-  bool AddADC(AbsConfList * conflist);
+  virtual void AddADC(AbsADC * adc);
+  virtual bool AddADC(AbsConf * conf);
+  virtual bool AddADC(AbsConfList * conflist);
 
-  AbsADC * FindADC(int sid);
-  int FindADCAt(int sid);
+  virtual AbsADC * FindADC(int sid);
+  virtual int FindADCAt(int sid);
 
-  bool OpenDAQ();
-  void CloseDAQ();
-  bool PrepareDAQ();
-  bool ConfigureDAQ();
-  bool InitializeDAQ();
-  void StartTrigger();
-  void StopTrigger();
+  virtual bool OpenDAQ();
+  virtual void CloseDAQ();
+  virtual bool PrepareDAQ();
+  virtual bool ConfigureDAQ();
+  virtual bool InitializeDAQ();
+  virtual void StartTrigger();
+  virtual void StopTrigger();
 
-  int ReadBCount(int n);
-  int ReadBCountMin(int * bcounts = nullptr);
-  int ReadBCountMax(int * bcounts = nullptr);
-  int ReadADCData(int n, int bcount, unsigned char * databuffer = nullptr);
-  int ReadData(int bcount, unsigned char ** databuffer);
+  virtual int ReadBCount(int n);
+  virtual int ReadBCountMin(int * bcounts = nullptr);
+  virtual int ReadBCountMax(int * bcounts = nullptr);
+  virtual int ReadADCData(int n, int bcount, unsigned char * databuffer = nullptr);
+  virtual int ReadData(int bcount, unsigned char ** databuffer);
 
   void SetOutputFileFormat(OUTPUT::FORMAT format);
   void SetOutputFilename(const char * fname);
@@ -83,7 +83,7 @@ public:
   void SetDAQTime(int t);
   void EnableHistograming();
 
-  void Run();
+  virtual void Run();
 
   void TF_TriggerMon();
   void TF_DebugMon();
