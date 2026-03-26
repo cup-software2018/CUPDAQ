@@ -32,7 +32,7 @@ To allow CUPDAQ to access connected USB devices without root privileges, configu
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="1903", MODE="0666"
    SUBSYSTEM=="usb", ATTR{idVendor}=="0547", ATTR{idProduct}=="2010", MODE="0666"
    ```
-   
+
 3. **Reload the udev rules**
    `sudo udevadm control --reload-rules && sudo udevadm trigger`
 
@@ -44,7 +44,7 @@ CUPDAQ uses a modern CMake build system that supports **relocatable** installati
 
    ```bash
    # Clone the repository
-   git clone [https://github.com/cup-software2018/CUPDAQ.git](https://github.com/cup-software2018/CUPDAQ.git)
+   git clone https://github.com/cup-software2018/CUPDAQ.git
    cd CUPDAQ
 
    # Configure the build
