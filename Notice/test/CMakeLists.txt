@@ -1,3 +1,6 @@
+# ------------------------------------------------------------
+# Tests for Notice module
+# ------------------------------------------------------------
 set ( TEST_SOURCES
     test_usb3com.cc
     test_minitcb.cc
@@ -8,15 +11,10 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
-    target_include_directories ( ${test_name}
-        PRIVATE
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/DAQUtils>
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/NewNotice>
-    )
-
+    # Linking the Notice target automatically provides its PUBLIC include directories.
+    # The legacy 'NewNotice' path and redundant 'DAQUtils' inclusions are removed.
     target_link_libraries ( ${test_name}
         PRIVATE
-            ${ROOT_LIBRARIES}
             Notice
     )
 
