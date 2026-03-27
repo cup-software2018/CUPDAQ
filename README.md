@@ -85,3 +85,26 @@ Upon successful installation, the directory will look like this:
    ├── lib64/              # Shared libraries (.so) and ROOT dicts (.pcm)
    └── setup_cupdaq.sh     # Environment initialization script
    ```
+
+---
+
+## Customizing the Execution Script (executedaq.sh)
+
+The `executedaq.sh` script is responsible for setting up the runtime environment and launching the DAQ binaries. Depending on your system infrastructure, you may need to modify the environment loading section.
+
+### Modifying Base Environment
+If your system requires pre-loading specific modules (e.g., ROOT, compiler, or experiment-wide libraries), locate the following section in `bin/executedaq.sh`:
+
+```bash
+# -----------------------------------------------------------------------------
+# 1. External Infrastructure Setup (ROOT, python, etc.)
+# -----------------------------------------------------------------------------
+# [IMPORTANT] Modify this section to source your system's environment 
+# e.g., source /path/to/your/root/bin/thisroot.sh
+# -----------------------------------------------------------------------------
+
+# Example: Default IBS CUP setup
+if [ -f ~cupsoft/prod_setup.sh ]; then
+    source ~cupsoft/prod_setup.sh 3.0
+fi
+```

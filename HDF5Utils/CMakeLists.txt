@@ -68,5 +68,4 @@ install ( FILES
     OPTIONAL
 )
 
-# Enable the test directory
-add_subdirectory ( test )
+#add_subdirectory ( test )

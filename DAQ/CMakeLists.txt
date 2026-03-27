@@ -99,4 +99,10 @@ install ( FILES
     OPTIONAL
 )
 
+file ( GLOB DAQ_SCRIPTS "scripts/*" )
+
+install ( PROGRAMS ${DAQ_SCRIPTS}
+        DESTINATION ${CMAKE_INSTALL_BINDIR}
+        COMPONENT Runtime )
+
 add_subdirectory ( test )
