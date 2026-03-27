@@ -1,18 +1,20 @@
 # ------------------------------------------------------------
-# HDF5Utils — shared library depending on HDF5
+# HDF5Utils - Shared library depending on HDF5
 # ------------------------------------------------------------
 set ( MODULE_NAME HDF5Utils )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-file ( GLOB MODULE_HEADERS ${MODULE_NAME}/*.hh )
-file ( GLOB MODULE_SOURCES src/*.cc )
+# Use CONFIGURE_DEPENDS to automatically track changes in source files
+file ( GLOB MODULE_HEADERS CONFIGURE_DEPENDS ${MODULE_NAME}/*.hh )
+file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 
-# --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
+# --- Collect include dirs for dictionary
+# Note: Using HDF5_INCLUDE_DIRS (plural) for consistency
 set ( DICT_I_FLAGS
-    -I${HDF5_INCLUDE_DIR}
+    -I${HDF5_INCLUDE_DIRS}
 )
 
-# Generate ROOT dictionary (pass -I for OnlConsts)
+# Generate ROOT dictionary
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
@@ -25,7 +27,7 @@ add_library ( ${MODULE_NAME} SHARED
     G__${MODULE_NAME}.cxx
 )
 
-# Include dirs: module itself and install interface
+# Include directories: module itself, install interface, and dependencies
 target_include_directories ( ${MODULE_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -34,29 +36,32 @@ target_include_directories ( ${MODULE_NAME}
         ${HDF5_INCLUDE_DIRS}
 )
 
+# Link dependencies and inherit global flags
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
-    ${ROOT_LIBRARIES}
-    ${HDF5_LIBRARIES}
+        ${ROOT_LIBRARIES}
+        ${HDF5_LIBRARIES}
 )
 
-target_compile_definitions ( ${MODULE_NAME} PUBLIC ${ROOT_DEFINITIONS} )
+target_compile_definitions ( ${MODULE_NAME}
+    PUBLIC
+        ${ROOT_DEFINITIONS}
+)
 
 # If HDF5 provides compile definitions, propagate them
 if ( DEFINED HDF5_DEFINITIONS )
     target_compile_definitions ( ${MODULE_NAME} PUBLIC ${HDF5_DEFINITIONS} )
 endif ()
 
-# If this module uses OnlConsts or others, link them here (example commented)
-# target_link_libraries(${MODULE_NAME} PUBLIC OnlConsts)
-
-# Installation
-install ( TARGETS ${MODULE_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
+# ---- Install ----
+install ( TARGETS ${MODULE_NAME}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
 install ( DIRECTORY ${MODULE_NAME}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
     FILES_MATCHING PATTERN "*.hh"
 )
-install(FILES
+install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}_rdict.pcm
     ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}.rootmap
     DESTINATION ${CMAKE_INSTALL_LIBDIR}

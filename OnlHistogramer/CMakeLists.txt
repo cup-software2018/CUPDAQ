@@ -1,16 +1,19 @@
 set ( MODULE_NAME OnlHistogramer )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-file ( GLOB MODULE_HEADERS ${MODULE_NAME}/*.hh )
-file ( GLOB MODULE_SOURCES src/*.cc )
+# Use CONFIGURE_DEPENDS to automatically track changes in source files
+file ( GLOB MODULE_HEADERS CONFIGURE_DEPENDS ${MODULE_NAME}/*.hh )
+file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 
+# Build shared library
 add_library ( ${MODULE_NAME} SHARED
     ${MODULE_SOURCES}
 )
 
-# Ensure build order
-add_dependencies ( ${MODULE_NAME} OnlConsts DAQUtils DAQConfig OnlObjs)
+# Modern target-based linking automatically handles build-order dependencies.
+# Therefore, add_dependencies() is removed.
 
+# Include paths
 target_include_directories ( ${MODULE_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -18,6 +21,7 @@ target_include_directories ( ${MODULE_NAME}
         ${ROOT_INCLUDE_DIRS}
 )
 
+# Link dependencies and inherit global flags
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
         ${ROOT_LIBRARIES}
@@ -28,10 +32,11 @@ target_link_libraries ( ${MODULE_NAME}
 )
 
 target_compile_definitions ( ${MODULE_NAME}
-    PUBLIC ${ROOT_DEFINITIONS}
+    PUBLIC
+        ${ROOT_DEFINITIONS}
 )
 
-# Installation
+# ---- Install ----
 install ( TARGETS ${MODULE_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )

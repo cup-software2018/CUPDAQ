@@ -10,14 +10,11 @@
 #include <iostream>
 #include <mutex>
 #include <optional>
-#include <regex>
-#include <sstream>
 #include <string>
 #include <thread>
-#include <unistd.h> // isatty
+#include <unistd.h>
 
 #ifndef LOG_COMPILE_LEVEL
-// 0=INFO, 1=WARN, 2=ERROR, 3=DEBUG, 4=STATS
 #define LOG_COMPILE_LEVEL 0
 #endif
 
@@ -62,15 +59,11 @@ public:
   void Flush()
   {
     std::lock_guard<std::mutex> lock(_mutex);
-    if (_opt.to_stderr) {
-      std::cerr << std::flush;
-    }
+    if (_opt.to_stderr) { std::cerr << std::flush; }
     else {
       std::cout << std::flush;
     }
-    if (_file) {
-      _file->flush();
-    }
+    if (_file) { _file->flush(); }
   }
 
   void logf(ELOGLEVEL lv, const char * pretty_func, const char * fmt, ...)
@@ -102,8 +95,8 @@ public:
       localtime_r(&t, &tm_buf);
 
       std::ostringstream header;
-      header << std::put_time(&tm_buf, _opt.time_fmt.c_str()) << "::[" << _level_tag(ELOGLEVEL::Info) << "] "
-             << base << " ";
+      header << std::put_time(&tm_buf, _opt.time_fmt.c_str()) << "::["
+             << _level_tag(ELOGLEVEL::Info) << "] " << base << " ";
 
       _output_no_newline(header.str());
     }
@@ -118,15 +111,14 @@ public:
     if (!_streaming_active) return;
 
     if (_opt.use_color && _is_tty) {
-      (_opt.to_stderr ? std::cerr : std::cout) << _color_open(ELOGLEVEL::Info) << msg << _color_close() << '\n';
+      (_opt.to_stderr ? std::cerr : std::cout)
+          << _color_open(ELOGLEVEL::Info) << msg << _color_close() << std::endl;
     }
     else {
-      (_opt.to_stderr ? std::cerr : std::cout) << msg << '\n';
+      (_opt.to_stderr ? std::cerr : std::cout) << msg << std::endl;
     }
 
-    if (_file) {
-      (*_file) << msg << '\n';
-    }
+    if (_file) { (*_file) << msg << std::endl; }
 
     _flush_outputs();
     _streaming_active = false;
@@ -171,7 +163,8 @@ private:
     std::string where = _extract_class_method(pretty_func);
 
     std::ostringstream header;
-    header << std::put_time(&tm_buf, _opt.time_fmt.c_str()) << "::[" << _level_tag(lv) << "] " << where << " ";
+    header << std::put_time(&tm_buf, _opt.time_fmt.c_str()) << "::[" << _level_tag(lv) << "] "
+           << where << " ";
 
     std::string line = header.str() + msg;
 
@@ -182,54 +175,54 @@ private:
   void _output_line(ELOGLEVEL lv, const std::string & line)
   {
     if (_opt.use_color && _is_tty) {
-      (_opt.to_stderr ? std::cerr : std::cout) << _color_open(lv) << line << _color_close() << '\n';
+      (_opt.to_stderr ? std::cerr : std::cout)
+          << _color_open(lv) << line << _color_close() << std::endl;
     }
     else {
-      (_opt.to_stderr ? std::cerr : std::cout) << line << '\n';
+      (_opt.to_stderr ? std::cerr : std::cout) << line << std::endl;
     }
 
-    if (_file) {
-      (*_file) << line << '\n';
-      _file->flush();
-    }
+    if (_file) { (*_file) << line << std::endl; }
   }
 
   void _output_no_newline(const std::string & s)
   {
     if (_opt.use_color && _is_tty) {
-      (_opt.to_stderr ? std::cerr : std::cout) << _color_open(ELOGLEVEL::Info) << s << _color_close();
+      (_opt.to_stderr ? std::cerr : std::cout)
+          << _color_open(ELOGLEVEL::Info) << s << _color_close();
     }
     else {
       (_opt.to_stderr ? std::cerr : std::cout) << s;
     }
 
-    if (_file) {
-      (*_file) << s;
-    }
+    if (_file) { (*_file) << s; }
   }
 
   void _flush_outputs()
   {
-    if (_opt.to_stderr) {
-      std::cerr << std::flush;
-    }
+    if (_opt.to_stderr) { std::cerr << std::flush; }
     else {
       std::cout << std::flush;
     }
-    if (_file) {
-      _file->flush();
-    }
+    if (_file) { _file->flush(); }
   }
 
   std::string _extract_class_method(const std::string & pretty) const
   {
-    static const std::regex re(R"(([\w:]+)::([\w<>~]+)\s*\(|([\w<>~]+)\s*\()");
-    std::smatch m;
-    if (std::regex_search(pretty, m, re)) {
-      if (m[1].matched && m[2].matched) return m[1].str() + "::" + m[2].str();
-      if (m[3].matched) return m[3].str();
+    size_t end_pos = pretty.find('(');
+    if (end_pos == std::string::npos) return pretty;
+
+    size_t space_pos = pretty.rfind(' ', end_pos);
+    size_t start_pos = (space_pos == std::string::npos) ? 0 : space_pos + 1;
+
+    size_t ptr_pos = pretty.rfind('*', end_pos);
+    if (ptr_pos != std::string::npos && ptr_pos > start_pos) { start_pos = ptr_pos + 1; }
+
+    while (start_pos < end_pos && pretty[start_pos] == ' ') {
+      start_pos++;
     }
-    return pretty;
+
+    return pretty.substr(start_pos, end_pos - start_pos);
   }
 
   const char * _level_tag(ELOGLEVEL lv) const
@@ -275,10 +268,14 @@ private:
   bool _streaming_active = false;
 };
 
-#define INFO(fmt, ...) ELog::instance().logf(ELOGLEVEL::Info, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define WARNING(fmt, ...) ELog::instance().logf(ELOGLEVEL::Warn, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define ERROR(fmt, ...) ELog::instance().logf(ELOGLEVEL::Error, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
-#define DEBUG(fmt, ...) ELog::instance().logf(ELOGLEVEL::Debug, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define INFO(fmt, ...)                                                                             \
+  ELog::instance().logf(ELOGLEVEL::Info, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define WARNING(fmt, ...)                                                                          \
+  ELog::instance().logf(ELOGLEVEL::Warn, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define ERROR(fmt, ...)                                                                            \
+  ELog::instance().logf(ELOGLEVEL::Error, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
+#define DEBUG(fmt, ...)                                                                            \
+  ELog::instance().logf(ELOGLEVEL::Debug, __PRETTY_FUNCTION__, fmt, ##__VA_ARGS__)
 #define STATS(fmt, ...) ELog::instance().logf(ELOGLEVEL::Stats, "", fmt, ##__VA_ARGS__)
 #define FORM(fmt, ...) ELog::instance().logf(ELOGLEVEL::None, "", fmt, ##__VA_ARGS__)
 #define INFO_PROGRESS(base, token) ELog::instance().logf_flush(__PRETTY_FUNCTION__, base, token)

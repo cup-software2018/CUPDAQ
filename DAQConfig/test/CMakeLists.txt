@@ -1,3 +1,6 @@
+# ------------------------------------------------------------
+# Tests for DAQConfig module
+# ------------------------------------------------------------
 set ( TEST_SOURCES
     test_tlt.cc
 )
@@ -7,12 +10,14 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
+    # Add necessary include directories for modules built after DAQConfig
     target_include_directories ( ${test_name}
         PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/DAQ>
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/DAQTrigger>
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/DAQ>
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/DAQTrigger>
     )
 
+    # Link required libraries
     target_link_libraries ( ${test_name}
         PRIVATE
             ${ROOT_LIBRARIES}

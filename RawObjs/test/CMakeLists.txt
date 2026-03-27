@@ -1,3 +1,6 @@
+# ------------------------------------------------------------
+# Tests for RawObjs module
+# ------------------------------------------------------------
 set ( TEST_SOURCES
     write_fadc_root.cc
 )
@@ -7,11 +10,8 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
-    target_include_directories ( ${test_name}
-        PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/RawObjs>
-    )
-
+    # Linking the RawObjs target automatically provides its PUBLIC include directories.
+    # Therefore, explicit target_include_directories is removed.
     target_link_libraries ( ${test_name}
         PRIVATE
             ${ROOT_LIBRARIES}

@@ -1,18 +1,6 @@
-#ifndef onlconsts_hh
-#define onlconsts_hh
+#pragma once
 
 #include "Rtypes.h"
-
-//
-// for ELog Server
-//
-const char * const kELOGIPADDR = "localhost";
-const int kELOGPORT = 7800;
-
-//
-// For socket communication
-//
-const int kMESSLEN = 32;
 
 //
 // Commands
@@ -65,10 +53,7 @@ inline void SetError(unsigned long & state) { SETBIT(state, kERROR); }
 
 inline bool CheckError(unsigned long state) { return TESTBIT(state, kERROR); }
 
-inline bool CheckState(unsigned long state, STATE pstate)
-{
-  return TESTBIT(state, pstate);    
-}
+inline bool CheckState(unsigned long state, STATE pstate) { return TESTBIT(state, pstate); }
 } // namespace RUNSTATE
 
 //
@@ -115,14 +100,16 @@ enum TYPE {
   NULLDAQ = 91,
   NULLMERGER = 92
 };
-enum EXPERIMENT {
-  NONE = 0,
-  NEOS = 1,
-  COSINE = 2,
-  NEON = 3,
-  AMORE1 = 4,
-  AMORE2 = 5
-};
+enum EXPERIMENT { NONE = 0, NEOS = 1, COSINE = 2, NEON = 3, AMORE1 = 4, AMORE2 = 5 };
 } // namespace DAQ
 
-#endif
+// =========================================================================
+// Network Port Offsets
+// Offset values added to the Base Port to determine the port for each specific function.
+// =========================================================================
+namespace PORT_OFFSET {
+constexpr int CONTROL = 0;  // Control port (ZMQ REP - command reception)
+constexpr int CONFIG = 10;  // Configuration sync port (ROOT TSocket - ConfigList transfer)
+constexpr int DATA = 20;    // Data transfer port (ZMQ PUSH/PULL or TCP)
+constexpr int MONITOR = 30; // Online monitoring port (Histogram, status streaming)
+} // namespace PORT_OFFSET

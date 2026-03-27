@@ -1,30 +1,33 @@
 set ( MODULE_NAME OnlObjs )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-file ( GLOB MODULE_HEADERS ${MODULE_NAME}/*.hh )
-file ( GLOB MODULE_SOURCES src/*.cc )
+# Use CONFIGURE_DEPENDS to automatically track changes in source files
+file ( GLOB MODULE_HEADERS CONFIGURE_DEPENDS ${MODULE_NAME}/*.hh )
+file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 
-# --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
-set(DICT_I_FLAGS
-    -I${CMAKE_SOURCE_DIR}/OnlConsts
-    -I${CMAKE_SOURCE_DIR}/DAQConfig
+# --- Collect include dirs for dictionary
+set ( DICT_I_FLAGS
+    -I${PROJECT_SOURCE_DIR}/OnlConsts
+    -I${PROJECT_SOURCE_DIR}/DAQConfig
 )
 
-# Generate ROOT dictionary (pass -I for OnlConsts)
+# Generate ROOT dictionary
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
     OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
+# Build shared library
 add_library ( ${MODULE_NAME} SHARED
     ${MODULE_SOURCES}
     G__${MODULE_NAME}.cxx
 )
 
-# Ensure build order
-add_dependencies ( ${MODULE_NAME} OnlConsts DAQConfig)
+# Modern target-based linking automatically handles build-order dependencies.
+# Therefore, add_dependencies() is removed.
 
+# Include paths
 target_include_directories ( ${MODULE_NAME}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -32,6 +35,7 @@ target_include_directories ( ${MODULE_NAME}
         ${ROOT_INCLUDE_DIRS}
 )
 
+# Link dependencies and inherit global flags
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
         ${ROOT_LIBRARIES}
@@ -40,10 +44,11 @@ target_link_libraries ( ${MODULE_NAME}
 )
 
 target_compile_definitions ( ${MODULE_NAME}
-    PUBLIC ${ROOT_DEFINITIONS}
+    PUBLIC
+        ${ROOT_DEFINITIONS}
 )
 
-# Installation
+# ---- Install ----
 install ( TARGETS ${MODULE_NAME}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
@@ -51,7 +56,7 @@ install ( DIRECTORY ${MODULE_NAME}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${MODULE_NAME}
     FILES_MATCHING PATTERN "*.hh"
 )
-install(FILES
+install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}_rdict.pcm
     ${CMAKE_CURRENT_BINARY_DIR}/lib${MODULE_NAME}.rootmap
     DESTINATION ${CMAKE_INSTALL_LIBDIR}

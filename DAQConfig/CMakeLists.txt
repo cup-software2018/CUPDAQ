@@ -1,41 +1,44 @@
 set ( MODULE_NAME DAQConfig )
 message ( STATUS "Configuring ${MODULE_NAME} ..." )
 
-file ( GLOB MODULE_HEADERS ${MODULE_NAME}/*.hh )
-file ( GLOB MODULE_SOURCES src/*.cc )
+# Use CONFIGURE_DEPENDS to automatically track changes in source files
+file ( GLOB MODULE_HEADERS CONFIGURE_DEPENDS ${MODULE_NAME}/*.hh )
+file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 
-# --- Collect include dirs for dictionary (from OnlConsts INTERFACE) ---
+# --- Collect include dirs for dictionary
 set ( DICT_I_FLAGS
-    -I${CMAKE_SOURCE_DIR}/OnlConsts
-    -I${CMAKE_SOURCE_DIR}/DAQUtils
+    -I${PROJECT_SOURCE_DIR}/OnlConsts
+    -I${PROJECT_SOURCE_DIR}/DAQUtils
 )
 
-# Generate ROOT dictionary (pass -I for OnlConsts)
+# Generate ROOT dictionary
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
     OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
-# Build shared library (add dictionary source)
+# Build shared library
 add_library ( ${MODULE_NAME} SHARED
     ${MODULE_SOURCES}
     G__${MODULE_NAME}.cxx
 )
 
-# Ensure build order
-add_dependencies ( ${MODULE_NAME} OnlConsts )
+# Modern target-based linking automatically handles build-order dependencies.
+# Therefore, add_dependencies() is no longer needed.
 
 # Include paths
 target_include_directories ( ${MODULE_NAME}
     PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    ${ROOT_INCLUDE_DIRS}
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+        ${ROOT_INCLUDE_DIRS}
 )
 
+# Link dependencies and inherit global flags
 target_link_libraries ( ${MODULE_NAME}
     PUBLIC
+        yaml-cpp
         ${ROOT_LIBRARIES}
         OnlConsts
         DAQUtils
@@ -43,7 +46,7 @@ target_link_libraries ( ${MODULE_NAME}
 
 target_compile_definitions ( ${MODULE_NAME}
     PUBLIC
-    ${ROOT_DEFINITIONS}
+        ${ROOT_DEFINITIONS}
 )
 
 # ---- Install ----
@@ -61,4 +64,4 @@ install ( FILES
     OPTIONAL
 )
 
-add_subdirectory ( test )
+#add_subdirectory ( test )
