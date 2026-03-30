@@ -258,6 +258,14 @@ void CupDAQManager::TF_MsgServer()
     // If timeout occurs (no message for 1000ms), loop again to check exit flags
     if (!res) { continue; }
 
+    // Flush any remaining parts of a multipart message to prevent EFSM error on send()
+    // This protects the server from crashing if a client sends malformed multipart data
+    while (request.more()) {
+      zmq::message_t dummy;
+      zmq_socket.recv(dummy, zmq::recv_flags::none);
+      WARNING("[%s] Discarded extra multipart frame from client", name.c_str());
+    }
+
     // 3. Parse the received message as JSON
     std::string msg_str(static_cast<char *>(request.data()), request.size());
     nlohmann::json req_json = nlohmann::json::parse(msg_str, nullptr, false);
