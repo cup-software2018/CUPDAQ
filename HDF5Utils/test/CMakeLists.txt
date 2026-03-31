@@ -2,7 +2,6 @@
 # Tests for HDF5Utils module
 # ------------------------------------------------------------
 set ( TEST_SOURCES
-    write_amore.cc
     write_fadc.cc
     write_fadc_random_ch.cc
     write_sadc.cc
