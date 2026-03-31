@@ -262,7 +262,7 @@ void CupDAQManager::TF_MsgServer()
     // This protects the server from crashing if a client sends malformed multipart data
     while (request.more()) {
       zmq::message_t dummy;
-      zmq_socket.recv(dummy, zmq::recv_flags::none);
+      (void)zmq_socket.recv(dummy, zmq::recv_flags::none);
       WARNING("[%s] Discarded extra multipart frame from client", name.c_str());
     }
 
