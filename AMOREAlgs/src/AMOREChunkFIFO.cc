@@ -203,8 +203,12 @@ int AMOREChunkFIFO::DumpCurrent(unsigned short ** outADC, unsigned long * outTim
                 copyCurrent * sizeof(unsigned long));
 
     for (int ch = 0; ch < fNChannel; ++ch) {
-      std::memcpy(&outADC[ch][copied], &fCurrentChunk->fADC[ch][startIdx],
-                  copyCurrent * sizeof(unsigned short));
+      for (int k = 0; k < copyCurrent; ++k) {
+        outADC[ch][copied + k] = static_cast<unsigned short>(fCurrentChunk->fADC[ch][startIdx + k]);
+      }
+
+      //std::memcpy(&outADC[ch][copied], &fCurrentChunk->fADC[ch][startIdx],
+      //            copyCurrent * sizeof(unsigned short));
     }
     copied += copyCurrent;
   }
@@ -220,6 +224,10 @@ int AMOREChunkFIFO::DumpCurrent(unsigned short ** outADC, unsigned long * outTim
                   copyNext * sizeof(unsigned long));
 
       for (int ch = 0; ch < fNChannel; ++ch) {
+        for (int k = 0; k < copyNext; ++k) {
+            outADC[ch][copied + k] = static_cast<unsigned short>(fNextChunk->fADC[ch][k]);
+        }
+
         std::memcpy(&outADC[ch][copied], &fNextChunk->fADC[ch][0],
                     copyNext * sizeof(unsigned short));
       }

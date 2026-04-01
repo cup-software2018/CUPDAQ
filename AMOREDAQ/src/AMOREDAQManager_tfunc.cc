@@ -201,6 +201,8 @@ void AMOREDAQManager::TF_SWTrigger(int n)
 
   std::vector<int> ndt(nch);
   std::vector<bool> istriggered(nch);
+  std::vector<bool> pendingTrigger(nch, false);
+  std::vector<int> pendingCount(nch, 0);
 
   while (true) {
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
@@ -238,27 +240,49 @@ void AMOREDAQManager::TF_SWTrigger(int n)
             }
             continue;
           }
+          if (pendingTrigger[i]) {
+            pendingCount[i] += 1;
+
+            if (pendingCount[i] >= tail) {
+              int copied = fifo->DumpCurrent(dumpADC.data(), dumpTime.data());
+
+              if (copied != ndp) {
+                WARNING("Channel %02d [sid=%d] incomplete dump: %d/%d",
+                        i, adc->GetSID(), copied, ndp);
+              }
+              else {
+                int pid = conf->PID(i);
+
+                Crystal_t xtal;
+                xtal.ndp   = static_cast<unsigned int>(ndp);
+                xtal.id    = pid / 2;
+                xtal.ttime = currenttime;
+
+                for (int j = 0; j < ndp; ++j) {
+                  phonon[j] = static_cast<unsigned short>(dumpADC[i][j]);
+                  photon[j] = static_cast<unsigned short>(dumpADC[i+1][j]);
+                }
+                xtal.SetWaveforms(phonon.data(), photon.data(), ndp);
+                fTriggeredCrystals.push_back(xtal);
+
+                INFO("Channel %02d [sid=%d] event confirmed after %d samples",
+                    i, adc->GetSID(), pendingCount[i]);
+
+                istriggered[i] = true;
+                ndt[i] = 0;
+              }
+
+              pendingTrigger[i] = false;
+              pendingCount[i] = 0;
+            }
+
+            continue;
+          }
+
           if (gRandom->Rndm() < 1e-06) {
             INFO("Channel %02d [sid=%d] is triggered", i, adc->GetSID());
-            fifo->DumpCurrent(dumpADC.data(), dumpTime.data());
-            //INFO("DumpCurrent size check: ndp=%d head=%d tail=%d",
-            //      ndp, fifo->GetHead(), fifo->GetTail());
-            int pid = conf->PID(i);
-
-            Crystal_t xtal;
-            xtal.ndp = static_cast<std::uint16_t>(ndp);
-            xtal.id = pid/2;
-            xtal.ttime = currenttime;
-            
-            for (int j = 0 ; j < ndp; ++j) {
-              phonon[j] = static_cast<std::uint16_t>(dumpADC[i][j]);
-              photon[j] = static_cast<std::uint16_t>(dumpADC[i+1][j]);
-            }
-            xtal.SetWaveforms(phonon.data(), photon.data(), ndp);
-
-            fTriggeredCrystals.push_back(xtal);
-
-            istriggered[i] = true;
+            pendingTrigger[i] = true;
+            pendingCount[i] = 0;
           }
         }
       }
