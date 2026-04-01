@@ -7,28 +7,25 @@ H5SADCEvent::H5SADCEvent()
 {
 }
 
-H5SADCEvent::~H5SADCEvent()
-{
-  // Buffers are managed by std::vector, no manual deletion needed.
-}
+H5SADCEvent::~H5SADCEvent() {}
 
 void H5SADCEvent::Open()
 {
-  // build HDF5 types for event header and SADC channel
   fEvtType = EventInfo_t::BuildType();
   fChType = AChannel_t::BuildType();
 
-  // read mode: only build types, no dataset creation
+  // Initialize SubRun using the protected helper method from AbsH5Base
+  InitSubRun();
+
   if (!fWriteTag) { return; }
 
-  // safety: file id must be valid in write mode
   if (fFile < 0) {
     Error("Open", "invalid file id (fFile = %d). SetFileId must be called before Open().",
           static_cast<int>(fFile));
     return;
   }
 
-  // create /events group only if it does not exist
+  // create /events group
   {
     htri_t gexists = H5Lexists(fFile, "/events", H5P_DEFAULT);
     if (gexists < 0) {
@@ -45,77 +42,32 @@ void H5SADCEvent::Open()
     }
   }
 
-  // create extendable dataset: /events/info
-  {
-    hsize_t dims[1] = {0};
-    hsize_t maxdims[1] = {H5S_UNLIMITED};
-    hid_t space = H5Screate_simple(1, dims, maxdims);
+  // create extendable 1D datasets
+  hsize_t dims[1] = {0};
+  hsize_t maxdims[1] = {H5S_UNLIMITED};
+  hid_t space1d = H5Screate_simple(1, dims, maxdims);
 
-    hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-    hsize_t chunk = (fBufEventCap > 0) ? static_cast<hsize_t>(fBufEventCap) : 1024;
-    H5Pset_chunk(dcpl, 1, &chunk);
-    H5Pset_deflate(dcpl, fCompressionLevel);
+  hid_t dcpl1d = H5Pcreate(H5P_DATASET_CREATE);
+  hsize_t chunk1d = (fBufCap > 0) ? static_cast<hsize_t>(fBufCap) : 1024;
+  H5Pset_chunk(dcpl1d, 1, &chunk1d);
+  H5Pset_deflate(dcpl1d, fCompressionLevel);
 
-    fDsetInfo = H5Dcreate2(fFile, "/events/info", fEvtType, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+  fDsetInfo =
+      H5Dcreate2(fFile, "/events/info", fEvtType, space1d, H5P_DEFAULT, dcpl1d, H5P_DEFAULT);
+  fDsetIndex = H5Dcreate2(fFile, "/events/index", H5T_NATIVE_ULLONG, space1d, H5P_DEFAULT, dcpl1d,
+                          H5P_DEFAULT);
 
-    H5Pclose(dcpl);
-    H5Sclose(space);
+  // SADC specific: use a potentially larger chunk for channels as they are smaller without
+  // waveforms
+  hsize_t chunkChs = 4096;
+  hid_t dcplChs = H5Pcreate(H5P_DATASET_CREATE);
+  H5Pset_chunk(dcplChs, 1, &chunkChs);
+  H5Pset_deflate(dcplChs, fCompressionLevel);
+  fDsetChs = H5Dcreate2(fFile, "/events/chs", fChType, space1d, H5P_DEFAULT, dcplChs, H5P_DEFAULT);
 
-    if (fDsetInfo < 0) {
-      Error("Open", "Failed to create dataset /events/info");
-      return;
-    }
-  }
-
-  // create extendable dataset: /events/index
-  {
-    hsize_t dims[1] = {0};
-    hsize_t maxdims[1] = {H5S_UNLIMITED};
-    hid_t space = H5Screate_simple(1, dims, maxdims);
-
-    hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-    hsize_t chunk = (fBufEventCap > 0) ? static_cast<hsize_t>(fBufEventCap) : 1024;
-    H5Pset_chunk(dcpl, 1, &chunk);
-    H5Pset_deflate(dcpl, fCompressionLevel);
-
-    fDsetIndex = H5Dcreate2(fFile, "/events/index", H5T_NATIVE_ULLONG, space, H5P_DEFAULT, dcpl,
-                            H5P_DEFAULT);
-
-    H5Pclose(dcpl);
-    H5Sclose(space);
-
-    if (fDsetIndex < 0) {
-      Error("Open", "Failed to create dataset /events/index");
-      return;
-    }
-  }
-
-  // create extendable dataset: /events/chs
-  {
-    hsize_t dims[1] = {0};
-    hsize_t maxdims[1] = {H5S_UNLIMITED};
-    hid_t space = H5Screate_simple(1, dims, maxdims);
-
-    hid_t dcpl = H5Pcreate(H5P_DATASET_CREATE);
-    hsize_t chunk = 4096;
-    H5Pset_chunk(dcpl, 1, &chunk);
-    H5Pset_deflate(dcpl, fCompressionLevel);
-
-    fDsetChs = H5Dcreate2(fFile, "/events/chs", fChType, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-
-    H5Pclose(dcpl);
-    H5Sclose(space);
-
-    if (fDsetChs < 0) {
-      Error("Open", "Failed to create dataset /events/chs");
-      return;
-    }
-  }
-
-  // initialize subrun and internal counters
-  fSubRun.nevent = 0;
-  fSubRun.first = 0;
-  fSubRun.last = 0;
+  H5Pclose(dcpl1d);
+  H5Pclose(dcplChs);
+  H5Sclose(space1d);
 
   fMemSize = 0;
   fTotalEvents = 0;
@@ -123,7 +75,7 @@ void H5SADCEvent::Open()
 
   fEvtBuf.clear();
   fChBuf.clear();
-  fBufEventCount = 0;
+  fBufCount = 0;
   fBufBytesUsed = 0;
 }
 
@@ -131,7 +83,7 @@ herr_t H5SADCEvent::FlushBuffer()
 {
   const std::size_t nEvtBuf = fEvtBuf.size();
   if (nEvtBuf == 0) {
-    fBufEventCount = 0;
+    fBufCount = 0;
     fBufBytesUsed = 0;
     return 0;
   }
@@ -139,7 +91,7 @@ herr_t H5SADCEvent::FlushBuffer()
   const std::size_t nChBuf = fChBuf.size();
   herr_t status = 0;
 
-  // append event headers
+  // Append events info
   {
     hsize_t old_dim[1] = {fTotalEvents};
     hsize_t new_dim[1] = {fTotalEvents + nEvtBuf};
@@ -158,7 +110,7 @@ herr_t H5SADCEvent::FlushBuffer()
     if (status < 0) return status;
   }
 
-  // append event index map
+  // Append event index
   {
     std::vector<std::uint64_t> indexBuf(nEvtBuf);
     std::uint64_t base = fTotalChannels;
@@ -186,7 +138,7 @@ herr_t H5SADCEvent::FlushBuffer()
     if (status < 0) return status;
   }
 
-  // append channel array
+  // Append SADC channels
   if (nChBuf > 0) {
     hsize_t old_dim[1] = {fTotalChannels};
     hsize_t new_dim[1] = {fTotalChannels + nChBuf};
@@ -210,7 +162,7 @@ herr_t H5SADCEvent::FlushBuffer()
 
   fEvtBuf.clear();
   fChBuf.clear();
-  fBufEventCount = 0;
+  fBufCount = 0;
   fBufBytesUsed = 0;
 
   return status;
@@ -220,7 +172,6 @@ void H5SADCEvent::Close()
 {
   if (fWriteTag) { FlushBuffer(); }
 
-  // Close cached DataSpaces
   if (fFileSpaceInfo >= 0) {
     H5Sclose(fFileSpaceInfo);
     fFileSpaceInfo = H5I_INVALID_HID;
@@ -234,7 +185,6 @@ void H5SADCEvent::Close()
     fFileSpaceChs = H5I_INVALID_HID;
   }
 
-  // Close Datasets
   if (fDsetInfo >= 0) {
     H5Dclose(fDsetInfo);
     fDsetInfo = H5I_INVALID_HID;
@@ -250,14 +200,12 @@ void H5SADCEvent::Close()
 
   fCurrentReadFid = H5I_INVALID_HID;
 
-  // Reset hybrid bulk load buffers
   fReadBufStart = -1;
   fReadBufSize = 0;
   fReadBufInfo.clear();
   fReadBufIndex.clear();
   fPrefetchChs.clear();
 
-  // close committed types
   if (fEvtType >= 0) {
     H5Tclose(fEvtType);
     fEvtType = H5I_INVALID_HID;
@@ -266,6 +214,9 @@ void H5SADCEvent::Close()
     H5Tclose(fChType);
     fChType = H5I_INVALID_HID;
   }
+
+  // Use the protected helper method from AbsH5Base
+  CloseSubRun();
 }
 
 herr_t H5SADCEvent::AppendEvent(const EventInfo_t & info, const std::vector<AChannel_t> & data)
@@ -278,22 +229,20 @@ herr_t H5SADCEvent::AppendEvent(const EventInfo_t & info, const std::vector<ACha
   info_local.nhit = nhit;
   fEvtBuf.push_back(info_local);
 
-  std::size_t addBytes = sizeof(EventInfo_t);
-  addBytes += static_cast<std::size_t>(nhit) * sizeof(AChannel_t);
+  std::size_t addBytes = sizeof(EventInfo_t) + static_cast<std::size_t>(nhit) * sizeof(AChannel_t);
 
   for (std::size_t i = 0; i < nhit; ++i) {
     fChBuf.push_back(data[i]);
   }
 
-  if (fSubRun.nevent == 0) { fSubRun.first = info.tnum; }
-  fSubRun.last = info.tnum;
-  fSubRun.nevent += 1;
+  // Update SubRun using the protected helper method from AbsH5Base
+  UpdateSubRun(info.tnum);
 
   fMemSize += static_cast<hsize_t>(addBytes);
-  fBufEventCount += 1;
+  fBufCount += 1;
   fBufBytesUsed += addBytes;
 
-  if ((fBufEventCap > 0 && fBufEventCount >= fBufEventCap) ||
+  if ((fBufCap > 0 && fBufCount >= fBufCap) ||
       (fBufMaxBytes > 0 && fBufBytesUsed >= fBufMaxBytes)) {
     return FlushBuffer();
   }
@@ -315,35 +264,14 @@ herr_t H5SADCEvent::ReadEvent(int n)
 
   if (fid < 0) return -1;
 
-  // ---------------------------------------------------------------------
-  // 1. File Change Handler
-  // ---------------------------------------------------------------------
   if (file_changed) {
-    if (fFileSpaceInfo >= 0) {
-      H5Sclose(fFileSpaceInfo);
-      fFileSpaceInfo = H5I_INVALID_HID;
-    }
-    if (fFileSpaceIndex >= 0) {
-      H5Sclose(fFileSpaceIndex);
-      fFileSpaceIndex = H5I_INVALID_HID;
-    }
-    if (fFileSpaceChs >= 0) {
-      H5Sclose(fFileSpaceChs);
-      fFileSpaceChs = H5I_INVALID_HID;
-    }
+    if (fFileSpaceInfo >= 0) { H5Sclose(fFileSpaceInfo); }
+    if (fFileSpaceIndex >= 0) { H5Sclose(fFileSpaceIndex); }
+    if (fFileSpaceChs >= 0) { H5Sclose(fFileSpaceChs); }
 
-    if (fDsetInfo >= 0) {
-      H5Dclose(fDsetInfo);
-      fDsetInfo = H5I_INVALID_HID;
-    }
-    if (fDsetIndex >= 0) {
-      H5Dclose(fDsetIndex);
-      fDsetIndex = H5I_INVALID_HID;
-    }
-    if (fDsetChs >= 0) {
-      H5Dclose(fDsetChs);
-      fDsetChs = H5I_INVALID_HID;
-    }
+    if (fDsetInfo >= 0) { H5Dclose(fDsetInfo); }
+    if (fDsetIndex >= 0) { H5Dclose(fDsetIndex); }
+    if (fDsetChs >= 0) { H5Dclose(fDsetChs); }
 
     hid_t dapl = H5Pcreate(H5P_DATASET_ACCESS);
     H5Pset_chunk_cache(dapl, 10007, 128 * 1024 * 1024, 1.0);
@@ -365,16 +293,11 @@ herr_t H5SADCEvent::ReadEvent(int n)
     fReadBufSize = 0;
   }
 
-  // ---------------------------------------------------------------------
-  // 2. Dynamic Sliding Window Prefetching
-  // ---------------------------------------------------------------------
   if (evtno < fReadBufStart || evtno >= fReadBufStart + fReadBufSize) {
-
     hsize_t dims[1];
     H5Sget_simple_extent_dims(fFileSpaceInfo, dims, nullptr);
-    int total_events_in_file = static_cast<int>(dims[0]);
+    int total_events = static_cast<int>(dims[0]);
 
-    // Safety margin assumption: average 10 active SADC channels per event
     std::size_t avg_channels = 10;
     std::size_t bytes_per_event =
         sizeof(EventInfo_t) + sizeof(std::uint64_t) + avg_channels * sizeof(AChannel_t);
@@ -382,10 +305,9 @@ herr_t H5SADCEvent::ReadEvent(int n)
     int max_safe_events = static_cast<int>(fBufMaxBytes / bytes_per_event);
     if (max_safe_events <= 0) max_safe_events = 10000;
 
-    int fetch_size = std::min(max_safe_events, total_events_in_file - evtno);
+    int fetch_size = std::min(max_safe_events, total_events - evtno);
 
     if (fetch_size > 0) {
-      // Step A: Fetch Metadata
       fReadBufInfo.resize(fetch_size);
       fReadBufIndex.resize(fetch_size);
 
@@ -401,17 +323,15 @@ herr_t H5SADCEvent::ReadEvent(int n)
               fReadBufIndex.data());
       H5Sclose(mem_space_blk);
 
-      // Step B: Fetch SADC Channels
-      std::uint64_t first_ch_global = fReadBufIndex[0];
-      std::uint64_t last_ch_global =
-          fReadBufIndex[fetch_size - 1] + fReadBufInfo[fetch_size - 1].nhit;
-      std::uint64_t total_chs_to_fetch = last_ch_global - first_ch_global;
+      std::uint64_t first_ch = fReadBufIndex[0];
+      std::uint64_t total_chs =
+          fReadBufIndex[fetch_size - 1] + fReadBufInfo[fetch_size - 1].nhit - first_ch;
 
-      if (total_chs_to_fetch > 0) {
-        fPrefetchChs.resize(total_chs_to_fetch);
+      if (total_chs > 0) {
+        fPrefetchChs.resize(total_chs);
 
-        hsize_t offset_ch[1] = {first_ch_global};
-        hsize_t count_ch[1] = {total_chs_to_fetch};
+        hsize_t offset_ch[1] = {first_ch};
+        hsize_t count_ch[1] = {total_chs};
         H5Sselect_hyperslab(fFileSpaceChs, H5S_SELECT_SET, offset_ch, nullptr, count_ch, nullptr);
         hid_t mem_space_chs = H5Screate_simple(1, count_ch, nullptr);
         H5Dread(fDsetChs, fChType, mem_space_chs, fFileSpaceChs, H5P_DEFAULT, fPrefetchChs.data());
@@ -420,27 +340,22 @@ herr_t H5SADCEvent::ReadEvent(int n)
 
       fReadBufStart = evtno;
       fReadBufSize = fetch_size;
-      fPrefetchChStart = first_ch_global;
+      fPrefetchChStart = first_ch;
     }
     else {
       return -1;
     }
   }
 
-  // ---------------------------------------------------------------------
-  // 3. Serve from RAM
-  // ---------------------------------------------------------------------
   int local_idx = evtno - fReadBufStart;
   fEvtInfo = fReadBufInfo[local_idx];
-  std::uint64_t ch_offset_global = fReadBufIndex[local_idx];
+  std::uint64_t ch_offset = fReadBufIndex[local_idx];
 
   const std::uint16_t nhit = fEvtInfo.nhit;
   fDataBuf.resize(nhit);
 
   if (nhit > 0) {
-    std::uint64_t local_ch_idx = ch_offset_global - fPrefetchChStart;
-
-    // Copy directly from prefetch buffer to user buffer
+    std::uint64_t local_ch_idx = ch_offset - fPrefetchChStart;
     std::copy(fPrefetchChs.begin() + local_ch_idx, fPrefetchChs.begin() + local_ch_idx + nhit,
               fDataBuf.begin());
   }

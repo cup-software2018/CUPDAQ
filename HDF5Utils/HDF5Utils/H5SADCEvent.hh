@@ -19,7 +19,7 @@ public:
   void Close() override;
 
   herr_t AppendEvent(const EventInfo_t & info, const std::vector<AChannel_t> & data);
-  herr_t ReadEvent(int n);
+  herr_t ReadEvent(int n) override;
 
   AChannel_t * GetData();
 
@@ -27,9 +27,13 @@ protected:
   herr_t FlushBuffer() override;
 
 private:
+  hid_t fChType{H5I_INVALID_HID};
+  hid_t fDsetIndex{H5I_INVALID_HID};
+  hid_t fDsetChs{H5I_INVALID_HID};
+
   std::uint64_t fTotalChannels{0};
 
-  // Write buffers
+  // Write buffers for SADC Channels
   std::vector<AChannel_t> fChBuf;
 
   // Pre-allocated vector buffer for zero-overhead user access

@@ -8,7 +8,7 @@
 
 #include "hdf5.h"
 
-constexpr int kH5FADCNDPMAX = 16384;   // 64 us for FADC
+constexpr int kH5FADCNDPMAX = 16384; // 64 us for FADC
 
 struct SubRun_t {
   std::uint32_t subrun;
@@ -34,12 +34,14 @@ struct FChannel_t {
   std::uint16_t id;
   std::uint16_t tbit;
   std::uint16_t ped;
+  std::uint32_t time; // Added individual hit time
   std::uint16_t waveform[kH5FADCNDPMAX];
 
   FChannel_t() noexcept
     : id(0),
       tbit(0),
-      ped(0)
+      ped(0),
+      time(0)
   {
     std::memset(waveform, 0, sizeof(waveform));
   }
@@ -54,6 +56,7 @@ struct FChannelHeader_t {
   std::uint16_t id;
   std::uint16_t tbit;
   std::uint16_t ped;
+  std::uint32_t time; // Added individual hit time
 
   static hid_t BuildType();
   hsize_t GetSize() const noexcept;
@@ -82,7 +85,6 @@ struct DataFile_t {
   std::string filename;
   hsize_t memsize;
   hsize_t filesize;
-  //  std::map<int, int> entries;
   int global_start;
   int nevent;
 
@@ -127,8 +129,9 @@ inline hid_t FChannel_t::BuildType()
 {
   hid_t type = H5Tcreate(H5T_COMPOUND, sizeof(FChannel_t));
   H5Tinsert(type, "id", HOFFSET(FChannel_t, id), H5T_STD_U16LE);
-  H5Tinsert(type, "bit", HOFFSET(FChannel_t, tbit), H5T_STD_U16LE);
+  H5Tinsert(type, "tbit", HOFFSET(FChannel_t, tbit), H5T_STD_U16LE);
   H5Tinsert(type, "ped", HOFFSET(FChannel_t, ped), H5T_STD_U16LE);
+  H5Tinsert(type, "time", HOFFSET(FChannel_t, time), H5T_STD_U32LE);
 
   hsize_t dim[1] = {kH5FADCNDPMAX};
   hid_t arrtype = H5Tarray_create2(H5T_STD_U16LE, 1, dim);
@@ -150,6 +153,7 @@ inline hid_t FChannelHeader_t::BuildType()
   H5Tinsert(type, "id", HOFFSET(FChannelHeader_t, id), H5T_STD_U16LE);
   H5Tinsert(type, "tbit", HOFFSET(FChannelHeader_t, tbit), H5T_STD_U16LE);
   H5Tinsert(type, "ped", HOFFSET(FChannelHeader_t, ped), H5T_STD_U16LE);
+  H5Tinsert(type, "time", HOFFSET(FChannelHeader_t, time), H5T_STD_U32LE);
   return type;
 }
 

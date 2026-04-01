@@ -9,7 +9,7 @@ H5DataWriter::H5DataWriter()
     fFilename(),
     fFileId(H5I_INVALID_HID),
     fCompressionLevel(1),
-    fEvent(nullptr),
+    fData(nullptr),
     fFileSize(0),
     fMemorySize(0),
     fSubrun(0)
@@ -21,7 +21,7 @@ H5DataWriter::H5DataWriter(const char * fname, int compress)
     fFilename(fname ? fname : ""),
     fFileId(H5I_INVALID_HID),
     fCompressionLevel(compress),
-    fEvent(nullptr),
+    fData(nullptr),
     fFileSize(0),
     fMemorySize(0),
     fSubrun(0)
@@ -32,8 +32,8 @@ H5DataWriter::~H5DataWriter() { Close(); }
 
 bool H5DataWriter::Open()
 {
-  if (!fEvent) {
-    Error("Open", "no H5Event connected");
+  if (!fData) {
+    Error("Open", "no H5 Data (Event or Hit) connected");
     return false;
   }
 
@@ -50,22 +50,28 @@ bool H5DataWriter::Open()
     return false;
   }
 
-  fEvent->SetWritable();
-  fEvent->SetCompressionLevel(fCompressionLevel);
-  fEvent->SetFileId(fFileId);
-  fEvent->Open();
+  fData->SetWritable();
+  fData->SetCompressionLevel(fCompressionLevel);
+  fData->SetFileId(fFileId);
+  fData->Open();
 
   return true;
 }
 
 void H5DataWriter::Close()
 {
-  if (fFileId < 0 || !fEvent) { return; }
+  if (fFileId < 0 || !fData) { return; }
 
   SubRun_t subrun{};
   subrun.subrun = static_cast<std::uint32_t>(fSubrun);
-  subrun.nevent = fEvent->GetNEvent();
-  fEvent->GetEventNumbers(subrun.first, subrun.last);
+
+  // Utilize the new generalized AbsH5Base methods
+  subrun.nevent = fData->GetSubRunEntries();
+
+  unsigned int first_num = 0, last_num = 0;
+  fData->GetSubRunNumbers(first_num, last_num);
+  subrun.first = static_cast<std::uint32_t>(first_num);
+  subrun.last = static_cast<std::uint32_t>(last_num);
 
   hid_t type = SubRun_t::BuildType();
   hsize_t onedim[1] = {1};
@@ -78,7 +84,7 @@ void H5DataWriter::Close()
   H5Sclose(space);
   H5Tclose(type);
 
-  fEvent->Close();
+  fData->Close();
   H5Fclose(fFileId);
   fFileId = H5I_INVALID_HID;
 }
@@ -97,8 +103,9 @@ void H5DataWriter::PrintStats() const
     base = fFilename;
   }
 
-  const int nevent = fEvent ? fEvent->GetNEvent() : 0;
+  // Changed to use GetSubRunEntries so it reflects "Hits" or "Events" dynamically
+  const int nentries = fData ? static_cast<int>(fData->GetSubRunEntries()) : 0;
 
-  Info("PrintStats", "%d events written in %s (%.2f | %.2f [MB], %.2f)", nevent, base.c_str(), memsize, filesize,
-       ratio);
+  Info("PrintStats", "%d entries written in %s (%.2f | %.2f [MB], %.2f%%)", nentries, base.c_str(),
+       memsize, filesize, ratio);
 }

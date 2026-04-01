@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "HDF5Utils/AbsH5Event.hh"
+#include "HDF5Utils/AbsH5Base.hh"
 #include "HDF5Utils/H5DataReader.hh"
 
 //------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ void H5ChainFile::Close()
 
 int H5ChainFile::GetNFile() const { return static_cast<int>(fFiles.size()); }
 
-hid_t H5ChainFile::GetFileId(int entno, int & evtno, bool * file_changed)
+hid_t H5ChainFile::GetFileId(int entno, int & local_entry, bool * file_changed)
 {
   hid_t fid = H5I_INVALID_HID;
   if (file_changed) { *file_changed = false; }
@@ -65,8 +65,8 @@ hid_t H5ChainFile::GetFileId(int entno, int & evtno, bool * file_changed)
       }
 
       fid = file->fid;
-      // Calculate local offset linearly
-      evtno = entno - file->global_start;
+      // Calculate local offset linearly (can be Event index or Hit index)
+      local_entry = entno - file->global_start;
       break;
     }
   }
@@ -82,16 +82,16 @@ ClassImp(H5DataReader)
 
 H5DataReader::H5DataReader()
   : fFiles(new H5ChainFile()),
-    fEvent(nullptr),
-    fNEvent(0),
+    fData(nullptr),
+    fEntries(0),
     fSubType(SubRun_t::BuildType())
 {
 }
 
 H5DataReader::H5DataReader(const char * fname)
   : fFiles(new H5ChainFile()),
-    fEvent(nullptr),
-    fNEvent(0),
+    fData(nullptr),
+    fEntries(0),
     fSubType(SubRun_t::BuildType())
 {
   SetFilename(fname);
@@ -166,7 +166,7 @@ bool H5DataReader::Add(const char * fname)
 
 bool H5DataReader::AddFile(const char * fname)
 {
-  // Open HDF5 file and register its subrun/event mapping
+  // Open HDF5 file and register its subrun/event/hit mapping
   if (!fname || fname[0] == '\0') {
     Error("AddFile", "no file name; no files connected");
     return false;
@@ -204,16 +204,17 @@ bool H5DataReader::AddFile(const char * fname)
     return false;
   }
 
-  const int nevt = static_cast<int>(subrun.nevent);
-  int ient = fNEvent;
+  // nevent here represents the number of entries (either global events or individual hits)
+  const int nentries = static_cast<int>(subrun.nevent);
+  int ient = fEntries;
 
   file->global_start = ient;
-  file->nevent = nevt;
+  file->nevent = nentries; // Kept as nevent in DataFile_t but acts as entries
 
   file->fid = -1; // will be opened lazily in H5ChainFile::GetFileId
   fFiles->AddFile(file);
 
-  fNEvent += nevt;
+  fEntries += nentries;
 
   H5Fclose(fid);
 
@@ -227,19 +228,19 @@ bool H5DataReader::Open()
     return false;
   }
 
-  if (!fEvent) {
-    Error("Open", "no H5Event connected");
+  if (!fData) {
+    Error("Open", "no H5 data object connected");
     return false;
   }
 
-  // Connect chain information to the AbsH5Event instance
-  fEvent->SetChainFile(fFiles);
-  fEvent->Open();
+  // Connect chain information to the AbsH5Base instance
+  fData->SetChainFile(fFiles);
+  fData->Open();
 
   return true;
 }
 
 void H5DataReader::Close()
 {
-  if (fEvent) { fEvent->Close(); }
+  if (fData) { fData->Close(); }
 }

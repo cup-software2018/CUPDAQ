@@ -5,6 +5,7 @@
 /bin/
 /include/
 /lib/
+/lib64/
 /install/
 /.clang-format
 /ld.sh
@@ -15,3 +16,4 @@
 /*.yaml
 /*.root*
 /*.h5*
+/*.sh

@@ -24,7 +24,10 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
   h5event->SetNDP(fNDP);
   fH5Event = h5event;
 
-  fHDF5File->SetEvent(h5event);
+  h5event->SetBufferCapacity(100);
+  h5event->SetBufferMaxBytes(32 * 1024 * 1024);
+
+  fHDF5File->SetData(h5event);
   if (!fHDF5File->Open()) {
     ERROR("can't open hdf5 output file");
     RUNSTATE::SetError(fRunStatus);
@@ -129,10 +132,10 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
   auto * h5event = new H5SADCEvent;
   fH5Event = h5event;
 
-  h5event->SetBufferEventCapacity(1000);
+  h5event->SetBufferCapacity(1000);
   h5event->SetBufferMaxBytes(32 * 1024 * 1024);
 
-  fHDF5File->SetEvent(h5event);
+  fHDF5File->SetData(h5event);
   if (!fHDF5File->Open()) {
     ERROR("can't open hdf5 output file");
     RUNSTATE::SetError(fRunStatus);
@@ -259,7 +262,7 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
 
     fHDF5File = new H5DataWriter(filename, fCompressionLevel);
     fHDF5File->SetSubrun(subnum);
-    fHDF5File->SetEvent(fH5Event);
+    fHDF5File->SetData(fH5Event);
 
     if (!fHDF5File->Open()) {
       ERROR("can't open output file %s", filename);
@@ -279,7 +282,7 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
 void CupDAQManager::WriteFADC_MOD_HDF5()
 {
   ERROR("HDF5 is not enabled in this build. Cannot write FADC data.");
-  RUNSTATE::SetError(fRunStatus); // RunStatus 에러 처리 추가 권장
+  RUNSTATE::SetError(fRunStatus);
 }
 
 void CupDAQManager::WriteSADC_MOD_HDF5()

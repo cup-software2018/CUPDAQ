@@ -8,6 +8,8 @@
 
 #include "hdf5.h"
 
+class AbsH5Base; // Forward declaration changed to AbsH5Base
+
 class H5ChainFile : public TObject {
 public:
   H5ChainFile();
@@ -17,16 +19,16 @@ public:
   void Close();
 
   int GetNFile() const;
-  hid_t GetFileId(int entno, int & evtno, bool * file_changed = nullptr);
+
+  // Renamed evtno to local_entry to reflect both Event and Hit indices
+  hid_t GetFileId(int entno, int & local_entry, bool * file_changed = nullptr);
 
 private:
   DataFile_t * fCurrentFilePtr{nullptr};
-  std::vector<DataFile_t *> fFiles;  
+  std::vector<DataFile_t *> fFiles;
 
   ClassDef(H5ChainFile, 0)
 };
-
-class AbsH5Event;
 
 class H5DataReader : public TObject {
 public:
@@ -37,25 +39,24 @@ public:
   void SetFilename(const char * fname);
   bool Add(const char * fname);
   bool AddFile(const char * fname);
-  void SetEvent(AbsH5Event * event);
+
+  // Changed from SetEvent(AbsH5Event*) to SetData(AbsH5Base*)
+  void SetData(AbsH5Base * data);
 
   bool Open();
   void Close();
 
-  int GetNEvent() const;
   int GetEntries() const;
 
 private:
   H5ChainFile * fFiles;
-  AbsH5Event * fEvent;
-  int fNEvent;
+  AbsH5Base * fData;
+  int fEntries; // Generalized from fNEvent
   hid_t fSubType;
 
   ClassDef(H5DataReader, 0)
 };
 
-inline void H5DataReader::SetEvent(AbsH5Event * event) { fEvent = event; }
+inline void H5DataReader::SetData(AbsH5Base * data) { fData = data; }
 
-inline int H5DataReader::GetNEvent() const { return fNEvent; }
-
-inline int H5DataReader::GetEntries() const { return fNEvent; }
+inline int H5DataReader::GetEntries() const { return fEntries; }

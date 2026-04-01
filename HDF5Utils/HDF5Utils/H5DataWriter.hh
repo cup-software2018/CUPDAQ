@@ -4,7 +4,8 @@
 
 #include "TObject.h"
 
-#include "HDF5Utils/AbsH5Event.hh"
+// AbsH5Base covers both AbsH5Event and AbsH5Hit
+#include "HDF5Utils/AbsH5Base.hh"
 #include "HDF5Utils/EDM.hh"
 
 #include "hdf5.h"
@@ -20,13 +21,16 @@ public:
 
   void SetFilename(const char * name);
   void SetCompressionLevel(int level);
-  void SetEvent(AbsH5Event * event);
+
+  // Changed from SetEvent(AbsH5Event*) to support both Event and Hit datas
+  void SetData(AbsH5Base * data);
   void SetSubrun(int sub);
 
   hid_t GetFileId() const;
   hsize_t GetFileSize() const;
   hsize_t GetMemorySize() const;
-  AbsH5Event * GetEvent();
+
+  AbsH5Base * GetData();
   const char * GetFilename() const;
   bool IsOpen() const;
 
@@ -38,7 +42,8 @@ private:
   hid_t fFileId;
   int fCompressionLevel;
 
-  AbsH5Event * fEvent;
+  // Unified pointer to handle H5FADCEvent, H5SADCEvent, H5FADCHit, H5SADCHit
+  AbsH5Base * fData;
 
   hsize_t fFileSize;
   hsize_t fMemorySize;
@@ -51,7 +56,7 @@ inline void H5DataWriter::SetFilename(const char * fname) { fFilename = fname ? 
 
 inline void H5DataWriter::SetCompressionLevel(int level) { fCompressionLevel = level; }
 
-inline void H5DataWriter::SetEvent(AbsH5Event * event) { fEvent = event; }
+inline void H5DataWriter::SetData(AbsH5Base * data) { fData = data; }
 
 inline void H5DataWriter::SetSubrun(int sub) { fSubrun = sub; }
 
@@ -64,9 +69,9 @@ inline hsize_t H5DataWriter::GetFileSize() const
   return size;
 }
 
-inline hsize_t H5DataWriter::GetMemorySize() const { return fEvent ? fEvent->GetSize() : 0; }
+inline hsize_t H5DataWriter::GetMemorySize() const { return fData ? fData->GetSize() : 0; }
 
-inline AbsH5Event * H5DataWriter::GetEvent() { return fEvent; }
+inline AbsH5Base * H5DataWriter::GetData() { return fData; }
 
 inline const char * H5DataWriter::GetFilename() const { return fFilename.c_str(); }
 

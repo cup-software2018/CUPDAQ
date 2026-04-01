@@ -18,8 +18,8 @@ public:
   void Open() override;
   void Close() override;
 
-  herr_t AppendEvent(const EventInfo_t & info, const std::vector<FChannel_t> & data);
-  herr_t ReadEvent(int n);
+    herr_t AppendEvent(const EventInfo_t & info, const std::vector<FChannel_t> & data);
+  herr_t ReadEvent(int n) override;
 
   void SetNDP(int ndp);
   int GetNDP();
@@ -30,12 +30,15 @@ protected:
   herr_t FlushBuffer() override;
 
 private:
+  hid_t fChType{H5I_INVALID_HID};
+  hid_t fDsetIndex{H5I_INVALID_HID};
+  hid_t fDsetChs{H5I_INVALID_HID};
   hid_t fDsetWave{H5I_INVALID_HID};
 
   std::uint64_t fTotalChannels{0};
   int fNDP{0};
 
-  // Write & Read internal buffers
+  // Write & Read internal buffers for Channels
   std::vector<FChannelHeader_t> fChBuf;
   std::vector<std::uint16_t> fWaveBuf;
 
