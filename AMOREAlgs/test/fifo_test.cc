@@ -61,7 +61,7 @@ public:
           if (t > 5.0 * fSigmaSamples) it = sigs.erase(it);
           else ++it;
         }
-        unsigned int adcVal = static_cast<unsigned int>(std::clamp(val, 0.0, 16383.0));
+        unsigned short adcVal = static_cast<unsigned short>(std::clamp(val, 0.0, 16383.0));
         buffer[offset + i * 3] = (adcVal & 0xFF);
         buffer[offset + i * 3 + 1] = ((adcVal >> 8) & 0xFF);
         buffer[offset + i * 3 + 2] = ((adcVal >> 16) & 0xFF);
@@ -132,10 +132,10 @@ void Consumer(AMOREChunkFIFO & fifo, int nch, int head, int tail)
 
   int totalNDP = head + tail;
   std::vector<unsigned long> dumpTime(totalNDP);
-  std::vector<unsigned int *> dumpADC(nch);
+  std::vector<unsigned short *> dumpADC(nch);
   for (int i = 0; i < nch; ++i)
-    dumpADC[i] = new unsigned int[totalNDP];
-  std::vector<unsigned int> currentADC(nch);
+    dumpADC[i] = new unsigned short[totalNDP];
+  std::vector<unsigned short> currentADC(nch);
   unsigned long currentTime;
 
   TCanvas * c1 = new TCanvas("c1", "AMORE Stream Monitor", 1400, 900);

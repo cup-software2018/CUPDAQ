@@ -56,7 +56,7 @@ protected:
   H5ChainFile * fChain{nullptr};
 
   int fBufEventCap{100};
-  std::size_t fBufMaxBytes{32 * 1024 * 1024};
+  std::size_t fBufMaxBytes{32 * 1024 * 1024}; // maximum buffer size. 32 MB
   int fBufEventCount{0};
   std::size_t fBufBytesUsed{0};
 

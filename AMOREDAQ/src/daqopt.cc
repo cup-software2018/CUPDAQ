@@ -55,10 +55,10 @@ void printusage(const char * daqname)
 {
   const char * name = basename_const(daqname);
 
-  std::cout << "CUP DAQ program for NOTICE ADCs" << std::endl;
+  std::cout << "AMoRE DAQ program for NOTICE ADCs" << std::endl;
   std::cout << std::endl;
   std::cout << "Usage: " << name << " [OPTION] [ARG] ..." << std::endl;
-  std::cout << "Example: " << name << " [-f/g/m/i/s] -c config.file -o output.root" << std::endl;
+  std::cout << "Example: " << name << " -c config.file -o output.root" << std::endl;
   std::cout << std::endl;
   std::cout << "options:" << std::endl;
   std::cout << "  -c, --config            [daq config file]" << std::endl;
@@ -68,7 +68,7 @@ void printusage(const char * daqname)
   std::cout << "  -t, --daq-time          [duration time for daq]" << std::endl;
   std::cout << "  -n, --daq-event         [number of event for daq]" << std::endl;
   std::cout << "  -h, --dohist            enable online histograming" << std::endl;
-  std::cout << "  -s, --dosend            doesn't write output, send event to merger" << std::endl;
+  //std::cout << "  -x, --dosend            doesn't write output, send event to merger" << std::endl;
   std::cout << "  -p, --splitting-time    [time for splitting output file]" << std::endl;
   std::cout << "  -q, --report-frequency  [reporting time]" << std::endl;
   std::cout << "  -v, --verbose-level     [verbose level]" << std::endl;
@@ -84,7 +84,7 @@ void optparse(daqopt & daq, int argc, char ** argv)
 
     switch (opt) {
       case 'h': daq.dohist = true; break;
-      case 'x': daq.dosend = true; break;
+      //case 'x': daq.dosend = true; break;
       case 'c': daq.config = optarg; break;
       case 'o': daq.output = optarg; break;
       case 'd': daq.daqid = std::atoi(optarg); break;

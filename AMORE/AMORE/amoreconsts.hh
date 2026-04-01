@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OnlConsts/onlconsts.hh"
+#include "OnlConsts/adcconsts.hh"
 
 namespace AMORE {
 const int kMINIMUMBCOUNT = 4096; // kbytes

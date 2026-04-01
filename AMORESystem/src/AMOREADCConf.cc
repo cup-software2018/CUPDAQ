@@ -19,8 +19,8 @@ AMOREADCConf::AMOREADCConf(int sid)
 
 void AMOREADCConf::PrintConf() const
 {
-  std::cout << Form(" ++ AMOREADC config: SID(%d) MID(%d) NCH(%d) SR(%d) RL(%d) DLY(%d) ZSU(%d)", fSID, fMID, fNCH, fSR,
-                    fRL, fDLY, fZSU)
+  std::cout << Form(" ++ AMOREADC config: SID(%d) MID(%d) NCH(%d) SR(%d) RL(%d) DLY(%d) ZSU(%d)",
+                    fSID, fMID, fNCH, fSR, fRL, fDLY, fZSU)
             << std::endl;
   if (fIsEnabled) std::cout << " ++ This AMOREADC is enabled" << std::endl;
   else std::cout << " ++ This AMOREADC is disabled" << std::endl;
@@ -39,6 +39,10 @@ void AMOREADCConf::PrintConf() const
     std::cout << "      TRGON : ";
     for (int i = 8 * j; i < 8 * (j + 1); i++)
       std::cout << Form("%6d", fTRGON[i]);
+    std::cout << std::endl;
+    std::cout << "         DT : ";
+    for (int i = 8 * j; i < 8 * (j + 1); i++)
+      std::cout << Form("%6d", fDT[i]);
     std::cout << std::endl;
   }
   std::cout << " -----------------------------------------------" << std::endl;

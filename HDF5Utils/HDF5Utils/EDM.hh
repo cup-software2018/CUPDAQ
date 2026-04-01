@@ -9,6 +9,7 @@
 #include "hdf5.h"
 
 constexpr int kH5FADCNDPMAX = 16384;   // 64 us for FADC
+//constexpr int kH5FADCNDPMAX = 32768;   // test for amoredaq
 constexpr int kH5AMORENDPMAX = 500000; // 5 s for AMOREADC
 
 struct SubRun_t {
@@ -80,12 +81,14 @@ struct AChannel_t {
 
 struct Crystal_t {
   std::uint16_t id;
+  std::uint16_t ndp;
   std::uint16_t phonon[kH5AMORENDPMAX];
   std::uint16_t photon[kH5AMORENDPMAX];
   std::uint64_t ttime;
 
   Crystal_t() noexcept
     : id(0),
+      ndp(0),
       ttime(0)
   {
     std::memset(phonon, 0, sizeof(phonon));
@@ -98,10 +101,15 @@ struct Crystal_t {
   void SetPhonon(const std::uint16_t * wave, int ndp) noexcept;
   void SetPhoton(const std::uint16_t * wave, int ndp) noexcept;
   void SetWaveforms(const std::uint16_t * pn, const std::uint16_t * pt, int ndp) noexcept;
+
+  const std::uint16_t * GetPhonon() const noexcept;
+  const std::uint16_t * GetPhoton() const noexcept;
+  void GetWaveforms(std::uint16_t * pn, std::uint16_t * pt, int ndp) const noexcept;
 };
 
 struct CrystalHeader_t {
   std::uint16_t id;
+  std::uint16_t ndp;
   std::uint64_t ttime;
 
   static hid_t BuildType();
@@ -113,14 +121,17 @@ struct DataFile_t {
   std::string filename;
   hsize_t memsize;
   hsize_t filesize;
-  std::map<int, int> entries;
+  //  std::map<int, int> entries;
+  int global_start;
+  int nevent;
 
   DataFile_t()
     : fid(H5I_INVALID_HID),
       filename(),
       memsize(0),
       filesize(0),
-      entries()
+      global_start(0),
+      nevent(0)
   {
   }
 };
@@ -219,10 +230,28 @@ inline void Crystal_t::SetPhoton(const std::uint16_t * wave, int ndp) noexcept
   std::memcpy(photon, wave, static_cast<std::size_t>(ndp) * sizeof(std::uint16_t));
 }
 
-inline void Crystal_t::SetWaveforms(const std::uint16_t * pn, const std::uint16_t * pt, int ndp) noexcept
+inline void Crystal_t::SetWaveforms(const std::uint16_t * pn, const std::uint16_t * pt,
+                                    int ndp) noexcept
 {
   SetPhonon(pn, ndp);
   SetPhoton(pt, ndp);
+}
+
+inline const std::uint16_t * Crystal_t::GetPhonon() const noexcept
+{
+  return phonon;
+}
+
+inline const std::uint16_t * Crystal_t::GetPhoton() const noexcept
+{
+  return photon;
+}
+
+inline void Crystal_t::GetWaveforms(std::uint16_t * pn, std::uint16_t * pt,
+                                    int ndp) const noexcept
+{
+  if (pn) std::memcpy(pn, phonon, static_cast<std::size_t>(ndp) * sizeof(std::uint16_t));
+  if (pt) std::memcpy(pt, photon, static_cast<std::size_t>(ndp) * sizeof(std::uint16_t));
 }
 
 inline hsize_t Crystal_t::GetSize() const noexcept { return sizeof(Crystal_t); }

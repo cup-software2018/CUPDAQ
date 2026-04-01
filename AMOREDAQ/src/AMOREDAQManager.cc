@@ -107,7 +107,7 @@ bool AMOREDAQManager::ReadConfig()
 
 template <typename T>
 void AMOREDAQManager::FillConfigArray(YAML::Node node, int nch, std::function<void(int, T)> setter,
-                                bool inc)
+                                      bool inc)
 {
   if (!node) return;
 
@@ -180,7 +180,7 @@ void AMOREDAQManager::ReadConfigADC(YAML::Node ymlnode)
     if (node["SID"]) {
       int sid = node["SID"].as<int>();
       conf->SetSID(sid);
-      conf->SetMID(sid+128);
+      conf->SetMID(sid + 128);
     }
     if (node["NCH"]) {
       nch = node["NCH"].as<int>();
@@ -196,6 +196,7 @@ void AMOREDAQManager::ReadConfigADC(YAML::Node ymlnode)
       FillConfigArray<int>(node["CID"], nch, [&](int i, int v) { conf->SetCID(i, v); }, true);
       FillConfigArray<int>(node["PID"], nch, [&](int i, int v) { conf->SetPID(i, v); }, true);
       FillConfigArray<int>(node["TRGON"], nch, [&](int i, int v) { conf->SetTRGON(i, v); });
+      FillConfigArray<int>(node["DT"], nch, [&](int i, int v) { conf->SetDT(i, v); });
     }
 
     fConfigList->Add(conf);
@@ -213,15 +214,22 @@ bool AMOREDAQManager::PrepareDAQ()
     return false;
   }
 
+  auto * conf = static_cast<FADCTConf *>(static_cast<AbsADC *>(fCont[0])->GetConfig());
+  fRecordLength = conf->RL();
+  int bcount = GetADCEventDataSize() / kKILOBYTES;
+  fMinimumBCount = (bcount <= AMORE::kMINIMUMBCOUNT) ? AMORE::kMINIMUMBCOUNT : bcount;
+  fADCMode = ADC::FMODE;
+
   fFIFOs.clear();
   int dsr = 0;
   for (int i = 0; i < nadc; ++i) {
     auto * adc = static_cast<AbsADC *>(fCont[i]);
     auto * conf = static_cast<AMOREADCConf *>(adc->GetConfig());
-    dsr = conf->SR();
 
+    dsr = conf->SR();
     int head = conf->DLY();
     int tail = conf->RL() - head;
+
     fFIFOs.push_back(std::make_unique<AMOREChunkFIFO>(kNCHAMOREADC, head, tail));
   }
 
@@ -229,6 +237,9 @@ bool AMOREDAQManager::PrepareDAQ()
 
   fTimeDelta = dsr * 1000;
 
+  fADCEventDataSize = GetADCEventDataSize();
+  fADCChannelDataSize = GetADCChannelDataSize();
+  fNDP = GetNDP();
 
   fRemainingBCount = new int[nadc];
   for (int i = 0; i < nadc; i++) {

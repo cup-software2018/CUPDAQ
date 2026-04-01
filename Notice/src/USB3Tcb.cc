@@ -22,7 +22,7 @@ constexpr uint16_t kNKPROGRAMMER_CMD_CHECK_DONE = 11;
 
 // Transfer constants
 constexpr int kUSB3_DATA_UNIT = 16384; // 16KB chunk size
-constexpr unsigned int kUSB3_DEFAULT_TIMEOUT = 1000;
+constexpr unsigned int kUSB3_DEFAULT_TIMEOUT = 5000;
 
 } // anonymous namespace
 
@@ -131,7 +131,7 @@ int USB3Tcb::Read(uint32_t mid, uint32_t count, uint32_t addr, unsigned char * d
 
   int transferred = 0;
   // Send Command
-  int stat = libusb_bulk_transfer(devh, kUSB3_SF_WRITE, buffer, length, &transferred, timeout);
+  int stat = libusb_bulk_transfer(devh, kUSB3_SF_WRITE, buffer, length, &transferred, 5000);
   if (stat < 0) {
     ERROR("TCB Read command error: %s [sid=%d]", libusb_error_name(stat), _sid);
     return stat;
@@ -149,8 +149,8 @@ int USB3Tcb::Read(uint32_t mid, uint32_t count, uint32_t addr, unsigned char * d
     stat = libusb_bulk_transfer(devh, kUSB3_SF_READ, data + received_bytes, chunk_size,
                                 &transferred, timeout);
     if (stat < 0) {
-      ERROR("TCB Read data error: %s [sid=%d] offset=%d", libusb_error_name(stat), _sid,
-            received_bytes);
+      ERROR("TCB Read data error: %s [sid=%d] offset=%d chunk=%d transferred=%d timeout=%u stat=%d",
+            libusb_error_name(stat), _sid, received_bytes, chunk_size, transferred, timeout, stat);
       return stat;
     }
     received_bytes += transferred;

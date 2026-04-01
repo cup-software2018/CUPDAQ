@@ -1,11 +1,9 @@
+#include <algorithm>
 #include <cstring> // for std::strcmp
+#include <filesystem>
+#include <regex>
 #include <string>
-
-#include "TList.h"
-#include "TObjString.h"
-#include "TRegexp.h"
-#include "TString.h"
-#include "TSystem.h"
+#include <vector>
 
 #include "HDF5Utils/AbsH5Event.hh"
 #include "HDF5Utils/H5DataReader.hh"
@@ -17,8 +15,7 @@
 ClassImp(H5ChainFile)
 
 H5ChainFile::H5ChainFile()
-  : fCurrentFile(H5I_INVALID_HID),
-    fFiles()
+  : fFiles()
 {
 }
 
@@ -44,25 +41,32 @@ void H5ChainFile::Close()
 
 int H5ChainFile::GetNFile() const { return static_cast<int>(fFiles.size()); }
 
-hid_t H5ChainFile::GetFileId(int entno, int & evtno)
+hid_t H5ChainFile::GetFileId(int entno, int & evtno, bool * file_changed)
 {
-  // Find which file contains the given global entry number (entno)
   hid_t fid = H5I_INVALID_HID;
+  if (file_changed) { *file_changed = false; }
 
   for (auto * file : fFiles) {
-    auto search = file->entries.find(entno);
-    if (search != file->entries.end()) {
-      // Open the file if not already open
-      if (file->fid < 0) {
-        if (fCurrentFile >= 0) { H5Fclose(fCurrentFile); }
-        fid = H5Fopen(file->filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        file->fid = fid;
-        fCurrentFile = fid;
+    // Range check instead of heavy std::map lookup
+    if (entno >= file->global_start && entno < file->global_start + file->nevent) {
+
+      if (fCurrentFilePtr != file) {
+        if (file_changed) { *file_changed = true; }
+
+        // Close the previous file if it was open
+        if (fCurrentFilePtr && fCurrentFilePtr->fid >= 0) {
+          H5Fclose(fCurrentFilePtr->fid);
+          fCurrentFilePtr->fid = -1;
+        }
+
+        // Open the new file
+        file->fid = H5Fopen(file->filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+        fCurrentFilePtr = file;
       }
-      else {
-        fid = file->fid;
-      }
-      evtno = search->second;
+
+      fid = file->fid;
+      // Calculate local offset linearly
+      evtno = entno - file->global_start;
       break;
     }
   }
@@ -103,48 +107,61 @@ void H5DataReader::SetFilename(const char * fname) { AddFile(fname); }
 
 bool H5DataReader::Add(const char * fname)
 {
-  // Support wildcard patterns using ROOT's TString/TRegexp/TSystem
-  TString basename = fname;
+  if (!fname || fname[0] == '\0') { return false; }
 
-  if (!basename.MaybeWildcard()) { return AddFile(fname); }
+  std::string path_str = fname;
 
-  Int_t slashpos = basename.Last('/');
-  TString directory;
-  if (slashpos >= 0) {
-    directory = basename(0, slashpos);
-    basename.Remove(0, slashpos + 1);
+  if (path_str.find('*') == std::string::npos && path_str.find('?') == std::string::npos) {
+    return AddFile(fname);
+  }
+
+  namespace fs = std::filesystem;
+  fs::path filepath(path_str);
+
+  fs::path directory = filepath.parent_path();
+  std::string pattern = filepath.filename().string();
+
+  if (directory.empty()) { directory = fs::current_path(); }
+
+  std::string regex_str = "^";
+  for (char c : pattern) {
+    if (c == '.') { regex_str += "\\."; }
+    else if (c == '*') {
+      regex_str += ".*";
+    }
+    else if (c == '?') {
+      regex_str += ".";
+    }
+    else {
+      regex_str += c;
+    }
+  }
+  regex_str += "$";
+
+  std::regex re(regex_str);
+  std::vector<std::string> matched_files;
+
+  if (fs::exists(directory) && fs::is_directory(directory)) {
+    for (const auto & entry : fs::directory_iterator(directory)) {
+      if (entry.is_regular_file()) {
+        std::string filename = entry.path().filename().string();
+        if (std::regex_match(filename, re)) { matched_files.push_back(entry.path().string()); }
+      }
+    }
   }
   else {
-    directory = gSystem->UnixPathName(gSystem->WorkingDirectory());
+    Error("Add", "Directory does not exist: %s", directory.string().c_str());
+    return false;
   }
 
-  const char * file;
-  const char * epath = gSystem->ExpandPathName(directory.Data());
-  void * dir = gSystem->OpenDirectory(epath);
-  delete[] epath;
+  std::sort(matched_files.begin(), matched_files.end());
 
-  if (dir) {
-    TList l;
-    TRegexp re(basename, kTRUE);
-    while ((file = gSystem->GetDirEntry(dir))) {
-      if (!std::strcmp(file, ".") || !std::strcmp(file, "..")) { continue; }
-      TString s = file;
-      if ((basename != file) && s.Index(re) == kNPOS) { continue; }
-      l.Add(new TObjString(file));
-    }
-    gSystem->FreeDirectory(dir);
-    l.Sort();
-    TIter next(&l);
-    TObjString * obj;
-    while ((obj = static_cast<TObjString *>(next()))) {
-      file = obj->GetName();
-      TString full = TString::Format("%s/%s", directory.Data(), file);
-      AddFile(full.Data());
-    }
-    l.Delete();
+  bool success = true;
+  for (const auto & file : matched_files) {
+    if (!AddFile(file.c_str())) { success = false; }
   }
 
-  return true;
+  return success;
 }
 
 bool H5DataReader::AddFile(const char * fname)
@@ -189,12 +206,9 @@ bool H5DataReader::AddFile(const char * fname)
 
   const int nevt = static_cast<int>(subrun.nevent);
   int ient = fNEvent;
-  int ievt = static_cast<int>(subrun.first);
 
-  // Build mapping from global entry index -> local event index
-  for (int i = 0; i < nevt; ++i) {
-    file->entries.insert(std::pair{ient + i, ievt + i});
-  }
+  file->global_start = ient;
+  file->nevent = nevt;
 
   file->fid = -1; // will be opened lazily in H5ChainFile::GetFileId
   fFiles->AddFile(file);

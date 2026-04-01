@@ -4,8 +4,6 @@
 #include <memory>
 #include <vector>
 
-#include "TObject.h"
-
 #include "AMORESystem/AMOREADCConf.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
 
@@ -20,7 +18,7 @@ struct AMOREChunk {
   }
 };
 
-class AMOREChunkFIFO : public TObject {
+class AMOREChunkFIFO {
 public:
   AMOREChunkFIFO();
   AMOREChunkFIFO(int nch, int head, int tail);
@@ -29,12 +27,12 @@ public:
   void BookFIFO(int nch, int head, int tail);
 
   // Producer methods
-  int PushChunk(unsigned int ** adc, unsigned long * time, int ndp);
+  int PushChunk(unsigned short ** adc, unsigned long * time, int ndp);
   int PushChunk(unsigned char * data, int ndp, AMOREADCConf * conf);
 
   // Consumer methods
-  int PopCurrent(unsigned int * adc, unsigned long & time);
-  int DumpCurrent(unsigned int ** outADC, unsigned long * outTime);
+  int PopCurrent(unsigned short * adc, unsigned long & time);
+  int DumpCurrent(unsigned short ** outADC, unsigned long * outTime);
 
   // Controls and status
   void Stop();
@@ -42,6 +40,8 @@ public:
   bool IsStopped() const;
   bool Empty() const;
   std::size_t GetQueueSize() const;
+  int GetHead() const noexcept;
+  int GetTail() const noexcept;
 
   // Statistics
   void DumpStat();
@@ -63,12 +63,20 @@ private:
   unsigned long fTotalSamples;
   unsigned long fFirstTime;
   unsigned long fLastTime;
-
-  ClassDef(AMOREChunkFIFO, 0)
 };
 
 inline void AMOREChunkFIFO::Stop() { fQueue.stop(); }
 inline void AMOREChunkFIFO::Restart() { fQueue.restart(); }
 inline bool AMOREChunkFIFO::IsStopped() const { return fQueue.is_stopped(); }
-inline bool AMOREChunkFIFO::Empty() const { return fQueue.empty() && !fCurrentChunk; }
+inline bool AMOREChunkFIFO::Empty() const {
+  if (!fCurrentChunk) {
+    return fQueue.empty() && !fNextChunk;
+  }
+
+  const bool currentConsumed = (fCurrentSampleIndex >= fCurrentChunk->fTime.size());
+  return fQueue.empty() && !fNextChunk && currentConsumed;
+}
 inline std::size_t AMOREChunkFIFO::GetQueueSize() const { return fQueue.size(); }
+
+inline int AMOREChunkFIFO::GetHead() const noexcept { return fHead; }
+inline int AMOREChunkFIFO::GetTail() const noexcept { return fTail; }

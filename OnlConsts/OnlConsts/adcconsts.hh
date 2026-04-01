@@ -83,6 +83,7 @@ const int kNCHFADC = 4;
 //
 const int kMINIMUMBCOUNTAMOREADC = 2048; // kbytes
 const int kNCHAMOREADC = 16;
+const int kNADCAMOREADC = 12;
 
 //
 // GADC constants

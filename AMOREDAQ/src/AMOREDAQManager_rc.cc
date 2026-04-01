@@ -23,6 +23,7 @@ void AMOREDAQManager::RC_AMOREDAQ()
 
   std::thread th1;
   std::thread th2;
+  std::thread th3;
   std::thread th_swt[8];
 
   fTCB.SetConfig(fConfigList);
@@ -35,19 +36,21 @@ void AMOREDAQManager::RC_AMOREDAQ()
 
   th1 = std::thread(&AMOREDAQManager::TF_ReadData_AMORE, this);
   th2 = std::thread(&AMOREDAQManager::TF_StreamData, this);
+  th3 = std::thread(&AMOREDAQManager::TF_WriteEvent_AMORE, this);
 
   int nadc = GetEntries();
+  INFO("RC_AMOREDAQ: nadc=%d", nadc);
   for (int i = 0; i < nadc; ++i) {
     th_swt[i] = std::thread(&AMOREDAQManager::TF_SWTrigger, this, i);
   }
 
   // sleep for 1 secs
-  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   fTCB.TriggerStart();
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
 
-  // sleep for 10 secs
-  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+  // sleep for set DAQ time
+  std::this_thread::sleep_for(std::chrono::milliseconds(fSetDAQTime*1000));
   fTCB.TriggerStop();
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
 
@@ -56,6 +59,7 @@ void AMOREDAQManager::RC_AMOREDAQ()
   for (int i = 0; i < nadc; ++i) {
     th_swt[i].join();
   }
+  th3.join();
 
   CloseDAQ();
   fTCB.Close();
