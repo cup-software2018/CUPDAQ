@@ -1,6 +1,4 @@
-#ifndef FADCHistogramer_hh
-#define FADCHistogramer_hh
-
+#pragma once
 #include "OnlHistogramer/AbsHistogramer.hh"
 
 class FADCHistogramer : public AbsHistogramer {
@@ -14,5 +12,3 @@ public:
 private:
   int fNDP{};
 };
-
-#endif

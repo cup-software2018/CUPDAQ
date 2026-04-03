@@ -1,5 +1,4 @@
-#ifndef AbsConfList_hh
-#define AbsConfList_hh
+#pragma once
 
 #include "TObjArray.h"
 
@@ -26,5 +25,3 @@ public:
 
   ClassDef(AbsConfList, 1)
 };
-
-#endif

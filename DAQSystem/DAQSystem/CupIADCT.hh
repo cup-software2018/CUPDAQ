@@ -1,6 +1,4 @@
-#ifndef CupIADCT_HH
-#define CupIADCT_HH
-
+#pragma once
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
 #include "Notice/NKIADC64.hh"
@@ -32,5 +30,3 @@ private:
 
   ClassDef(CupIADCT, 0)
 };
-
-#endif

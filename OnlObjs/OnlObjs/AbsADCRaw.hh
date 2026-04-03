@@ -1,6 +1,4 @@
-#ifndef AbsADCRaw_hh
-#define AbsADCRaw_hh
-
+#pragma once
 #include <cstring>
 
 #include "TObject.h"
@@ -75,5 +73,3 @@ inline unsigned int AbsADCRaw::GetTriggerType() const { return fHeader ? fHeader
 inline unsigned int AbsADCRaw::GetTriggerNumber() const { return fHeader ? fHeader->GetLocalTriggerNumber() : 0U; }
 
 inline unsigned long AbsADCRaw::GetTriggerTime() const { return fHeader ? fHeader->GetLocalTriggerTime() : 0UL; }
-
-#endif

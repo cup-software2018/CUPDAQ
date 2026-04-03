@@ -1,6 +1,4 @@
-#ifndef ADCHeader_hh
-#define ADCHeader_hh
-
+#pragma once
 #include "TObject.h"
 
 #include "OnlObjs/TimeCalConsts.hh"
@@ -135,5 +133,3 @@ inline unsigned int ADCHeader::GetLocalTriggerNumber() const { return loctnum; }
 inline unsigned long ADCHeader::GetLocalTriggerTime() const { return locttime; }
 
 inline TimeCalConsts * ADCHeader::GetTimeCalConsts() const { return fCalConsts; }
-
-#endif

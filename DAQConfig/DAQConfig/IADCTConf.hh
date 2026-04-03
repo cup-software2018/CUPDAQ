@@ -1,6 +1,4 @@
-#ifndef IADCTConf_hh
-#define IADCTConf_hh
-
+#pragma once
 #include "DAQConfig/AbsConf.hh"
 #include "OnlConsts/adcconsts.hh"
 
@@ -98,5 +96,3 @@ inline int IADCTConf::THR(int ch) const { return fTHR[ch]; }
 inline int IADCTConf::DLY(int ch) const { return fDLY[ch]; }
 inline int IADCTConf::TLT(int group) const { return fTLT[group]; }
 inline float IADCTConf::HV(int group) const { return fHV[group]; }
-
-#endif

@@ -1,6 +1,4 @@
-#ifndef SADCHistogramer_hh
-#define SADCHistogramer_hh
-
+#pragma once
 #include "OnlHistogramer/AbsHistogramer.hh"
 
 class SADCHistogramer : public AbsHistogramer {
@@ -11,5 +9,3 @@ public:
   void Book() override;
   void Fill(BuiltEvent * bevent) override;
 };
-
-#endif

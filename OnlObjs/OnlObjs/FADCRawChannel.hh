@@ -1,6 +1,4 @@
-#ifndef FADCRawChannel_hh
-#define FADCRawChannel_hh
-
+#pragma once
 #include <cstring>
 
 #include "TObject.h"
@@ -31,5 +29,3 @@ inline void FADCRawChannel::SetADC(int i, unsigned short adc) { fADC[i] = adc; }
 inline int FADCRawChannel::GetNDP() const { return fNDP; }
 
 inline unsigned short * FADCRawChannel::GetADC() const { return fADC; }
-
-#endif

@@ -1,6 +1,4 @@
-#ifndef CupMADCS_HH
-#define CupMADCS_HH
-
+#pragma once
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
 #include "Notice/NKFADC125S.hh"
@@ -31,5 +29,3 @@ private:
 
   ClassDef(CupMADCS, 0)
 };
-
-#endif

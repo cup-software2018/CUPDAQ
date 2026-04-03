@@ -1,6 +1,4 @@
-#ifndef BuiltEvent_hh
-#define BuiltEvent_hh
-
+#pragma once
 #include "TObjArray.h"
 
 #include "OnlObjs/AbsADCRaw.hh"
@@ -42,5 +40,3 @@ inline int BuiltEvent::GetDAQID() const { return fDAQID; }
 inline unsigned int BuiltEvent::GetEventNumber() const { return fEventNumber; }
 
 inline bool BuiltEvent::IsSortable() const { return true; }
-
-#endif

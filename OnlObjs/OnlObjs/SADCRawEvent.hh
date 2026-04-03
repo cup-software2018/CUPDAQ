@@ -1,6 +1,4 @@
-#ifndef SADCRawEvent_hh
-#define SADCRawEvent_hh
-
+#pragma once
 #include "OnlObjs/AbsADCRaw.hh"
 
 class SADCRawEvent : public AbsADCRaw {
@@ -41,5 +39,3 @@ inline unsigned int * SADCRawEvent::GetADCs() const { return fADC; }
 inline unsigned int SADCRawEvent::GetTime(int n) const { return fTime[n]; }
 
 inline unsigned int * SADCRawEvent::GetTimes() const { return fTime; }
-
-#endif

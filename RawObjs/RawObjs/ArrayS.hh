@@ -1,24 +1,4 @@
-// @(#)root/cont:$Id: ArrayS.hh,v 1.3 2022/12/19 00:43:47 cupsoft Exp $
-// Author: Rene Brun   06/03/95
-
-/*************************************************************************
- * Copyright (C) 1995-2000, Rene Brun and Fons Rademakers.               *
- * All rights reserved.                                                  *
- *                                                                       *
- * For the licensing terms see $ROOTSYS/LICENSE.                         *
- * For the list of contributors see $ROOTSYS/README/CREDITS.             *
- *************************************************************************/
-
-#ifndef ROOT_ArrayS
-#define ROOT_ArrayS
-
-//////////////////////////////////////////////////////////////////////////
-//                                                                      //
-// ArrayS                                                              //
-//                                                                      //
-// Array of shorts (16 bits per element).                               //
-//                                                                      //
-//////////////////////////////////////////////////////////////////////////
+#pragma once
 
 #include "TArray.h"
 
@@ -101,5 +81,3 @@ inline unsigned short ArrayS::operator[](Int_t i) const
   if (!BoundsOk("ArrayS::operator[]", i)) return 0;
   return fArray[i];
 }
-
-#endif

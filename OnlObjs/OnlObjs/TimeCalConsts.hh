@@ -1,6 +1,4 @@
-#ifndef TimeCalConsts_hh
-#define TimeCalConsts_hh
-
+#pragma once
 #include <map>
 
 #include "TObject.h"
@@ -28,5 +26,3 @@ inline int TimeCalConsts::GetConst(int mid) const
   auto item = calconsts.find(mid);
   return (item != calconsts.end()) ? item->second : -1;
 }
-
-#endif

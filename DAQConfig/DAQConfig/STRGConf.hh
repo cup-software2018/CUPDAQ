@@ -1,6 +1,4 @@
-#ifndef STRGConf_hh
-#define STRGConf_hh
-
+#pragma once
 #include <string>
 
 #include "DAQConfig/AbsConf.hh"
@@ -39,5 +37,3 @@ inline void STRGConf::SetInputCard(const char * fname) { fFilename = fname; }
 inline int STRGConf::GetZSUMode() const { return fZSUMode; }
 inline int STRGConf::GetPrescale() const { return fPrescale; }
 inline const char * STRGConf::GetInputCard() const { return fFilename.c_str(); }
-
-#endif

@@ -1,6 +1,4 @@
-#ifndef SADCTConf_hh
-#define SADCTConf_hh
-
+#pragma once
 #include "DAQConfig/AbsConf.hh"
 #include "OnlConsts/adcconsts.hh"
 
@@ -70,5 +68,3 @@ inline int SADCTConf::THR(int ch) const { return fTHR[ch]; }
 inline int SADCTConf::DLY(int ch) const { return fDLY[ch]; }
 inline int SADCTConf::TLT(int group) const { return fTLT[group]; }
 inline int SADCTConf::SUBPED() const { return fSUBPED; }
-
-#endif

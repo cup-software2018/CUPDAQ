@@ -1,7 +1,5 @@
 
-#ifndef TriggerLookupTable_hh
-#define TriggerLookupTable_hh
-
+#pragma once
 class TriggerLookupTable {
 public:
   static TriggerLookupTable & Instance()
@@ -19,5 +17,3 @@ private:
   TriggerLookupTable(const TriggerLookupTable &) = delete;
   TriggerLookupTable & operator=(const TriggerLookupTable &) = delete;
 };
-
-#endif

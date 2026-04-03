@@ -1,6 +1,4 @@
-#ifndef FADCRawEvent_hh
-#define FADCRawEvent_hh
-
+#pragma once
 #include "OnlObjs/AbsADCRaw.hh"
 
 class FADCRawChannel;
@@ -42,5 +40,3 @@ inline int FADCRawEvent::GetNCH() const { return fNCH; }
 inline int FADCRawEvent::GetNDP() const { return fNDP; }
 
 inline FADCRawChannel * FADCRawEvent::GetChannel(int n) const { return fChannel[n]; }
-
-#endif
