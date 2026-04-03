@@ -101,14 +101,6 @@ bool CupGeneralTCB::Config()
       return false;
     }
 
-    if (name.find("AMOREADC") != std::string_view::npos) {
-      int bcount = fTCB->ReadBCount(mid);
-      if (bcount) {
-        std::unique_ptr<unsigned char[]> data(new unsigned char[bcount * kKILOBYTES]);
-        fTCB->ReadData(mid, bcount, data.get());
-      }
-    }
-
     if (name.find("SADC") == std::string_view::npos) { fTCB->AlignDRAM(mid); }
   }
 
