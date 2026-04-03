@@ -224,9 +224,9 @@ void CupDAQManager::TF_MsgServer()
   std::string name = fDAQName;
   bool istcb = (fDAQID == 0);
 
-  // Initialize ZeroMQ context and socket in Reply (REP) mode
+  // Initialize ZeroMQ context and socket in ROUTER mode instead of REP
   zmq::context_t context(1);
-  zmq::socket_t zmq_socket(context, zmq::socket_type::rep);
+  zmq::socket_t zmq_socket(context, zmq::socket_type::router);
 
   // Set receive timeout to 1000ms.
   // This allows the while loop to check for exit flags periodically without blocking forever.
@@ -243,26 +243,44 @@ void CupDAQManager::TF_MsgServer()
     return;
   }
 
-  INFO("[%s] Message Server started on port %d", name.c_str(), port);
+  INFO("[%s] Message Server started on port %d (ROUTER Mode)", name.c_str(), port);
 
   // Main Event Loop
   while (true) {
     // 1. Check exit flags
     if (fDoExit || fDoExitTCB) { break; }
 
+    zmq::message_t identity;
+    zmq::message_t delimiter;
     zmq::message_t request;
 
     // 2. Wait for a message from clients
-    auto res = zmq_socket.recv(request, zmq::recv_flags::none);
+    // In ROUTER mode, the first frame is ALWAYS the routing identity
+    auto res = zmq_socket.recv(identity, zmq::recv_flags::none);
 
     // If timeout occurs (no message for 1000ms), loop again to check exit flags
     if (!res) { continue; }
 
-    // Flush any remaining parts of a multipart message to prevent EFSM error on send()
-    // This protects the server from crashing if a client sends malformed multipart data
-    while (request.more()) {
+    // Read the empty delimiter frame (mandatory in REQ-ROUTER pattern)
+    if (identity.more()) { (void)zmq_socket.recv(delimiter, zmq::recv_flags::none); }
+    else {
+      WARNING("[%s] Invalid ROUTER frame received (no delimiter)", name.c_str());
+      continue;
+    }
+
+    // Read the actual payload frame (JSON data)
+    if (delimiter.more()) { (void)zmq_socket.recv(request, zmq::recv_flags::none); }
+    else {
+      WARNING("[%s] Invalid ROUTER frame received (no payload)", name.c_str());
+      continue;
+    }
+
+    // Flush any remaining parts properly to prevent lingering messages
+    bool has_more = request.more();
+    while (has_more) {
       zmq::message_t dummy;
       (void)zmq_socket.recv(dummy, zmq::recv_flags::none);
+      has_more = dummy.more();
       WARNING("[%s] Discarded extra multipart frame from client", name.c_str());
     }
 
@@ -340,10 +358,18 @@ void CupDAQManager::TF_MsgServer()
       }
     }
 
-    // 4. Send the JSON reply back to the client
+    // 4. Send the JSON reply back to the client using ROUTER envelope structure
     std::string rep_str = rep_json.dump();
     zmq::message_t reply(rep_str.size());
     std::memcpy(reply.data(), rep_str.c_str(), rep_str.size());
+
+    // Send the routing identity first
+    zmq_socket.send(identity, zmq::send_flags::sndmore);
+
+    // Send the empty delimiter
+    zmq_socket.send(delimiter, zmq::send_flags::sndmore);
+
+    // Send the actual payload
     zmq_socket.send(reply, zmq::send_flags::none);
   }
 
