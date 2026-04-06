@@ -61,43 +61,48 @@ void CupDAQManager::RC_TCB()
       std::string daq_name = daq->GetDAQName(id);
       std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
 
-      try {
-        auto socket = std::make_unique<zmq::socket_t>(fZMQContext, zmq::socket_type::req);
+      auto socket = std::make_unique<zmq::socket_t>(fZMQContext, zmq::socket_type::req);
 
-        socket->set(zmq::sockopt::rcvtimeo, 2000);
-        socket->set(zmq::sockopt::sndtimeo, 2000);
-        socket->connect(endpoint);
+      // Enable relaxed mode to prevent EFSM crash on timeout
+      socket->set(zmq::sockopt::req_relaxed, 1);
+      socket->set(zmq::sockopt::req_correlate, 1);
 
-        nlohmann::json ping_json;
-        ping_json["command"] = "kQUERYDAQSTATUS";
-        std::string ping_str = ping_json.dump();
+      socket->set(zmq::sockopt::rcvtimeo, 2000);
+      socket->set(zmq::sockopt::sndtimeo, 2000);
+      socket->connect(endpoint);
 
-        zmq::message_t request(ping_str.size());
-        std::memcpy(request.data(), ping_str.c_str(), ping_str.size());
+      nlohmann::json ping_json;
+      ping_json["command"] = "kQUERYDAQSTATUS";
+      std::string ping_str = ping_json.dump();
 
-        if (!socket->send(request, zmq::send_flags::none)) {
-          throw std::runtime_error("Send failed");
-        }
+      zmq::message_t request(ping_str.size());
+      std::memcpy(request.data(), ping_str.c_str(), ping_str.size());
 
-        zmq::message_t reply;
-        auto res = socket->recv(reply, zmq::recv_flags::none);
+      // Log exactly before sending to track the crash point
+      INFO("[%s] Sending kQUERYDAQSTATUS to %s", daq_name.c_str(), endpoint.c_str());
 
-        if (!res) {
-          socketerror = true;
-          ERROR("%s connection failed (timeout) at %s", daq_name.c_str(), endpoint.c_str());
-          break;
-        }
-
-        fDAQSocket.push_back(std::move(socket));
-        INFO("%s connected and verified at %s", daq_name.c_str(), endpoint.c_str());
-      }
-      catch (const std::exception & e) {
+      auto send_res = socket->send(request, zmq::send_flags::none);
+      if (!send_res) {
         socketerror = true;
-        ERROR("%s connection failed at %s: %s", daq_name.c_str(), endpoint.c_str(), e.what());
+        ERROR("[%s] Send failed at %s", daq_name.c_str(), endpoint.c_str());
         break;
       }
-    }
 
+      // Log before receiving
+      INFO("[%s] Waiting for reply from %s", daq_name.c_str(), endpoint.c_str());
+
+      zmq::message_t reply;
+      auto recv_res = socket->recv(reply, zmq::recv_flags::none);
+
+      if (!recv_res) {
+        socketerror = true;
+        ERROR("[%s] Connection failed (timeout) at %s", daq_name.c_str(), endpoint.c_str());
+        break;
+      }
+
+      fDAQSocket.push_back(std::move(socket));
+      INFO("[%s] Connected and verified at %s", daq_name.c_str(), endpoint.c_str());
+    }
     if (socketerror) {
       RUNSTATE::SetError(fRunStatusTCB);
       return;
