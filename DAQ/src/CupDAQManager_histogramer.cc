@@ -1,10 +1,10 @@
+#include <chrono> // For std::chrono
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
+#include <random>
 #include <string>
-
-#include "TRandom3.h"
 
 #include "DAQ/CupDAQManager.hh"
 #include "OnlHistogramer/AbsHistogramer.hh"
@@ -52,7 +52,6 @@ void CupDAQManager::TF_Histogramer()
       namespace fs = std::filesystem;
       fs::path dirname = fs::path(rawdata_dir_env) / "HIST" / run_str;
 
-      // 4. Safe directory creation (fixes the 'test -d' shell return code bug)
       if (!fs::exists(dirname)) {
         fs::create_directories(dirname);
         INFO("%s created", dirname.c_str());
@@ -61,7 +60,6 @@ void CupDAQManager::TF_Histogramer()
         INFO("%s already exist", dirname.c_str());
       }
 
-      // Combine directory and filename naturally
       fs::path full_path = dirname / (std::string("hist_") + adc_name + "_" + run_str + ".root");
       filename = full_path.string();
     }
@@ -88,8 +86,11 @@ void CupDAQManager::TF_Histogramer()
   double perror = 0.0;
   double integral = 0.0;
 
-  TStopwatch sw;
-  sw.Start();
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(0.0, 1.0);
+
+  auto start_time = std::chrono::steady_clock::now();
 
   fBenchmark->Start("Histogramer");
   while (true) {
@@ -109,18 +110,20 @@ void CupDAQManager::TF_Histogramer()
 
     if (builtevent) {
       eventnumber = builtevent->GetEventNumber();
-      if (gRandom->Rndm() < mfrac) {
+
+      if (dis(gen) < mfrac) {
         histogramer->Fill(builtevent.get());
         ntotalmonitoredevent += 1;
       }
-      // unique_ptr goes out of scope and deletes builtevent
     }
 
     // update histogramer every 1s
-    double elapsetime = sw.RealTime();
-    sw.Continue();
+    auto current_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = current_time - start_time;
+    double elapsetime = elapsed.count();
+
     if (elapsetime >= 1.0) {
-      sw.Start(true);
+      start_time = std::chrono::steady_clock::now();
       histogramer->Update();
     }
 

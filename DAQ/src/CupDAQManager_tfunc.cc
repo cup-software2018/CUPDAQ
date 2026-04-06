@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <chrono>
+#include <cstdio>
 #include <memory>
 #include <mutex>
 #include <nlohmann/json.hpp>
@@ -11,9 +13,6 @@
 #include "TServerSocket.h"
 
 #include "DAQ/CupDAQManager.hh"
-#include "OnlHistogramer/AbsHistogramer.hh"
-#include "OnlHistogramer/FADCHistogramer.hh"
-#include "OnlHistogramer/SADCHistogramer.hh"
 
 void CupDAQManager::TF_RunManager()
 {
@@ -113,8 +112,7 @@ void CupDAQManager::TF_TriggerMon()
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
-  TStopwatch sw;
-  sw.Start();
+  auto start_time = std::chrono::steady_clock::now();
 
   auto get_hms = [](double sec) {
     if (sec < 0) sec = 0;
@@ -129,11 +127,13 @@ void CupDAQManager::TF_TriggerMon()
   };
 
   while (true) {
-    double elapsetime = sw.RealTime();
-    sw.Continue();
+    // Calculate the elapsed time in seconds
+    auto current_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = current_time - start_time;
+    double elapsetime = elapsed.count();
 
     if (elapsetime > fTriggerMonTime) {
-      sw.Start(true);
+      start_time = std::chrono::steady_clock::now();
 
       mlock.lock();
       int triggernumber = fTriggerNumber;
@@ -175,28 +175,34 @@ void CupDAQManager::TF_DebugMon()
 
   INFO("debug monitoring started");
 
-  TStopwatch sw;
-  sw.Start();
+  auto start_time = std::chrono::steady_clock::now();
 
   while (true) {
-    double elapsetime = sw.RealTime();
-    sw.Continue();
+    // Calculate the elapsed time in seconds
+    auto current_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = current_time - start_time;
+    double elapsetime = elapsed.count();
 
     if (elapsetime > debugmontime) {
-      sw.Start(true);
+      start_time = std::chrono::steady_clock::now();
 
       std::string adcbcountsize;
       std::string adcbufsize;
       std::string sortbufsize;
 
+      char buf[32];
+
       for (int i = 0; i < nadc_int; ++i) {
-        adcbcountsize += Form("%5d ", fRemainingBCount[i]);
+        std::snprintf(buf, sizeof(buf), "%5d ", fRemainingBCount[i]);
+        adcbcountsize += buf;
 
         auto * adc = static_cast<AbsADC *>(fCont[i]);
-        adcbufsize += Form("%5d ", adc->Bsize());
+        std::snprintf(buf, sizeof(buf), "%5d ", adc->Bsize());
+        adcbufsize += buf;
 
         auto * modraw = fADCRawBuffers.at(static_cast<std::size_t>(i));
-        sortbufsize += Form("%5d ", static_cast<int>(modraw->size()));
+        std::snprintf(buf, sizeof(buf), "%5d ", static_cast<int>(modraw->size()));
+        sortbufsize += buf;
       }
 
       DEBUG("ADC bcount size: %s", adcbcountsize.c_str());
@@ -461,17 +467,18 @@ void CupDAQManager::TF_ShrinkToFit()
 
   INFO("shrink buffer memory to fit started");
 
-  TStopwatch sw;
-  sw.Start();
+  auto start_time = std::chrono::steady_clock::now();
 
   const int nadc_int = GetEntries();
 
   while (true) {
-    double elapsetime = sw.RealTime();
-    sw.Continue();
+    // Calculate the elapsed time in seconds
+    auto current_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = current_time - start_time;
+    double elapsetime = elapsed.count();
 
     if (elapsetime >= 10.0) {
-      sw.Start(true);
+      start_time = std::chrono::steady_clock::now();
 
       for (int i = 0; i < nadc_int; ++i) {
         auto * adc = static_cast<AbsADC *>(fCont[i]);
@@ -505,48 +512,40 @@ void CupDAQManager::TF_ShrinkToFit()
 
 void CupDAQManager::TF_SplitOutput(bool ontcb)
 {
-  TStopwatch sw;
+  unsigned long & current_run_status = ontcb ? fRunStatusTCB : fRunStatus;
+  bool & current_do_exit = ontcb ? fDoExitTCB : fDoExit;
 
-  if (ontcb) {
-    if (!ThreadWait(fRunStatusTCB, fDoExitTCB)) { return; }
-    INFO("output splitter started (TCB)");
+  if (!ThreadWait(current_run_status, current_do_exit)) { return; }
 
-    sw.Start();
-    while (true) {
-      double elapsetime = sw.RealTime();
-      sw.Continue();
-      if (elapsetime >= fOutputSplitTime) {
-        sw.Start(true);
-        SendCommandToDAQs("kSPLITOUTPUTFILE");
-        fSubRunNumber += 1;
+  INFO("output splitter started%s", ontcb ? " (TCB)" : "");
 
-        if (fVerboseLevel >= 1) { INFO("output file will be split"); }
-      }
-      if (fDoEndRunTCB || RUNSTATE::CheckError(fRunStatusTCB)) { break; }
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  auto start_time = std::chrono::steady_clock::now();
+
+  while (true) {
+    auto current_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = current_time - start_time;
+    double elapsetime = elapsed.count();
+
+    if (elapsetime >= fOutputSplitTime) {
+      start_time = std::chrono::steady_clock::now();
+
+      fDoSplitOutputFile = true;
+      fSubRunNumber += 1;
+
+      if (fVerboseLevel >= 1) { INFO("output file will be split"); }
     }
-  }
-  else {
-    if (!ThreadWait(fRunStatus, fDoExit)) { return; }
-    INFO("output splitter started");
 
-    sw.Start();
-    while (true) {
-      double elapsetime = sw.RealTime();
-      sw.Continue();
-      if (elapsetime >= fOutputSplitTime) {
-        sw.Start(true);
-        fDoSplitOutputFile = true;
-        fSubRunNumber += 1;
-
-        if (fVerboseLevel >= 1) { INFO("output file will be split"); }
-      }
+    // Check exit conditions cleanly
+    if (ontcb) {
+      if (fDoEndRunTCB || RUNSTATE::CheckError(fRunStatusTCB)) { break; }
+    }
+    else {
       bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
                       RUNSTATE::CheckError(fRunStatus) || fDoExit;
       if (runstate) { break; }
-
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   INFO("output splitter ended");

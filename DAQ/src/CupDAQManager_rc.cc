@@ -57,16 +57,12 @@ void CupDAQManager::RC_TCB()
       if (id == fDAQID) { continue; }
 
       std::string ip = daq->GetIPAddr(id);
-      int port = daq->GetPort(id); // The ZMQ Control Port
+      int port = daq->GetPort(id);
       std::string daq_name = daq->GetDAQName(id);
       std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
 
       auto socket = std::make_unique<zmq::socket_t>(fZMQContext, zmq::socket_type::req);
-
-      // Enable relaxed mode to prevent EFSM crash on timeout
       socket->set(zmq::sockopt::req_relaxed, 1);
-      socket->set(zmq::sockopt::req_correlate, 1);
-
       socket->set(zmq::sockopt::rcvtimeo, 2000);
       socket->set(zmq::sockopt::sndtimeo, 2000);
       socket->connect(endpoint);
