@@ -1,7 +1,5 @@
-#include "TMessage.h"
-
 #include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/RunConfig.hh"
+#include "DAQConfig/DAQConf.hh"
 
 void CupDAQManager::RC_NullTCB()
 {

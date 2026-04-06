@@ -10,18 +10,8 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
-    # Add necessary include directories for modules built after DAQConfig
-    target_include_directories ( ${test_name}
-        PRIVATE
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/DAQ>
-            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/DAQTrigger>
-    )
-
-    # Link required libraries
     target_link_libraries ( ${test_name}
         PRIVATE
-            ${ROOT_LIBRARIES}
-            yaml-cpp
             DAQConfig
     )
 

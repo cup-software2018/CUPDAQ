@@ -7,7 +7,6 @@ set ( TEST_SOURCES
     merger.cc
     tcbdaq.cc
     stddaq.cc
-
     # nulltcb.cc
     # nulldaq.cc
     # nullmerger.cc
@@ -18,8 +17,6 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
-    # The DAQ target links everything PUBLICLY (including Notice, DAQUtils, OnlObjs, etc.),
-    # so linking to DAQ automatically resolves transative dependencies and include paths.
     target_link_libraries ( ${test_name}
         PRIVATE
             ${ROOT_LIBRARIES}
@@ -27,8 +24,6 @@ foreach ( src ${TEST_SOURCES} )
             DAQ
     )
 
-    # Transitive dependencies for HDF5 are already handled by DAQ if it was enabled,
-    # making additional conditionals here unnecessary.
     install ( TARGETS ${test_name}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )

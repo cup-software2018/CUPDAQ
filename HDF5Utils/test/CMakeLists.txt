@@ -15,9 +15,6 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
-    # Linking HDF5Utils automatically provides its PUBLIC include directories
-    # and transative dependencies (like ROOT and HDF5).
-    # Therefore, explicit target_include_directories and repetitive linking are removed.
     target_link_libraries ( ${test_name}
         PRIVATE
             HDF5Utils

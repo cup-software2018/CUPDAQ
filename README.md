@@ -88,6 +88,23 @@ Upon successful installation, the directory will look like this:
 
 ---
 
+## Module Overview
+
+The CUPDAQ system is organized into several modular components to maintain clean separation of concerns and facilitate scalable development:
+
+* **OnlConsts**: Header-only library containing fundamental constants used across the DAQ system.
+* **DAQUtils**: Header-only utility library providing common helper functions and tools.
+* **DAQConfig**: Handles the parsing and management of YAML configuration files for DAQ parameters.
+* **Notice**: Hardware communication library handling USB interfacing with Notice Korea boards.
+* **DAQSystem**: Core system-level classes and logic for managing hardware components and states.
+* **OnlObjs / RawObjs**: Object definitions (ROOT objects and standalone) for raw data packaging and online data management.
+* **DAQTrigger**: Handles the trigger configurations, logic, and synchronizations.
+* **OnlHistogramer**: Provides real-time event monitoring and histogramming capabilities.
+* **HDF5Utils**: (Optional) Integrated tools for high-performance data writing in the HDF5 format.
+* **DAQ**: The primary module containing the central management logic (`CupDAQManager`), executable scripts, and tools.
+
+---
+
 ## Customizing the Execution Script (executedaq.sh)
 
 The `executedaq.sh` script is responsible for setting up the runtime environment and launching the DAQ binaries. Depending on your system infrastructure, you may need to modify the environment loading section.

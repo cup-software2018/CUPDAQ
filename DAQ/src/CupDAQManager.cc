@@ -7,7 +7,6 @@
 #include "DAQConfig/GADCSConf.hh"
 #include "DAQConfig/IADCTConf.hh"
 #include "DAQConfig/MADCSConf.hh"
-#include "DAQConfig/SADCTConf.hh"
 #include "DAQSystem/CupFADCS.hh"
 #include "DAQSystem/CupFADCT.hh"
 #include "DAQSystem/CupGADCS.hh"

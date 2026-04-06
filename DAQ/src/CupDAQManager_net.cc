@@ -1,6 +1,5 @@
 #include "TMessage.h"
 #include "TMonitor.h"
-#include "TServerSocket.h"
 #include "TSocket.h"
 
 #include "DAQ/CupDAQManager.hh"

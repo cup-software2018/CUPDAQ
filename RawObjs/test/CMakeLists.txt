@@ -10,8 +10,6 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
-    # Linking the RawObjs target automatically provides its PUBLIC include directories.
-    # Therefore, explicit target_include_directories is removed.
     target_link_libraries ( ${test_name}
         PRIVATE
             ${ROOT_LIBRARIES}

@@ -3,10 +3,6 @@
 #include <memory>
 
 #include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/FADCSConf.hh"
-#include "DAQConfig/FADCTConf.hh"
-#include "DAQConfig/GADCSConf.hh"
-#include "DAQConfig/MADCSConf.hh"
 
 void CupDAQManager::TF_BuildEvent()
 {

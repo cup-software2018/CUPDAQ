@@ -11,8 +11,6 @@ foreach ( src ${TEST_SOURCES} )
 
     add_executable ( ${test_name} ${src} )
 
-    # Linking the Notice target automatically provides its PUBLIC include directories.
-    # The legacy 'NewNotice' path and redundant 'DAQUtils' inclusions are removed.
     target_link_libraries ( ${test_name}
         PRIVATE
             Notice
