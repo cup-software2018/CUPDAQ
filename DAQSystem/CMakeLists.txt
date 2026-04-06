@@ -7,6 +7,7 @@ file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 
 # --- Collect include dirs for dictionary
 set ( DICT_I_FLAGS
+    -I${CMAKE_CURRENT_SOURCE_DIR} # Critical: Allows rootcling to find headers using Module/Header.hh
     -I${PROJECT_SOURCE_DIR}/OnlConsts
     -I${PROJECT_SOURCE_DIR}/DAQUtils
     -I${PROJECT_SOURCE_DIR}/Notice

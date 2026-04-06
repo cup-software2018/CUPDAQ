@@ -7,6 +7,7 @@
 /lib/
 /lib64/
 /install/
+/.clangd
 /.clang-format
 /ld.sh
 /*.C

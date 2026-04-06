@@ -4,6 +4,11 @@
 cmake_minimum_required ( VERSION 3.16 )
 project ( CUPDAQ VERSION 1.0.0 LANGUAGES CXX )
 
+# ---- Compilation Database ----
+# Generates compile_commands.json in the build directory,
+# helping IDEs and analysis tools (like clangd/Antigravity) resolve includes.
+set ( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
 # ---- C++ Standard ----
 set ( CMAKE_CXX_STANDARD 17 )
 set ( CMAKE_CXX_STANDARD_REQUIRED ON )

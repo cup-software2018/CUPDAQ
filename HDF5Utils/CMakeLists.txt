@@ -11,6 +11,7 @@ file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 # --- Collect include dirs for dictionary
 # Note: Using HDF5_INCLUDE_DIRS (plural) for consistency
 set ( DICT_I_FLAGS
+    -I${CMAKE_CURRENT_SOURCE_DIR} # Critical: Allows rootcling to find headers using Module/Header.hh
     -I${HDF5_INCLUDE_DIRS}
 )
 

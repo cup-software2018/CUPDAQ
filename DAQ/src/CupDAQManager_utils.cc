@@ -134,14 +134,14 @@ nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket
 
   if (!socket_ptr->send(request, zmq::send_flags::none)) {
     daq_name = "Unknown";
-    ERROR("[SendCommandToDAQ] SEND failed for command [%s]", cmd.c_str());
+    ERROR("SEND failed for command [%s]", cmd.c_str());
     return err_json;
   }
 
   zmq::message_t reply;
   if (!socket_ptr->recv(reply, zmq::recv_flags::none)) {
     daq_name = "Unknown";
-    ERROR("[SendCommandToDAQ] RECV failed (timeout) for command [%s]", cmd.c_str());
+    ERROR("RECV failed (timeout) for command [%s]", cmd.c_str());
     return err_json;
   }
 
@@ -173,7 +173,7 @@ nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket
 
 void CupDAQManager::SendCommandToDAQs(const std::string & cmd)
 {
-  INFO("[SendCommandToDAQs] Broadcasting command [%s] to all connected DAQs", cmd.c_str());
+  INFO("Broadcasting command [%s] to all connected DAQs", cmd.c_str());
 
   int idx = 0;
   for (auto & socket_ptr : fDAQSocket) {
@@ -183,13 +183,13 @@ void CupDAQManager::SendCommandToDAQs(const std::string & cmd)
     }
 
     // Log the target index before calling SendCommandToDAQ
-    INFO("[SendCommandToDAQs] Forwarding command [%s] to socket index [%d]", cmd.c_str(), idx);
+    INFO("Forwarding command [%s] to socket index [%d]", cmd.c_str(), idx);
 
     SendCommandToDAQ(socket_ptr, cmd);
     idx++;
   }
 
-  INFO("[SendCommandToDAQs] Finished broadcasting command [%s]", cmd.c_str());
+  INFO("Finished broadcasting command [%s]", cmd.c_str());
 }
 
 unsigned long CupDAQManager::QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,

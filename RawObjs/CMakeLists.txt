@@ -5,11 +5,16 @@ message ( STATUS "Configuring ${MODULE_NAME} ..." )
 file ( GLOB MODULE_HEADERS CONFIGURE_DEPENDS ${MODULE_NAME}/*.hh )
 file ( GLOB MODULE_SOURCES CONFIGURE_DEPENDS src/*.cc )
 
+# --- Collect include dirs for dictionary
+set ( DICT_I_FLAGS
+    -I${CMAKE_CURRENT_SOURCE_DIR} # Critical: Allows rootcling to find headers using Module/Header.hh
+)
+
 # Generate ROOT dictionary
 ROOT_GENERATE_DICTIONARY ( G__${MODULE_NAME}
     ${MODULE_HEADERS}
     LINKDEF ${MODULE_NAME}/LinkDef.h
-    OPTIONS -Wno-inconsistent-missing-override
+    OPTIONS ${DICT_I_FLAGS} -Wno-inconsistent-missing-override
 )
 
 # Build shared library
