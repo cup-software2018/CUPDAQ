@@ -170,14 +170,14 @@ void AbsTCB::PrintRegisterTCB(TCBConf * conf)
     i = (int)TESTBIT(sw, 3);
     const char * swi = Form("%d %d %d %d", f, sm, sl, i);
 
-    cout << Form(" ++ TCB register: SID(0) TRGON(%lu) CW(%lu) DLY(%lu) "
-                 "PTRIG(%lu) \n"
-                 "                  MTHRF(%lu)  PSCF(%lu)  DTF(%lu)  TSWF(%s) \n"
-                 "                  MTHRSM(%lu) PSCSM(%lu) DTSM(%lu) TSWSM(%s) "
+    cout << Form(" ++ TCB register: SID(0) TRGON(%u) CW(%u) DLY(%u) "
+                 "PTRIG(%u) \n"
+                 "                  MTHRF(%u)  PSCF(%u)  DTF(%u)  TSWF(%s) \n"
+                 "                  MTHRSM(%u) PSCSM(%u) DTSM(%u) TSWSM(%s) "
                  "\n"
-                 "                  MTHRSL(%lu) PSCSL(%lu) DTSL(%lu) TSWSL(%s) "
+                 "                  MTHRSL(%u) PSCSL(%u) DTSL(%u) TSWSL(%s) "
                  "\n"
-                 "                  MTHRI(%lu)  PSCI(%lu)  DTI(%lu)  TSWI(%s) ",
+                 "                  MTHRI(%u)  PSCI(%u)  DTI(%u)  TSWI(%s) ",
                  ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(),
                  ReadPSCALEFADC(), ReadDT(0, 0), swf, ReadMTHRSADCMU(), ReadPSCALESADCMU(),
                  ReadDT(0, 1), swsm, ReadMTHRSADCLS(), ReadPSCALESADCLS(), ReadDT(0, 2), swsl,
@@ -185,9 +185,9 @@ void AbsTCB::PrintRegisterTCB(TCBConf * conf)
          << endl;
   }
   else {
-    cout << Form(" ++ TCB register: SID(0) TRGON(%lu) CW(%lu) DLY(%lu) "
-                 "PTRIG(%lu) \n"
-                 "                  MTHR(%lu) PSC(%lu) DT(%lu)",
+    cout << Form(" ++ TCB register: SID(0) TRGON(%u) CW(%u) DLY(%u) "
+                 "PTRIG(%u) \n"
+                 "                  MTHR(%u) PSC(%u) DT(%u)",
                  ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(),
                  ReadPSCALEFADC(), ReadDT(0, 0))
          << endl;
@@ -204,7 +204,7 @@ void AbsTCB::PrintRegisterFADC(FADCTConf * conf)
   uint32_t rTLT = ReadTLT(mid);
   uint32_t rDSR = ReadDSR(mid);
 
-  cout << Form(" ++ FADC register: SID(%d) MID(%1d) NCH(%1d) RL(%lu) DSR(%lu) TLT(%lX) ", sid, mid,
+  cout << Form(" ++ FADC register: SID(%d) MID(%1d) NCH(%1d) RL(%u) DSR(%u) TLT(%X) ", sid, mid,
                nch, rRL, rDSR, rTLT)
        << endl;
 
@@ -216,61 +216,61 @@ void AbsTCB::PrintRegisterFADC(FADCTConf * conf)
   cout << endl;
   cout << "        POL : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPOL(mid, conf->CID(i)));
+    cout << Form("%8u", ReadPOL(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "     DACOFF : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadDACOFF(mid, conf->CID(i)));
+    cout << Form("%8u", ReadDACOFF(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "      AMODE : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadAMODE(mid, conf->CID(i)));
+    cout << Form("%8u", ReadAMODE(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "        DLY : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadDLY(mid, conf->CID(i)));
+    cout << Form("%8u", ReadDLY(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "      DTIME : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadDT(mid, conf->CID(i)));
+    cout << Form("%8u", ReadDT(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "         CW : ";
   for (int i = 0; i < nch; i++)
-    cout << Form("%8lu", ReadCW(mid, conf->CID(i)));
+    cout << Form("%8u", ReadCW(mid, conf->CID(i)));
   cout << endl;
   cout << "         TM : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadTM(mid, conf->CID(i)));
+    cout << Form("%8u", ReadTM(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "        THR : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadTHR(mid, conf->CID(i)));
+    cout << Form("%8u", ReadTHR(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "        PCT : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPCT(mid, conf->CID(i)));
+    cout << Form("%8u", ReadPCT(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "        PCI : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPCI(mid, conf->CID(i)));
+    cout << Form("%8u", ReadPCI(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "        PWT : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPWT(mid, conf->CID(i)));
+    cout << Form("%8u", ReadPWT(mid, conf->CID(i)));
   }
   cout << endl;
   cout << "        PSW : ";
   for (int i = 0; i < nch; i++) {
-    cout << Form("%8lu", ReadPSW(mid, conf->CID(i)));
+    cout << Form("%8u", ReadPSW(mid, conf->CID(i)));
   }
   cout << endl;
   cout << " -----------------------------------------------" << endl;
@@ -288,14 +288,14 @@ void AbsTCB::PrintRegisterSADC(SADCTConf * conf)
   uint32_t rPSW = ReadPSW(mid, 1);
   uint32_t rPEDSUB = ReadAMODE(mid, 1);
 
-  cout << Form(" ++ SADCT register: SID(%d) MID(%d) NCH(%1d) CW(%lu) GW(%lu) "
-               "PSW(%lu) SUBPED(%lu)",
+  cout << Form(" ++ SADCT register: SID(%d) MID(%d) NCH(%1d) CW(%u) GW(%u) "
+               "PSW(%u) SUBPED(%u)",
                sid, mid, nch, rCW, rGW, rPSW, rPEDSUB)
        << endl;
-  cout << Form("                    TLT1(%lX) TLT2(%lX) TLT3(%lX) TLT4(%lX)", ReadSTLT(mid, 1 * 4),
+  cout << Form("                    TLT1(%X) TLT2(%X) TLT3(%X) TLT4(%X)", ReadSTLT(mid, 1 * 4),
                ReadSTLT(mid, 2 * 4), ReadSTLT(mid, 3 * 4), ReadSTLT(mid, 4 * 4))
        << endl;
-  cout << Form("                    TLT5(%lX) TLT6(%lX) TLT7(%lX) TLT8(%lX)", ReadSTLT(mid, 5 * 4),
+  cout << Form("                    TLT5(%X) TLT6(%X) TLT7(%X) TLT8(%X)", ReadSTLT(mid, 5 * 4),
                ReadSTLT(mid, 6 * 4), ReadSTLT(mid, 7 * 4), ReadSTLT(mid, 8 * 4))
        << endl;
   cout << " -----------------------------------------------" << endl;
@@ -308,12 +308,12 @@ void AbsTCB::PrintRegisterSADC(SADCTConf * conf)
     cout << endl;
     cout << "     THR : ";
     for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%6lu", ReadTHR(mid, conf->CID(i)));
+      cout << Form("%6u", ReadTHR(mid, conf->CID(i)));
     }
     cout << endl;
     cout << "     DLY : ";
     for (int i = 8 * j; i < 8 * (j + 1); i++) {
-      cout << Form("%6lu", ReadDLY(mid, conf->CID(i)));
+      cout << Form("%6u", ReadDLY(mid, conf->CID(i)));
     }
     cout << endl;
   }
@@ -337,17 +337,17 @@ void AbsTCB::PrintRegisterIADC(IADCTConf * conf)
   if (rMODE > 0) rGW = 0;
   else rRL = 0;
 
-  cout << Form(" ++ IADCT register: SID(%d) MID(%1d) NCH(%1d) MODE(%ld) "
-               "RL(%ld) CW(%ld) GW(%ld) PSW(%ld)",
+  cout << Form(" ++ IADCT register: SID(%d) MID(%1d) NCH(%1d) MODE(%u) "
+               "RL(%u) CW(%u) GW(%u) PSW(%u)",
                sid, mid, nch, rMODE, rRL, rCW, rGW, rPSW)
        << endl;
-  cout << Form("                    TLT1(%lX) TLT2(%lX) TLT3(%lX) TLT4(%lX) "
-               "TLT5(%lX)",
+  cout << Form("                    TLT1(%X) TLT2(%X) TLT3(%X) TLT4(%X) "
+               "TLT5(%X)",
                ReadSTLT(mid, 1), ReadSTLT(mid, 2), ReadSTLT(mid, 3), ReadSTLT(mid, 4),
                ReadSTLT(mid, 4))
        << endl;
-  cout << Form("                    TLT6(%lX) TLT7(%lX) TLT8(%lX) TLT9(%lX) "
-               "TLT10(%lX)",
+  cout << Form("                    TLT6(%X) TLT7(%X) TLT8(%X) TLT9(%X) "
+               "TLT10(%X)",
                ReadSTLT(mid, 5), ReadSTLT(mid, 6), ReadSTLT(mid, 7), ReadSTLT(mid, 8),
                ReadSTLT(mid, 4))
        << endl;
@@ -365,12 +365,12 @@ void AbsTCB::PrintRegisterIADC(IADCTConf * conf)
     cout << endl;
     cout << "     THR : ";
     for (int i = 10 * j; i < 10 * (j + 1); i++) {
-      cout << Form("%6lu", ReadTHR(mid, conf->CID(i)));
+      cout << Form("%6u", ReadTHR(mid, conf->CID(i)));
     }
     cout << endl;
     cout << "     DLY : ";
     for (int i = 10 * j; i < 10 * (j + 1); i++) {
-      cout << Form("%6lu", ReadDLY(mid, conf->CID(i)));
+      cout << Form("%6u", ReadDLY(mid, conf->CID(i)));
     }
     cout << endl;
   }
@@ -387,7 +387,7 @@ void AbsTCB::MeasurePedestalFADC(FADCTConf * conf)
   for (int i = 0; i < nch; i++) {
     ULong_t cid = conf->CID(i);
     MeasurePED(mid, cid);
-    cout << Form("%4lu  ", ReadPED(mid, cid)) << flush;
+    cout << Form("%4u  ", ReadPED(mid, cid)) << flush;
   }
   cout << endl;
 }
@@ -401,7 +401,7 @@ void AbsTCB::MeasurePedestalSADC(SADCTConf * conf)
   MeasurePED(mid, 1);
   for (int i = 0; i < nch; i++) {
     int cid = conf->CID(i);
-    cout << Form("ch%02d = %4lu  ", cid, ReadPED(mid, cid)) << flush;
+    cout << Form("ch%02d = %4u  ", cid, ReadPED(mid, cid)) << flush;
     if (cid % 8 == 0) { cout << endl; }
   }
   if (nch % 8 != 0) { cout << endl; }
@@ -417,7 +417,7 @@ void AbsTCB::MeasurePedestalIADC(IADCTConf * conf)
   MeasurePED(mid, 1);
   for (int i = 0; i < nch; i++) {
     int cid = conf->CID(i);
-    cout << Form("ch%02d = %4lu  ", cid, ReadPED(mid, cid)) << flush;
+    cout << Form("ch%02d = %4u  ", cid, ReadPED(mid, cid)) << flush;
     if (cid % 10 == 0) { cout << endl; }
   }
   if (nch % 10 != 0) { cout << endl; }
