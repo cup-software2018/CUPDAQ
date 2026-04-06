@@ -105,7 +105,8 @@ void CupSoftTrigger::InitTrigger()
     WARNING("InitTrigger: no input file %s", config->GetInputCard());
   }
 
-  INFO("InitTrigger: NADC=%d, TBIT=%d, QSUM=%d, PSC=%d", fQsumArray->GetEntries(), fDoZSUTBit, fDoZSUQSum, fDoPrescale);
+  INFO("InitTrigger: NADC=%d, TBIT=%d, QSUM=%d, PSC=%d", fQsumArray->GetEntries(), fDoZSUTBit,
+       fDoZSUQSum, fDoPrescale);
 }
 
 bool CupSoftTrigger::DoTrigger(BuiltEvent * bevent)

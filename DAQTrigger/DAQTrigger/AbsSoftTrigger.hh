@@ -6,7 +6,6 @@
 #include <string>
 
 #include "DAQConfig/AbsConf.hh"
-#include "DAQUtils/ELog.hh"
 #include "OnlConsts/adcconsts.hh"
 #include "OnlObjs/BuiltEvent.hh"
 

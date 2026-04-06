@@ -11,7 +11,6 @@
 #include <mutex>
 #include <optional>
 #include <string>
-#include <thread>
 #include <unistd.h>
 
 #ifndef LOG_COMPILE_LEVEL

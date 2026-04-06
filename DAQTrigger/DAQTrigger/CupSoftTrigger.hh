@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 #include "TObjArray.h"
 #include "TObject.h"
 

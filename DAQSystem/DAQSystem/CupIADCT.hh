@@ -1,4 +1,5 @@
 #pragma once
+
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
 #include "Notice/NKIADC64.hh"

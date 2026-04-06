@@ -1,5 +1,4 @@
 #include "DAQSystem/CupMiniTCB.hh"
-#include "DAQUtils/ELog.hh"
 
 ClassImp(CupMiniTCB)
 

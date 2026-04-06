@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ctime>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -9,7 +8,6 @@
 #include "TObjArray.h"
 
 #include "DAQConfig/AbsConfList.hh"
-#include "DAQUtils/ELog.hh"
 #include "OnlConsts/adcconsts.hh"
 #include "OnlObjs/BuiltEvent.hh"
 

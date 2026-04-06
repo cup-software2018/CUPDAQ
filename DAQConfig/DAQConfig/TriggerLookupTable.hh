@@ -1,5 +1,5 @@
-
 #pragma once
+
 class TriggerLookupTable {
 public:
   static TriggerLookupTable & Instance()

@@ -4,6 +4,7 @@
 #include "TBranchRef.h"
 #include "TTree.h"
 
+#include "DAQUtils/ELog.hh"
 #include "OnlHistogramer/AbsHistogramer.hh"
 
 AbsHistogramer::AbsHistogramer() { fHistProxy = new HistProxy(); }

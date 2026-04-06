@@ -1,7 +1,5 @@
 #pragma once
 
-#include "TObject.h"
-
 #include "DAQConfig/AbsConf.hh"
 #include "DAQSystem/AbsADC.hh"
 #include "DAQSystem/CupTCB.hh"
