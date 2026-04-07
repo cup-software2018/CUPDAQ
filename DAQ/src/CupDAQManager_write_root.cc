@@ -4,6 +4,7 @@
 #include "TBranchRef.h"
 
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 #include "OnlObjs/ADCHeader.hh"
 #include "OnlObjs/FADCRawChannel.hh"
 #include "OnlObjs/FADCRawEvent.hh"
@@ -166,7 +167,7 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
       wlock.lock();
       fROOTTree->Fill();
       wlock.unlock();
-      
+
       StopBenchmark("WriteEvent");
     }
 

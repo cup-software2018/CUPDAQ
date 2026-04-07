@@ -5,6 +5,7 @@
 #include <string>
 
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 
 // =====================================================================
 // Core Write Event Logic

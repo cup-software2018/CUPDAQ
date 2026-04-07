@@ -1,13 +1,10 @@
 // CupDAQManager.hh
 #pragma once
 
-#include <chrono>
 #include <ctime>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
-#include <tuple>
 #include <vector>
 #include <zmq.hpp>
 
@@ -22,7 +19,6 @@
 #include "DAQSystem/AbsADC.hh"
 #include "DAQTrigger/AbsSoftTrigger.hh"
 #include "DAQUtils/ConcurrentDeque.hh"
-#include "DAQUtils/ELog.hh"
 #include "DAQUtils/Json.hh"
 #ifdef ENABLE_HDF5
 #include "HDF5Utils/AbsH5Event.hh"
@@ -40,16 +36,16 @@ public:
   CupDAQManager();
   ~CupDAQManager() override;
 
-  void SetRunNumber(int run);
-  void SetDAQID(int id);
-  void SetDAQType(DAQ::TYPE type);
-  void SetADCType(ADC::TYPE type);
-  void SetTriggerMode(TRIGGER::MODE mode);
-  void SetSoftTrigger(AbsSoftTrigger * trigger);
-  void SetConfigFilename(const char * name);
-  void SetMinimumBCount(int val);
+  virtual void SetRunNumber(int run);
+  virtual void SetDAQID(int id);
+  virtual void SetDAQType(DAQ::TYPE type);
+  virtual void SetADCType(ADC::TYPE type);
+  virtual void SetTriggerMode(TRIGGER::MODE mode);
+  virtual void SetSoftTrigger(AbsSoftTrigger * trigger);
+  virtual void SetConfigFilename(const char * name);
+  virtual void SetMinimumBCount(int val);
 
-  void UseEventMerger();
+  virtual void UseEventMerger();
 
   virtual void AddADC(AbsADC * adc);
   virtual bool AddADC(AbsConf * conf);
@@ -72,105 +68,105 @@ public:
   virtual int ReadADCData(int n, int bcount, unsigned char * databuffer = nullptr);
   virtual int ReadData(int bcount, unsigned char ** databuffer);
 
-  void SetOutputFileFormat(OUTPUT::FORMAT format);
-  void SetOutputFilename(const char * fname);
-  void SetCompressionLevel(int level);
-  void SetOutputSplitTime(int time);
+  virtual void SetOutputFileFormat(OUTPUT::FORMAT format);
+  virtual void SetOutputFilename(const char * fname);
+  virtual void SetCompressionLevel(int level);
+  virtual void SetOutputSplitTime(int time);
 
-  void SetVerboseLevel(int level);
-  void SetTriggerMonTime(int time);
-  void SetNEvent(int n);
-  void SetDAQTime(int t);
-  void EnableHistograming();
+  virtual void SetVerboseLevel(int level);
+  virtual void SetTriggerMonTime(int time);
+  virtual void SetNEvent(int n);
+  virtual void SetDAQTime(int t);
+  virtual void EnableHistograming();
 
-  void Run();
+  virtual void Run();
 
-  void TF_TriggerMon();
-  void TF_DebugMon();
-  void TF_RunManager();
-  void TF_MsgServer();
-  void TF_DataServer();
-  void TF_ReadData();
-  void TF_SortEvent();
-  void TF_BuildEvent();
-  void TF_WriteEvent();
-  void TF_SplitOutput(bool ontcb);
-  void TF_Histogramer();
-  void TF_ShrinkToFit();
+  virtual void TF_TriggerMon();
+  virtual void TF_DebugMon();
+  virtual void TF_RunManager();
+  virtual void TF_MsgServer();
+  virtual void TF_DataServer();
+  virtual void TF_ReadData();
+  virtual void TF_SortEvent();
+  virtual void TF_BuildEvent();
+  virtual void TF_WriteEvent();
+  virtual void TF_SplitOutput(bool ontcb);
+  virtual void TF_Histogramer();
+  virtual void TF_ShrinkToFit();
 
-  void TF_SendEvent();
-  void TF_MergeEvent();
+  virtual void TF_SendEvent();
+  virtual void TF_MergeEvent();
 
 protected:
-  bool IsStandaloneDAQ() const;
+  virtual bool IsStandaloneDAQ() const;
 
-  int GetNADC() const;
-  int GetNDP() const;
-  int GetADCEventDataSize() const;
-  int GetADCChannelDataSize() const;
+  virtual int GetNADC() const;
+  virtual int GetNDP() const;
+  virtual int GetADCEventDataSize() const;
+  virtual int GetADCChannelDataSize() const;
 
-  void RC_TCB();
-  void RC_STDDAQ();
-  void RC_TCBDAQ();
-  void RC_TCBCTRLDAQ();
-  void RC_MERGER();
-  void RC_NullTCB();
-  void RC_NullDAQ();
-  void RC_NullMERGER();
+  virtual void RC_TCB();
+  virtual void RC_STDDAQ();
+  virtual void RC_TCBDAQ();
+  virtual void RC_TCBCTRLDAQ();
+  virtual void RC_MERGER();
+  virtual void RC_NullTCB();
+  virtual void RC_NullDAQ();
+  virtual void RC_NullMERGER();
 
-  void ReadData_GLT();
-  void ReadData_MOD();
-  void SortEvent_MOD();
-  void SortEvent_CHA();
-  void BuildEvent_GLT();
-  void BuildEvent_MOD();
-  void BuildEvent_SLF();
-  void WriteSADC_MOD_ROOT();
-  void WriteFADC_MOD_ROOT();
-  void WriteSADC_MOD_HDF5();
-  void WriteFADC_MOD_HDF5();
-  void WriteSADC_MOD_GZIP();
-  void WriteFADC_MOD_GZIP();
+  virtual void ReadData_GLT();
+  virtual void ReadData_MOD();
+  virtual void SortEvent_MOD();
+  virtual void SortEvent_CHA();
+  virtual void BuildEvent_GLT();
+  virtual void BuildEvent_MOD();
+  virtual void BuildEvent_SLF();
+  virtual void WriteSADC_MOD_ROOT();
+  virtual void WriteFADC_MOD_ROOT();
+  virtual void WriteSADC_MOD_HDF5();
+  virtual void WriteFADC_MOD_HDF5();
+  virtual void WriteSADC_MOD_GZIP();
+  virtual void WriteFADC_MOD_GZIP();
 
-  bool OpenNewOutputFile();
-  long OpenNewROOTFile(const char * fname);
-  long OpenNewHDF5File(const char * fname);
-  long OpenNewGZIPFile(const char * fname);
-  long SwitchRootFile(TFile *& oldfile, TFile * newfile);
-  void CloseHDF5Output();
+  virtual bool OpenNewOutputFile();
+  virtual long OpenNewROOTFile(const char * fname);
+  virtual long OpenNewHDF5File(const char * fname);
+  virtual long OpenNewGZIPFile(const char * fname);
+  virtual long SwitchRootFile(TFile *& oldfile, TFile * newfile);
+  virtual void CloseHDF5Output();
 
-  void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt, int * status);
+  virtual void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt, int * status);
   virtual void PrintDAQSummary();
 
-  bool ThreadWait(unsigned long & state, bool & exit);
-  void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
+  virtual bool ThreadWait(unsigned long & state, bool & exit);
+  virtual void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
                    double ki = 0.01);
 
-  nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+  virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
                                   const std::string & cmd, std::string & daq_name);
-  nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+  virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
                                   const std::string & cmd);
-  void SendCommandToDAQs(const std::string & cmd);
+  virtual void SendCommandToDAQs(const std::string & cmd);
 
-  unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
+  virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
                                std::string & daq_name);
-  unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr);
+  virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr);
 
-  bool WaitDAQStatus(RUNSTATE::STATE status);
-  bool IsDAQRunning();
-  bool IsDAQFail();
+  virtual bool WaitDAQStatus(RUNSTATE::STATE status);
+  virtual bool IsDAQRunning();
+  virtual bool IsDAQFail();
 
-  bool WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit = true);
-  int WaitCommand(bool & isgo);
-  int WaitCommand(bool & isgo, bool & exit);
-  int WaitCommand(bool & isgo, unsigned long & state);
-  bool IsForcedEndRunFile(bool useRC = false);
+  virtual bool WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit = true);
+  virtual int WaitCommand(bool & isgo);
+  virtual int WaitCommand(bool & isgo, bool & exit);
+  virtual int WaitCommand(bool & isgo, unsigned long & state);
+  virtual bool IsForcedEndRunFile(bool useRC = false);
 
-  const char * GetADCName() const;
-  const char * GetADCName(ADC::TYPE type) const;
+  virtual const char * GetADCName() const;
+  virtual const char * GetADCName(ADC::TYPE type) const;
 
-  void StartBenchmark(const char * name);
-  void StopBenchmark(const char * name);
+  virtual void StartBenchmark(const char * name);
+  virtual void StopBenchmark(const char * name);
 
 protected:
   int fRunNumber;

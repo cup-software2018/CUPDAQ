@@ -7,6 +7,7 @@
 #include <string>
 
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 #include "OnlHistogramer/AbsHistogramer.hh"
 #include "OnlHistogramer/FADCHistogramer.hh"
 #include "OnlHistogramer/SADCHistogramer.hh"

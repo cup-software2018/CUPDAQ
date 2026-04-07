@@ -7,6 +7,7 @@
 #include "DAQConfig/IADCTConf.hh"
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
+#include "DAQUtils/ELog.hh"
 
 void CupDAQManager::TF_SortEvent()
 {

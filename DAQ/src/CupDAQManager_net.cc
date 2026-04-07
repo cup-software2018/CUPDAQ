@@ -3,6 +3,7 @@
 #include "TSocket.h"
 
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
 
@@ -18,18 +19,18 @@ void CupDAQManager::TF_SendEvent()
   INFO("TF_SendEvent: Data Client started, connecting to Data Server...");
 
   auto socket = std::make_unique<TSocket>(fMergeServerIPAddr.c_str(), fMergeServerPort);
-  
+
   if (socket->GetErrorCode() < 0) {
     RUNSTATE::SetError(fRunStatus);
-    ERROR("TF_SendEvent: connection to Data Server failed at %s:%d", 
-          fMergeServerIPAddr.c_str(), fMergeServerPort);
+    ERROR("TF_SendEvent: connection to Data Server failed at %s:%d", fMergeServerIPAddr.c_str(),
+          fMergeServerPort);
     return;
   }
-  
+
   INFO("TF_SendEvent: connection to Data Server succeeded");
 
   fSendStatus = RUNNING;
-  
+
   while (true) {
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
 
@@ -43,7 +44,7 @@ void CupDAQManager::TF_SendEvent()
       BuiltEvent * bevent = bevent_opt->get();
 
       int state = socket->SendObject(bevent);
-      
+
       if (state < 0) {
         RUNSTATE::SetError(fRunStatus);
         ERROR("TF_SendEvent: sending BuiltEvent to Data Server failed");
@@ -132,7 +133,8 @@ void CupDAQManager::TF_MergeEvent()
         std::unique_ptr<BuiltEvent> & bevent_ptr = bevent_opt.value();
         BuiltEvent * bevent = bevent_ptr.get();
 
-        evtnum[nd] = bevent->GetEventNumber();std::lock_guard<std::mutex> lock(fRecvBufferMutex);
+        evtnum[nd] = bevent->GetEventNumber();
+        std::lock_guard<std::mutex> lock(fRecvBufferMutex);
         evttime[nd] = bevent->GetTriggerTime();
 
         int nadc = bevent->GetEntries();
@@ -178,7 +180,9 @@ void CupDAQManager::TF_MergeEvent()
 
       bool istriggered = true;
 
-      if (fSoftTrigger->IsEnabled() && !fSoftTrigger->DoTrigger(builtevent.get())) { istriggered = false; }
+      if (fSoftTrigger->IsEnabled() && !fSoftTrigger->DoTrigger(builtevent.get())) {
+        istriggered = false;
+      }
 
       if (istriggered) {
         mlock.lock();

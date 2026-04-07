@@ -1,4 +1,7 @@
+#include <thread>
+
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 
 void CupDAQManager::TF_ReadData()
 {

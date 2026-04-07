@@ -1,5 +1,9 @@
+#include <chrono>
+#include <thread>
+
 #include "DAQ/CupDAQManager.hh"
 #include "DAQConfig/DAQConf.hh"
+#include "DAQUtils/ELog.hh"
 
 void CupDAQManager::RC_NullTCB()
 {

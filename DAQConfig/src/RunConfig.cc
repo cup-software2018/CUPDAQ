@@ -50,6 +50,8 @@ bool RunConfig::ReadConfig(const char * name)
     ConfigGADCS(merged_node);
     ConfigMADCS(merged_node);
 
+    fConfigs->Sort();
+
     INFO("reading config %s is done", name);
     return true;
   }

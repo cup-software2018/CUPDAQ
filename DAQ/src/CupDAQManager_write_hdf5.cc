@@ -8,6 +8,7 @@
 #include <string>
 
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 #include "OnlObjs/ADCHeader.hh"
 #include "OnlObjs/FADCRawChannel.hh"
 #include "OnlObjs/FADCRawEvent.hh"

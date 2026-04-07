@@ -1,10 +1,12 @@
 #include <filesystem>
+#include <thread>
 
 #include "TMessage.h"
 #include "TServerSocket.h"
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQConfig/RunConfig.hh"
+#include "DAQUtils/ELog.hh"
 
 void CupDAQManager::Run()
 {

@@ -13,6 +13,7 @@
 #include "DAQSystem/CupIADCT.hh"
 #include "DAQSystem/CupMADCS.hh"
 #include "DAQSystem/CupSADCT.hh"
+#include "DAQUtils/ELog.hh"
 
 ClassImp(CupDAQManager)
 

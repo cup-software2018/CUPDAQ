@@ -5,6 +5,7 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <thread>
 #include <vector>
 #include <zmq.hpp>
 
@@ -13,6 +14,7 @@
 #include "TServerSocket.h"
 
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 
 void CupDAQManager::TF_RunManager()
 {

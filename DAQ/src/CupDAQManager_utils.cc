@@ -3,8 +3,10 @@
 #include <ctime>
 #include <filesystem>
 #include <iostream>
+#include <thread>
 
 #include "DAQ/CupDAQManager.hh"
+#include "DAQUtils/ELog.hh"
 
 void CupDAQManager::PrintDAQSummary()
 {
