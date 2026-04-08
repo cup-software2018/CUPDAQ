@@ -17,7 +17,6 @@ void CupDAQManager::TF_Histogramer()
   if (!ThreadWait(fRunStatus, fDoExit)) { return; }
   INFO("histogramer started");
 
-  // Create histogramer based on ADC mode
   std::unique_ptr<AbsHistogramer> histogramer;
   switch (fADCMode) {
     case ADC::FMODE: histogramer = std::make_unique<FADCHistogramer>(); break;
@@ -30,7 +29,6 @@ void CupDAQManager::TF_Histogramer()
   histogramer->SetConfigList(fConfigList);
   histogramer->SetStartDatime(fStartDatime);
 
-  // Set filename and directory for the histogram ROOT file
   if (fHistFilename.empty()) {
     std::string filename;
     const char * rawdata_dir_env = std::getenv("RAWDATA_DIR");
@@ -100,14 +98,13 @@ void CupDAQManager::TF_Histogramer()
 
   fBenchmark->Start("Histogramer");
   while (true) {
-    // Check for emergent exit or normal end
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
     if (fBuildStatus == ENDED && fBuiltEventBuffer2.empty()) { break; }
 
     int size = static_cast<int>(fBuiltEventBuffer2.size());
     int n_to_pop = 1; // Default to consuming one event per loop
 
-    // --- 1. Watermark Status Update (Hysteresis Logic) ---
+    // Watermark Status Update (Hysteresis Logic) ---
     if (size > buffer_emergency_size) {
       is_emergency_mode = true; // High watermark exceeded: Emergency mode ON
     }
@@ -128,7 +125,7 @@ void CupDAQManager::TF_Histogramer()
       prev_emergency_mode = is_emergency_mode;
     }
 
-    // --- 2. Apply Parameters Based on Current State ---
+    // Apply Parameters Based on Current State
     if (is_emergency_mode) {
       // During emergency, completely disable monitoring and aggressively flush the buffer
       mfrac = 0.0;
@@ -156,7 +153,7 @@ void CupDAQManager::TF_Histogramer()
       }
     }
 
-    // --- 3. Consume Data from the Buffer ---
+    // Consume Data from the Buffer
     for (int i = 0; i < n_to_pop; ++i) {
       if (fBuiltEventBuffer2.empty()) break;
 
@@ -173,7 +170,6 @@ void CupDAQManager::TF_Histogramer()
       }
     }
 
-    // --- 4. Update and Periodic Logging ---
     // Update histogramer every 1 second
     auto current_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = current_time - start_time;
@@ -181,12 +177,10 @@ void CupDAQManager::TF_Histogramer()
       start_time = std::chrono::steady_clock::now();
       histogramer->Update();
 
-      // [DEBUG LOG 2] Print current status every 1 second without blocking the thread
-      DEBUG("HistState | Buffer: %d | mfrac: %.4f | Pop/loop: %d | EmgMode: %s | Monitored: %d",
-            size, mfrac, n_to_pop, is_emergency_mode ? "ON" : "OFF", ntotalmonitoredevent);
+      // DEBUG("HistState | Buffer: %d | mfrac: %.4f | Pop/loop: %d | EmgMode: %s | Monitored: %d",
+      //       size, mfrac, n_to_pop, is_emergency_mode ? "ON" : "OFF", ntotalmonitoredevent);
     }
 
-    // Maximize processing speed by skipping sleep when the buffer is accumulating
     if (size < buffer_safe_size) { ThreadSleep(fHistSleep, perror, integral, size); }
   }
   fBenchmark->Stop("Histogramer");
