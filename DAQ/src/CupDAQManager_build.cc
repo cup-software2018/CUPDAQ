@@ -172,9 +172,7 @@ void CupDAQManager::BuildEvent_GLT()
         fBuiltEventBuffer1.push_back(builtevent);
 
         if (fDoHistograming) {
-          if (fBuiltEventBuffer2.size() < 1000) {
             fBuiltEventBuffer2.push_back(builtevent);
-          }
         }
       }
 

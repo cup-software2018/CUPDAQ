@@ -594,8 +594,6 @@ void CupDAQManager::RC_TCBDAQ()
     return;
   }
 
-  std::thread th1, th2, th3, th4, th5, th6, th7, th8, th9;
-
   auto execute_run = [&]() {
     if (!fTCB->Config()) { return; }
     if (!AddADC(fConfigList)) { return; }
@@ -603,19 +601,24 @@ void CupDAQManager::RC_TCBDAQ()
     if (!OpenDAQ()) { return; }
 
     // thread
-    th1 = std::thread(&CupDAQManager::TF_RunManager, this);
-    th2 = std::thread(&CupDAQManager::TF_ReadData, this);
-    th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
-    th4 = std::thread(&CupDAQManager::TF_BuildEvent, this);
-    th5 = std::thread(&CupDAQManager::TF_WriteEvent, this);
-    th6 = std::thread(&CupDAQManager::TF_TriggerMon, this);
-    th7 = std::thread(&CupDAQManager::TF_SplitOutput, this, false);
-    th8 = std::thread(&CupDAQManager::TF_ShrinkToFit, this);
+    std::thread th1 = std::thread(&CupDAQManager::TF_RunManager, this);
+    std::thread th2 = std::thread(&CupDAQManager::TF_ReadData, this);
+    std::thread th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
+    std::thread th4 = std::thread(&CupDAQManager::TF_BuildEvent, this);
+    std::thread th5 = std::thread(&CupDAQManager::TF_WriteEvent, this);
+    std::thread th6 = std::thread(&CupDAQManager::TF_TriggerMon, this);
+    std::thread th7 = std::thread(&CupDAQManager::TF_SplitOutput, this, false);
+    std::thread th8 = std::thread(&CupDAQManager::TF_ShrinkToFit, this);
+    std::thread th9;
     if (fVerboseLevel > 0) { th9 = std::thread(&CupDAQManager::TF_DebugMon, this); }
+    std::thread th10;
+    if (fDoHistograming) { th10 = std::thread(&CupDAQManager::TF_Histogramer, this); }
+
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
+    if (th10.joinable()) th10.join();
     if (th9.joinable()) th9.join();
     if (th8.joinable()) th8.join();
     if (th7.joinable()) th7.join();
