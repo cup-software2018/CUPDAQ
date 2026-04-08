@@ -1,9 +1,13 @@
+#include "TROOT.h"
+
 #include "DAQ/CupDAQManager.hh"
 #include "DAQ/daqopt.hh"
 #include "DAQTrigger/CupSoftTrigger.hh"
 
 int main(int argc, char ** argv)
 {
+  ROOT::EnableThreadSafety();
+
   if (argc < 2) {
     printusage(argv[0]);
     return 0;
@@ -35,7 +39,7 @@ int main(int argc, char ** argv)
   DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();
-  DAQ->ClearBuffer();
+  DAQ->ClearBuffers();
 
   delete swtrigger;
   delete DAQ;

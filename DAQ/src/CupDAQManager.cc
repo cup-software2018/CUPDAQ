@@ -126,7 +126,7 @@ CupDAQManager::~CupDAQManager()
   }
   */
 
-  fRecvEventBuffer.clear();
+  // fRecvEventBuffer.clear();
 
   if (fIsOwnADC) { Clear(); }
 
@@ -139,7 +139,7 @@ CupDAQManager::~CupDAQManager()
   fBenchmark = nullptr;
 }
 
-void CupDAQManager::ClearBuffer()
+void CupDAQManager::ClearBuffers()
 {
   while (!fBuiltEventBuffer1.empty()) {
     fBuiltEventBuffer1.pop_front();
@@ -147,6 +147,8 @@ void CupDAQManager::ClearBuffer()
   while (!fBuiltEventBuffer2.empty()) {
     fBuiltEventBuffer2.pop_front();
   }
+
+  fRecvEventBuffer.clear();
 }
 
 void CupDAQManager::AddADC(AbsADC * adc)

@@ -42,12 +42,14 @@ BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
 
 BuiltEvent::~BuiltEvent()
 {
-  // Use RemoveAt() + plain delete to bypass ROOT's GarbageCollect.
-  // GarbageCollect accesses gROOT global state which may already be
-  // partially destroyed at program exit, causing a segfault.
-  for (int i = GetLast(); i >= 0; --i) {
-    delete RemoveAt(i);
+  this->SetOwner(kFALSE);
+
+  for (int i = 0; i <= GetLast(); ++i) {
+    TObject * obj = this->At(i);
+    if (obj) { delete obj; }
   }
+
+  this->Clear();
 }
 
 unsigned int BuiltEvent::GetTriggerType() const
