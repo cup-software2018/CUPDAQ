@@ -14,7 +14,7 @@ BuiltEvent::BuiltEvent()
 }
 
 BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
-  : TObjArray(builtevent),
+  : TObjArray(),
     fDAQID(builtevent.GetDAQID()),
     fEventNumber(builtevent.GetEventNumber())
 {
