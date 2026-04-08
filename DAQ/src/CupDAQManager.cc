@@ -117,12 +117,14 @@ CupDAQManager::~CupDAQManager()
   }
   fADCRawBuffers.clear();
 
+  /*
   while (!fBuiltEventBuffer1.empty()) {
     fBuiltEventBuffer1.pop_front();
   }
   while (!fBuiltEventBuffer2.empty()) {
     fBuiltEventBuffer2.pop_front();
   }
+  */
 
   fRecvEventBuffer.clear();
 
@@ -137,6 +139,16 @@ CupDAQManager::~CupDAQManager()
   fBenchmark = nullptr;
 }
 
+void CupDAQManager::ClearBuffer()
+{
+  while (!fBuiltEventBuffer1.empty()) {
+    fBuiltEventBuffer1.pop_front();
+  }
+  while (!fBuiltEventBuffer2.empty()) {
+    fBuiltEventBuffer2.pop_front();
+  }
+}
+
 void CupDAQManager::AddADC(AbsADC * adc)
 {
   Add(adc);
@@ -148,9 +160,9 @@ bool CupDAQManager::AddADC(AbsConf * conf)
 {
   AbsADC * adc = nullptr;
 
-  if (!conf->IsEnabled()) { 
-    WARNING("%s[sid=%2d] disabled in config", GetADCName(fADCType), conf->SID());    
-    return true; 
+  if (!conf->IsEnabled()) {
+    WARNING("%s[sid=%2d] disabled in config", GetADCName(fADCType), conf->SID());
+    return true;
   }
   if (!conf->IsLinked()) {
     ERROR("%s[sid=%2d] enabled but not linked", GetADCName(fADCType), conf->SID());

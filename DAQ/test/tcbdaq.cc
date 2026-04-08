@@ -14,8 +14,7 @@ int main(int argc, char ** argv)
   optparse(option, argc, argv);
 
   // for TCB controlled ADC
-  ADC::TYPE adctype =
-      static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 10);
+  ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 10);
 
   auto * DAQ = new CupDAQManager();
   DAQ->SetDAQType(DAQ::TCBDAQ);
@@ -36,6 +35,7 @@ int main(int argc, char ** argv)
   DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();
+  DAQ->ClearBuffer();
 
   delete swtrigger;
   delete DAQ;

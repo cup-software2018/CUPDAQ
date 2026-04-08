@@ -97,6 +97,8 @@ public:
   virtual void TF_SendEvent();
   virtual void TF_MergeEvent();
 
+  virtual void ClearBuffer();
+
 protected:
   virtual bool IsStandaloneDAQ() const;
 
