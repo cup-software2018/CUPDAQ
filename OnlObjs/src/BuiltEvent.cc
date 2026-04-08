@@ -11,7 +11,6 @@ BuiltEvent::BuiltEvent()
     fDAQID(0),
     fEventNumber(0)
 {
-  SetOwner(kTRUE);
 }
 
 BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
@@ -19,7 +18,6 @@ BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
     fDAQID(builtevent.GetDAQID()),
     fEventNumber(builtevent.GetEventNumber())
 {
-  SetOwner(kTRUE);
   const int nent = builtevent.GetLast() + 1;
   for (int i = 0; i < nent; ++i) {
     auto * event = static_cast<AbsADCRaw *>(builtevent.At(i));
@@ -38,13 +36,19 @@ BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
       default: break;
     }
 
-    if (newadc) {
-      AddAt(newadc, i);
-    }
+    if (newadc) { AddAt(newadc, i); }
   }
 }
 
-BuiltEvent::~BuiltEvent() {}
+BuiltEvent::~BuiltEvent()
+{
+  // Use RemoveAt() + plain delete to bypass ROOT's GarbageCollect.
+  // GarbageCollect accesses gROOT global state which may already be
+  // partially destroyed at program exit, causing a segfault.
+  for (int i = GetLast(); i >= 0; --i) {
+    delete RemoveAt(i);
+  }
+}
 
 unsigned int BuiltEvent::GetTriggerType() const
 {
