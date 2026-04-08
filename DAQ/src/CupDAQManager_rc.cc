@@ -447,7 +447,7 @@ void CupDAQManager::RC_MERGER()
     const std::string & daq_name = daq->GetDAQName(id);
 
     if (daq_name.find(adcname) != std::string::npos) {
-      auto evtbuf = std::make_unique<ConcurrentDeque<std::unique_ptr<BuiltEvent>>>();
+      auto evtbuf = std::make_unique<ConcurrentDeque<std::shared_ptr<BuiltEvent>>>();
       fRecvEventBuffer.emplace_back(id, std::move(evtbuf));
 
       INFO("event buffer for %s prepared", daq_name.c_str());

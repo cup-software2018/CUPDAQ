@@ -446,7 +446,7 @@ void CupDAQManager::TF_DataServer()
         std::lock_guard<std::mutex> lock(fRecvBufferMutex);
         for (auto & buf : fRecvEventBuffer) {
           if (buf.first == daqid) {
-            buf.second->push_back(std::unique_ptr<BuiltEvent>(event));
+            buf.second->push_back(std::shared_ptr<BuiltEvent>(event));
             break;
           }
         }

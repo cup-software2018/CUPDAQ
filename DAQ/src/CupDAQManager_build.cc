@@ -1,6 +1,6 @@
-#include <algorithm>
 #include <cstring>
 #include <memory>
+#include <random>
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
@@ -47,8 +47,13 @@ void CupDAQManager::BuildEvent_GLT()
   std::vector<unsigned int> trgnum(nadc);
   std::vector<unsigned long> trgtime(nadc);
 
-  double perror = 0.0;
-  double integral = 0.0;
+  double perror = 0;
+  double integral = 0;
+
+  double mfrac = 0.3; // Default monitoring fraction. Could be configurable later.
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(0.0, 1.0);
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
@@ -96,11 +101,14 @@ void CupDAQManager::BuildEvent_GLT()
       CheckEventSanity(header.data(), trgnum.data(), trgtime.data(), sanity.data());
 
       if (fADCType == ADC::SADCS || fADCType == ADC::SADCT) {
-        int temp = 0;
+        bool isnull = false;
         for (std::size_t i = 0; i < nadc; i++) {
-          temp += sanity[i];
+          if (sanity[i] == -1) { 
+            isnull = true; 
+            break; 
+          }
         }
-        if (temp < 0) {
+        if (isnull) {
           INFO("SADC null event, will be skipped");
           for (std::size_t i = 0; i < nadc; i++) {
             auto * adceventbuffer = buffers[i];
@@ -113,7 +121,7 @@ void CupDAQManager::BuildEvent_GLT()
         }
       }
 
-      auto builtevent = std::make_unique<BuiltEvent>();
+      auto builtevent = std::make_shared<BuiltEvent>();
       builtevent->SetDAQID(fDAQID);
 
       int nerror = 0;
@@ -126,16 +134,14 @@ void CupDAQManager::BuildEvent_GLT()
         if (s == 1) {
           ERROR("ADC header is corrupted [mid=%d]", adc->GetSID());
           nerror += 1;
-          continue;
         }
         else if (s == 2) {
-          WARNING("event missed in ADC [mid=%d]", adc->GetSID());
-          continue;
+          ERROR("trigger number mismatch in ADC [mid=%d]", adc->GetSID());
+          nerror += 1;
         }
         else if (s == 3) {
-          ERROR("local trigger time error in ADC [mid=%d]", adc->GetSID());
+          ERROR("local trigger time mismatch in ADC [mid=%d]", adc->GetSID());
           nerror += 1;
-          continue;
         }
 
         auto adcrawOpt = adceventbuffer->pop_front();
@@ -169,12 +175,15 @@ void CupDAQManager::BuildEvent_GLT()
 
         builtevent->SetEventNumber(fNBuiltEvent);
 
-        std::unique_ptr<BuiltEvent> hist_clone;
-        if (fDoHistograming) { hist_clone = std::make_unique<BuiltEvent>(*builtevent); }
+        fBuiltEventBuffer1.push_back(builtevent);
 
-        fBuiltEventBuffer1.push_back(std::move(builtevent));
-
-        if (fDoHistograming) { fBuiltEventBuffer2.push_back(std::move(hist_clone)); }
+        if (fDoHistograming) {
+          if (dis(gen) < mfrac) {
+            if (fBuiltEventBuffer2.size() < 1000) {
+              fBuiltEventBuffer2.push_back(builtevent);
+            }
+          }
+        }
       }
 
       totalsize -= 1;
@@ -196,31 +205,23 @@ void CupDAQManager::CheckEventSanity(ADCHeader ** header, unsigned int * tn, uns
 
   if (nadc == 1) {
     if (header[0]->GetError()) { error[0] = 1; }
+    else if (header[0]->GetMID() == 0) { error[0] = -1; }
     return;
   }
 
-  bool iserror = false;
   for (std::size_t i = 0; i < nadc; i++) {
-    if (header[i]->GetMID() == 0) { error[i] = -1; }
-    if (header[i]->GetError()) { error[0] = 1; }
     tn[i] = header[i]->GetLocalTriggerNumber();
     tt[i] = header[i]->GetLocalTriggerTime();
 
-    if (i > 0) {
-      if (tn[i] != tn[0] || tt[i] != tt[0]) { iserror = true; }
-    }
-  }
-
-  if (iserror) {
-    unsigned int nmin = *std::min_element(tn, tn + nadc);
-    unsigned long tmin = *std::min_element(tt, tt + nadc);
-    for (std::size_t i = 0; i < nadc; i++) {
-      if (header[i]->GetLocalTriggerNumber() > nmin) {
-        DEBUG("trgnum = %u [mid=%d, %u]", nmin, header[i]->GetMID(), header[i]->GetLocalTriggerNumber());
+    if (header[i]->GetMID() == 0) { error[i] = -1; }
+    else if (header[i]->GetError()) { error[i] = 1; }
+    else if (i > 0) {
+      if (tn[i] != tn[0]) {
+        DEBUG("trgnum mismatch: ref=%u vs [mid=%d]=%u", tn[0], header[i]->GetMID(), tn[i]);
         error[i] = 2;
       }
-      if (header[i]->GetLocalTriggerTime() > tmin) {
-        DEBUG("trgtime = %lu [mid=%d, %lu]", tmin, header[i]->GetMID(), header[i]->GetLocalTriggerTime());
+      else if (tt[i] != tt[0]) {
+        DEBUG("trgtime mismatch: ref=%lu vs [mid=%d]=%lu", tt[0], header[i]->GetMID(), tt[i]);
         error[i] = 3;
       }
     }

@@ -7,9 +7,6 @@
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
 
-// =====================================================================
-// Core Write Event Logic
-// =====================================================================
 void CupDAQManager::TF_WriteEvent()
 {
   fWriteStatus = READY;
@@ -62,9 +59,6 @@ void CupDAQManager::TF_WriteEvent()
   INFO("writing output data ended");
 }
 
-// =====================================================================
-// Output File Creation (Zero ROOT dependency for strings & paths)
-// =====================================================================
 bool CupDAQManager::OpenNewOutputFile()
 {
   int nfile = fOutputFileList.size();
@@ -167,24 +161,29 @@ bool CupDAQManager::OpenNewOutputFile()
   return true;
 }
 
-// =====================================================================
-// HDF5 File Closing Helpers (Separated for Cleanliness)
-// =====================================================================
 #ifdef ENABLE_HDF5
 
 void CupDAQManager::CloseHDF5Output()
 {
-  if (fHDF5File && fHDF5File->IsOpen()) {
-    fTotalWrittenDataSize += fHDF5File->GetFileSize();
-    const char * fname = fHDF5File->GetFilename();
-    fHDF5File->Close();
-    INFO("output data %s closed", fname);
+  if (fHDF5File) {
+    if (fHDF5File->IsOpen()) {
+      fTotalWrittenDataSize += fHDF5File->GetFileSize();
+      const char * fname = fHDF5File->GetFilename();
+      fHDF5File->Close();
+      INFO("output data %s closed", fname);
+    }
+    delete fHDF5File;
+    fHDF5File = nullptr;
+  }
+
+  if (fH5Event) {
+    delete fH5Event;
+    fH5Event = nullptr;
   }
 }
 
 #else
 
-// Stub function when HDF5 is disabled
 void CupDAQManager::CloseHDF5Output()
 {
   // Do nothing

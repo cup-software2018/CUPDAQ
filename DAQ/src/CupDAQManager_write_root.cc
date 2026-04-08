@@ -54,8 +54,8 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
       eventinfo->SetTriggerTime(ev->GetTriggerTime());
@@ -134,8 +134,8 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
       eventinfo->SetTriggerTime(ev->GetTriggerTime());

@@ -14,9 +14,6 @@
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
 
-// =====================================================================
-// HDF5 Enabled Implementation
-// =====================================================================
 #ifdef ENABLE_HDF5
 
 void CupDAQManager::WriteFADC_MOD_HDF5()
@@ -72,8 +69,8 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         continue;
       }
 
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo.tnum = ev->GetTriggerNumber();
       eventinfo.ttime = ev->GetTriggerTime();
@@ -177,8 +174,8 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
         continue;
       }
 
-      std::unique_ptr<BuiltEvent> bevent = std::move(bevent_opt.value());
-      BuiltEvent * ev = bevent.get();
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * ev = bevent_ptr.get();
 
       unsigned long fastttime = UINT64_MAX;
       unsigned int tnum = 0;
@@ -275,9 +272,6 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
   return retval;
 }
 
-// =====================================================================
-// HDF5 Disabled Implementation (Stub Functions)
-// =====================================================================
 #else
 
 void CupDAQManager::WriteFADC_MOD_HDF5()

@@ -225,8 +225,8 @@ protected:
   int fWriteSleep;
 
   std::vector<ConcurrentDeque<std::unique_ptr<AbsADCRaw>> *> fADCRawBuffers;
-  ConcurrentDeque<std::unique_ptr<BuiltEvent>> fBuiltEventBuffer1;
-  ConcurrentDeque<std::unique_ptr<BuiltEvent>> fBuiltEventBuffer2;
+  ConcurrentDeque<std::shared_ptr<BuiltEvent>> fBuiltEventBuffer1;
+  ConcurrentDeque<std::shared_ptr<BuiltEvent>> fBuiltEventBuffer2;
 
   OUTPUT::FORMAT fOutputFileFormat;
   std::string fOutputFilename;
@@ -279,7 +279,7 @@ protected:
   std::string fADCName;
 
   bool fDoSendEvent;
-  using BuiltEventQueue = ConcurrentDeque<std::unique_ptr<BuiltEvent>>;
+  using BuiltEventQueue = ConcurrentDeque<std::shared_ptr<BuiltEvent>>;
   using RecvBufferEntry = std::pair<int, std::unique_ptr<BuiltEventQueue>>;
   std::vector<RecvBufferEntry> fRecvEventBuffer;
 
@@ -449,6 +449,6 @@ inline const char * CupDAQManager::GetADCName(ADC::TYPE type) const
     case ADC::IADCT: return "IADC";
     case ADC::MADCS: return "MADC";
 
-    default: return "Unknown"; // 안전을 위해 기본값 제공
+    default: return "Unknown";
   }
 }

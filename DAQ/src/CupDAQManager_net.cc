@@ -41,7 +41,8 @@ void CupDAQManager::TF_SendEvent()
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) { continue; }
 
-      BuiltEvent * bevent = bevent_opt->get();
+      std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
+      BuiltEvent * bevent = bevent_ptr.get();
 
       int state = socket->SendObject(bevent);
 
@@ -117,7 +118,7 @@ void CupDAQManager::TF_MergeEvent()
       totalsize /= ndaq;
 
       nmerge += 1;
-      auto builtevent = std::make_unique<BuiltEvent>();
+      auto builtevent = std::make_shared<BuiltEvent>();
 
       nd = 0;
       bool iserror = false;
@@ -130,7 +131,7 @@ void CupDAQManager::TF_MergeEvent()
           break;
         }
 
-        std::unique_ptr<BuiltEvent> & bevent_ptr = bevent_opt.value();
+        std::shared_ptr<BuiltEvent> & bevent_ptr = bevent_opt.value();
         BuiltEvent * bevent = bevent_ptr.get();
 
         evtnum[nd] = bevent->GetEventNumber();
@@ -191,12 +192,13 @@ void CupDAQManager::TF_MergeEvent()
 
         builtevent->SetEventNumber(fNBuiltEvent);
 
-        std::unique_ptr<BuiltEvent> hist_clone;
-        if (fDoHistograming) { hist_clone = std::make_unique<BuiltEvent>(*builtevent); }
+        fBuiltEventBuffer1.push_back(builtevent);
 
-        fBuiltEventBuffer1.push_back(std::move(builtevent));
-
-        if (fDoHistograming) { fBuiltEventBuffer2.push_back(std::move(hist_clone)); }
+        if (fDoHistograming) {
+          if (fBuiltEventBuffer2.size() < 1000) {
+            fBuiltEventBuffer2.push_back(builtevent);
+          }
+        }
       }
 
       totalsize -= 1;
