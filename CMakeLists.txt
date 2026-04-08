@@ -28,7 +28,7 @@ set ( CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE )
 set ( CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}" )
 
 # ---- ROOT ----
-find_package ( ROOT REQUIRED COMPONENTS Core RIO )
+find_package ( ROOT REQUIRED COMPONENTS Core RIO RHTTP )
 include ( ${ROOT_USE_FILE} )
 
 # Prevent absolute paths from being hardcoded in ROOT dictionaries

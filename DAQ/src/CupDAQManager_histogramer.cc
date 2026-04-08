@@ -70,8 +70,7 @@ void CupDAQManager::TF_Histogramer()
   }
 
   if (!histogramer->Open()) {
-    WARNING("cannot open histogramer root file %s, histogramer will be ended",
-            fHistFilename.c_str());
+    WARNING("cannot start online monitoring server, histogramer will be ended");
     return;
   }
 

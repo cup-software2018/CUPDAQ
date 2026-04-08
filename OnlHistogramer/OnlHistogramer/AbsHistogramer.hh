@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "TFile.h"
+#include "THttpServer.h"
 #include "TObjArray.h"
 
 #include "DAQConfig/AbsConfList.hh"
@@ -41,6 +42,7 @@ protected:
 
   std::string fROOTFilename;
   TFile * fROOTFile{nullptr};
+  THttpServer * fHttpServer{nullptr};
   std::vector<std::string> fROOTFileList;
 
   HistProxy * fHistProxy{nullptr};
