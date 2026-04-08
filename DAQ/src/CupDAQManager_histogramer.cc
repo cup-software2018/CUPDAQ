@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <memory>
+#include <random>
 #include <string>
 
 #include "DAQ/CupDAQManager.hh"
@@ -81,8 +82,14 @@ void CupDAQManager::TF_Histogramer()
   int eventnumber = 0;
   int ntotalmonitoredevent = 0;
 
+  double mfrac = 0.3; // monitoring fraction: 30%
+
   double perror = 0.0;
   double integral = 0.0;
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(0.0, 1.0);
 
   auto start_time = std::chrono::steady_clock::now();
 
@@ -105,8 +112,10 @@ void CupDAQManager::TF_Histogramer()
     if (builtevent) {
       eventnumber = builtevent->GetEventNumber();
 
-      histogramer->Fill(builtevent.get());
-      ntotalmonitoredevent += 1;
+      if (dis(gen) < mfrac) {
+        histogramer->Fill(builtevent.get());
+        ntotalmonitoredevent += 1;
+      }
     }
 
     // update histogramer every 1s

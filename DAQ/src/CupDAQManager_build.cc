@@ -1,6 +1,5 @@
 #include <cstring>
 #include <memory>
-#include <random>
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
@@ -49,11 +48,6 @@ void CupDAQManager::BuildEvent_GLT()
 
   double perror = 0;
   double integral = 0;
-
-  double mfrac = 0.3; // Default monitoring fraction. Could be configurable later.
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_real_distribution<double> dis(0.0, 1.0);
 
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
@@ -178,10 +172,8 @@ void CupDAQManager::BuildEvent_GLT()
         fBuiltEventBuffer1.push_back(builtevent);
 
         if (fDoHistograming) {
-          if (dis(gen) < mfrac) {
-            if (fBuiltEventBuffer2.size() < 1000) {
-              fBuiltEventBuffer2.push_back(builtevent);
-            }
+          if (fBuiltEventBuffer2.size() < 1000) {
+            fBuiltEventBuffer2.push_back(builtevent);
           }
         }
       }
