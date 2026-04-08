@@ -17,11 +17,8 @@ void CupDAQManager::TF_Histogramer()
   if (!ThreadWait(fRunStatus, fDoExit)) { return; }
   INFO("histogramer started");
 
-  //
-  // Create histogramer
-  //
+  // Create histogramer based on ADC mode
   std::unique_ptr<AbsHistogramer> histogramer;
-
   switch (fADCMode) {
     case ADC::FMODE: histogramer = std::make_unique<FADCHistogramer>(); break;
     case ADC::SMODE: histogramer = std::make_unique<SADCHistogramer>(); break;
@@ -33,23 +30,19 @@ void CupDAQManager::TF_Histogramer()
   histogramer->SetConfigList(fConfigList);
   histogramer->SetStartDatime(fStartDatime);
 
+  // Set filename and directory for the histogram ROOT file
   if (fHistFilename.empty()) {
     std::string filename;
-
     const char * rawdata_dir_env = std::getenv("RAWDATA_DIR");
-
     char run_str[16];
     std::snprintf(run_str, sizeof(run_str), "%06d", fRunNumber);
-
     const char * adc_name = GetADCName(fADCType);
 
     if (!rawdata_dir_env) {
       WARNING("variable RAWDATA_DIR is not set");
-
       filename = std::string("hist_") + adc_name + "_" + run_str + ".root";
     }
     else {
-
       namespace fs = std::filesystem;
       fs::path dirname = fs::path(rawdata_dir_env) / "HIST" / run_str;
 
@@ -74,14 +67,27 @@ void CupDAQManager::TF_Histogramer()
     return;
   }
 
-  // booking histograms
+  // Book histograms
   histogramer->Book();
   histogramer->Update();
 
   int eventnumber = 0;
   int ntotalmonitoredevent = 0;
 
-  double mfrac = 0.3; // monitoring fraction: 30%
+  // Dynamic monitoring fraction parameters
+  const double max_mfrac = 0.3;  // Maximum monitoring fraction (30%)
+  const double min_mfrac = 0.01; // Minimum monitoring fraction (1%)
+  double mfrac = max_mfrac;
+
+  // Thresholds for buffer management (Hysteresis / Watermark levels)
+  const int buffer_safe_size = 500;       // Apply max_mfrac below this
+  const int buffer_warn_size = 2000;      // Low watermark: turn off emergency mode
+  const int buffer_critical_size = 5000;  // Suspend monitoring (mfrac = 0)
+  const int buffer_emergency_size = 8000; // High watermark: turn on emergency mode
+
+  // Emergency state flags to prevent ping-pong oscillation at the boundary
+  bool is_emergency_mode = false;
+  bool prev_emergency_mode = false;
 
   double perror = 0.0;
   double integral = 0.0;
@@ -94,45 +100,98 @@ void CupDAQManager::TF_Histogramer()
 
   fBenchmark->Start("Histogramer");
   while (true) {
-    // for emergent exit
+    // Check for emergent exit or normal end
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
-    if (fBuildStatus == ENDED) {
-      if (fBuiltEventBuffer2.empty()) { break; }
-    }
-
-    std::shared_ptr<BuiltEvent> builtevent;
+    if (fBuildStatus == ENDED && fBuiltEventBuffer2.empty()) { break; }
 
     int size = static_cast<int>(fBuiltEventBuffer2.size());
-    if (size > 0) {
-      auto opt = fBuiltEventBuffer2.pop_front();
-      if (opt) { builtevent = opt.value(); }
+    int n_to_pop = 1; // Default to consuming one event per loop
+
+    // --- 1. Watermark Status Update (Hysteresis Logic) ---
+    if (size > buffer_emergency_size) {
+      is_emergency_mode = true; // High watermark exceeded: Emergency mode ON
+    }
+    else if (size < buffer_warn_size) {
+      is_emergency_mode = false; // Low watermark reached: Emergency mode OFF
     }
 
-    if (builtevent) {
-      eventnumber = builtevent->GetEventNumber();
+    // [DEBUG LOG 1] Print warning/info ONLY when the emergency state changes
+    if (is_emergency_mode != prev_emergency_mode) {
+      if (is_emergency_mode) {
+        WARNING("Histogramer [EMERGENCY MODE ON] : Buffer size (%d) exceeded High Watermark!",
+                size);
+      }
+      else {
+        INFO("Histogramer [EMERGENCY MODE OFF]: Buffer size (%d) stabilized below Low Watermark.",
+             size);
+      }
+      prev_emergency_mode = is_emergency_mode;
+    }
 
-      if (dis(gen) < mfrac) {
-        histogramer->Fill(builtevent.get());
-        ntotalmonitoredevent += 1;
+    // --- 2. Apply Parameters Based on Current State ---
+    if (is_emergency_mode) {
+      // During emergency, completely disable monitoring and aggressively flush the buffer
+      mfrac = 0.0;
+      n_to_pop = 50; // Pop multiple items at once to catch up quickly
+    }
+    else {
+      // Normal mode: Dynamic mfrac adjustment
+      if (size <= buffer_safe_size) { mfrac = max_mfrac; }
+      else if (size <= buffer_warn_size) {
+        // Linear interpolation between max_mfrac and min_mfrac
+        double ratio =
+            static_cast<double>(size - buffer_safe_size) / (buffer_warn_size - buffer_safe_size);
+        mfrac = max_mfrac - ratio * (max_mfrac - min_mfrac);
+      }
+      else if (size <= buffer_critical_size) {
+        // Rapidly decrease from min_mfrac to 0 to remove load from the histogramer
+        double ratio = static_cast<double>(size - buffer_warn_size) /
+                       (buffer_critical_size - buffer_warn_size);
+        mfrac = min_mfrac * (1.0 - ratio);
+      }
+      else {
+        // Between critical and emergency: suspend monitoring, but pop 1 by 1
+        mfrac = 0.0;
+        n_to_pop = 1;
       }
     }
 
-    // update histogramer every 1s
-    auto current_time = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed = current_time - start_time;
-    double elapsetime = elapsed.count();
+    // --- 3. Consume Data from the Buffer ---
+    for (int i = 0; i < n_to_pop; ++i) {
+      if (fBuiltEventBuffer2.empty()) break;
 
-    if (elapsetime >= 1.0) {
-      start_time = std::chrono::steady_clock::now();
-      histogramer->Update();
+      auto opt = fBuiltEventBuffer2.pop_front();
+      if (opt) {
+        std::shared_ptr<BuiltEvent> builtevent = opt.value();
+        eventnumber = builtevent->GetEventNumber();
+
+        // Fill histogram if mfrac condition is met (never executed if mfrac is 0)
+        if (mfrac > 0.0 && dis(gen) < mfrac) {
+          histogramer->Fill(builtevent.get());
+          ntotalmonitoredevent += 1;
+        }
+      }
     }
 
-    ThreadSleep(fHistSleep, perror, integral, size);
+    // --- 4. Update and Periodic Logging ---
+    // Update histogramer every 1 second
+    auto current_time = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = current_time - start_time;
+    if (elapsed.count() >= 1.0) {
+      start_time = std::chrono::steady_clock::now();
+      histogramer->Update();
+
+      // [DEBUG LOG 2] Print current status every 1 second without blocking the thread
+      DEBUG("HistState | Buffer: %d | mfrac: %.4f | Pop/loop: %d | EmgMode: %s | Monitored: %d",
+           size, mfrac, n_to_pop, is_emergency_mode ? "ON" : "OFF", ntotalmonitoredevent);
+    }
+
+    // Maximize processing speed by skipping sleep when the buffer is accumulating
+    if (size < buffer_safe_size) { ThreadSleep(fHistSleep, perror, integral, size); }
   }
   fBenchmark->Stop("Histogramer");
 
   histogramer->Close();
-
   fHistogramerEnded = true;
 
   if (eventnumber > 0) {
