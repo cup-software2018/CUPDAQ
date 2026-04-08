@@ -11,6 +11,7 @@ BuiltEvent::BuiltEvent()
     fDAQID(0),
     fEventNumber(0)
 {
+  SetOwner(kTRUE);
 }
 
 BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
@@ -18,30 +19,32 @@ BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
     fDAQID(builtevent.GetDAQID()),
     fEventNumber(builtevent.GetEventNumber())
 {
-  const int nent = builtevent.GetEntries();
+  SetOwner(kTRUE);
+  const int nent = builtevent.GetLast() + 1;
   for (int i = 0; i < nent; ++i) {
     auto * event = static_cast<AbsADCRaw *>(builtevent.At(i));
     if (!event) continue;
 
+    AbsADCRaw * newadc = nullptr;
     switch (event->GetADCMode()) {
       case ADC::FMODE: {
-        auto * adc = static_cast<FADCRawEvent *>(event);
-        auto * newadc = new FADCRawEvent(*adc);
-        Add(newadc);
+        newadc = new FADCRawEvent(*static_cast<FADCRawEvent *>(event));
         break;
       }
       case ADC::SMODE: {
-        auto * adc = static_cast<SADCRawEvent *>(event);
-        auto * newadc = new SADCRawEvent(*adc);
-        Add(newadc);
+        newadc = new SADCRawEvent(*static_cast<SADCRawEvent *>(event));
         break;
       }
       default: break;
     }
+
+    if (newadc) {
+      AddAt(newadc, i);
+    }
   }
 }
 
-BuiltEvent::~BuiltEvent() { Delete(); }
+BuiltEvent::~BuiltEvent() {}
 
 unsigned int BuiltEvent::GetTriggerType() const
 {
