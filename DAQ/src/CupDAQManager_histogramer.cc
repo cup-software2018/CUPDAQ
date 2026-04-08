@@ -75,15 +75,15 @@ void CupDAQManager::TF_Histogramer()
   int ntotalmonitoredevent = 0;
 
   // Dynamic monitoring fraction parameters
-  const double max_mfrac = 0.3;  // Maximum monitoring fraction (30%)
+  const double max_mfrac = 1.0;  // Maximum monitoring fraction (30%)
   const double min_mfrac = 0.01; // Minimum monitoring fraction (1%)
   double mfrac = max_mfrac;
 
   // Thresholds for buffer management (Hysteresis / Watermark levels)
-  const int buffer_safe_size = 500;       // Apply max_mfrac below this
-  const int buffer_warn_size = 2000;      // Low watermark: turn off emergency mode
-  const int buffer_critical_size = 5000;  // Suspend monitoring (mfrac = 0)
-  const int buffer_emergency_size = 8000; // High watermark: turn on emergency mode
+  const int buffer_safe_size = 10;       // Apply max_mfrac below this
+  const int buffer_warn_size = 100;      // Low watermark: turn off emergency mode
+  const int buffer_critical_size = 200;  // Suspend monitoring (mfrac = 0)
+  const int buffer_emergency_size = 500; // High watermark: turn on emergency mode
 
   // Emergency state flags to prevent ping-pong oscillation at the boundary
   bool is_emergency_mode = false;
@@ -132,7 +132,7 @@ void CupDAQManager::TF_Histogramer()
     if (is_emergency_mode) {
       // During emergency, completely disable monitoring and aggressively flush the buffer
       mfrac = 0.0;
-      n_to_pop = 50; // Pop multiple items at once to catch up quickly
+      n_to_pop = 10; // Pop multiple items at once to catch up quickly
     }
     else {
       // Normal mode: Dynamic mfrac adjustment
@@ -183,7 +183,7 @@ void CupDAQManager::TF_Histogramer()
 
       // [DEBUG LOG 2] Print current status every 1 second without blocking the thread
       DEBUG("HistState | Buffer: %d | mfrac: %.4f | Pop/loop: %d | EmgMode: %s | Monitored: %d",
-           size, mfrac, n_to_pop, is_emergency_mode ? "ON" : "OFF", ntotalmonitoredevent);
+            size, mfrac, n_to_pop, is_emergency_mode ? "ON" : "OFF", ntotalmonitoredevent);
     }
 
     // Maximize processing speed by skipping sleep when the buffer is accumulating
