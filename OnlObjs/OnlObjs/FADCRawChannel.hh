@@ -7,7 +7,7 @@
 class FADCRawChannel : public TObject {
 private:
   int fNDP;
-  unsigned short * fADC;
+  unsigned short * fADC; // [fNDP]
 
 public:
   FADCRawChannel();
@@ -19,6 +19,7 @@ public:
 
   int GetNDP() const;
   unsigned short * GetADC() const;
+  int GetSize() const;
 
   void Print(Option_t * opt = "") const override;
 
@@ -30,3 +31,8 @@ inline void FADCRawChannel::SetADC(int i, unsigned short adc) { fADC[i] = adc; }
 inline int FADCRawChannel::GetNDP() const { return fNDP; }
 
 inline unsigned short * FADCRawChannel::GetADC() const { return fADC; }
+
+inline int FADCRawChannel::GetSize() const
+{
+  return sizeof(FADCRawChannel) + fNDP * sizeof(unsigned short);
+}

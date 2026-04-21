@@ -1,13 +1,10 @@
-//
-// Created by cupsoft on 7/24/19.
-//
 #include <memory>
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQConfig/IADCTConf.hh"
+#include "DAQUtils/ELog.hh"
 #include "OnlObjs/FADCRawEvent.hh"
 #include "OnlObjs/SADCRawEvent.hh"
-#include "DAQUtils/ELog.hh"
 
 void CupDAQManager::TF_SortEvent()
 {
@@ -72,15 +69,25 @@ void CupDAQManager::SortEvent_MOD()
 
         switch (fADCType) {
           case ADC::FADCS:
-          case ADC::FADCT: adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::FADC); break;
+          case ADC::FADCT:
+            adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::FADC);
+            break;
           case ADC::GADCS:
-          case ADC::GADCT: adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::GADC); break;
-          case ADC::MADCS: adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::MADC); break;
+          case ADC::GADCT:
+            adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::GADC);
+            break;
+          case ADC::MADCS:
+            adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::MADC);
+            break;
           case ADC::SADCS:
-          case ADC::SADCT: adcevent = std::make_unique<SADCRawEvent>(fADCEventDataSize, ADC::SADC); break;
+          case ADC::SADCT:
+            adcevent = std::make_unique<SADCRawEvent>(fADCEventDataSize, ADC::SADC);
+            break;
           case ADC::IADCT: {
             auto * conf = static_cast<IADCTConf *>(adc->GetConfig());
-            if (conf->MODE() > 0) { adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::IADC); }
+            if (conf->MODE() > 0) {
+              adcevent = std::make_unique<FADCRawEvent>(fNDP, fADCEventDataSize, ADC::IADC);
+            }
             else {
               adcevent = std::make_unique<SADCRawEvent>(fADCEventDataSize, ADC::IADC);
             }
@@ -108,3 +115,4 @@ void CupDAQManager::SortEvent_MOD()
 }
 
 void CupDAQManager::SortEvent_CHA() {}
+

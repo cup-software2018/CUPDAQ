@@ -41,6 +41,7 @@ public:
   unsigned int GetLocalTriggerNumber() const;
   unsigned long GetLocalTriggerTime() const;
   TimeCalConsts * GetTimeCalConsts() const;
+  int GetSize() const;
 
   void Print(Option_t * opt = "") const override;
 
@@ -131,5 +132,10 @@ inline unsigned int ADCHeader::GetLocalTriggerPattern() const { return loctptn; 
 inline unsigned int ADCHeader::GetLocalTriggerNumber() const { return loctnum; }
 
 inline unsigned long ADCHeader::GetLocalTriggerTime() const { return locttime; }
+
+inline int ADCHeader::GetSize() const
+{
+  return sizeof(ADCHeader) + kNMAXADCCH * (sizeof(bool) * 2 + sizeof(unsigned int));
+}
 
 inline TimeCalConsts * ADCHeader::GetTimeCalConsts() const { return fCalConsts; }

@@ -85,7 +85,6 @@ public:
   virtual void TF_DebugMon();
   virtual void TF_RunManager();
   virtual void TF_MsgServer();
-  virtual void TF_DataServer();
   virtual void TF_ReadData();
   virtual void TF_SortEvent();
   virtual void TF_BuildEvent();
@@ -94,7 +93,9 @@ public:
   virtual void TF_Histogramer();
   virtual void TF_ShrinkToFit();
 
-  virtual void TF_SendEvent();
+  // for merging event
+  virtual void TF_DataServer();
+  virtual void TF_SendData();
   virtual void TF_MergeEvent();
 
   virtual void ClearBuffers();
@@ -137,21 +138,22 @@ protected:
   virtual long SwitchRootFile(TFile *& oldfile, TFile * newfile);
   virtual void CloseHDF5Output();
 
-  virtual void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt, int * status);
+  virtual void CheckEventSanity(ADCHeader ** header, unsigned int * tn, unsigned long * tt,
+                                int * status);
   virtual void PrintDAQSummary();
 
   virtual bool ThreadWait(unsigned long & state, bool & exit);
   virtual void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
-                   double ki = 0.01);
+                           double ki = 0.01);
 
   virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
-                                  const std::string & cmd, std::string & daq_name);
+                                          const std::string & cmd, std::string & daq_name);
   virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
-                                  const std::string & cmd);
+                                          const std::string & cmd);
   virtual void SendCommandToDAQs(const std::string & cmd);
 
   virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
-                               std::string & daq_name);
+                                       std::string & daq_name);
   virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr);
 
   virtual bool WaitDAQStatus(RUNSTATE::STATE status);
@@ -279,6 +281,8 @@ protected:
   std::mutex fRecvBufferMutex;
 
   std::string fADCName;
+
+  double fCurrentTriggerRate;
 
   bool fDoSendEvent;
   using BuiltEventQueue = ConcurrentDeque<std::shared_ptr<BuiltEvent>>;

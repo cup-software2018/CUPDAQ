@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <memory>
@@ -8,10 +7,6 @@
 #include <thread>
 #include <vector>
 #include <zmq.hpp>
-
-#include "TMessage.h"
-#include "TMonitor.h"
-#include "TServerSocket.h"
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
@@ -153,6 +148,8 @@ void CupDAQManager::TF_TriggerMon()
 
       dummynevent = static_cast<unsigned int>(triggernumber);
       dummytime = triggertime;
+
+      fCurrentTriggerRate = insrate;
     }
 
     bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
@@ -382,82 +379,6 @@ void CupDAQManager::TF_MsgServer()
   }
 
   INFO("[%s] Message Server ended cleanly", name.c_str());
-}
-
-void CupDAQManager::TF_DataServer()
-{
-  int data_port = fDAQPort + PORT_OFFSET::DATA;
-  std::string name = fDAQName;
-
-  auto server_socket = std::make_unique<TServerSocket>(data_port, kTRUE);
-
-  if (!server_socket->IsValid()) {
-    ERROR("[%s] ROOT socket failed to bind on port %d", name.c_str(), data_port);
-    RUNSTATE::SetError(fRunStatus);
-    return;
-  }
-
-  std::vector<std::unique_ptr<TSocket>> client_sockets;
-
-  auto monitor = std::make_unique<TMonitor>();
-  monitor->Add(server_socket.get());
-
-  INFO("[%s] ROOT Data Server started on port %d", name.c_str(), data_port);
-
-  while (true) {
-    if (fDoExit) { break; }
-
-    TSocket * active_socket = monitor->Select(1000);
-    if (active_socket == (TSocket *)-1) { continue; }
-
-    if (active_socket->IsA() == TServerSocket::Class()) {
-      TSocket * raw_client = server_socket->Accept();
-      if (raw_client) {
-        monitor->Add(raw_client);
-        client_sockets.push_back(std::unique_ptr<TSocket>(raw_client));
-        INFO("[%s] New ROOT client connected", name.c_str());
-      }
-    }
-    else {
-      TMessage * raw_mess = nullptr;
-
-      // If client disconnects or an error occurs
-      if (active_socket->Recv(raw_mess) <= 0 || raw_mess == nullptr) {
-        INFO("[%s] ROOT client disconnected", name.c_str());
-
-        monitor->Remove(active_socket);
-
-        client_sockets.erase(std::remove_if(client_sockets.begin(), client_sockets.end(),
-                                            [&](const std::unique_ptr<TSocket> & p) {
-                                              return p.get() == active_socket;
-                                            }),
-                             client_sockets.end());
-        continue;
-      }
-
-      std::unique_ptr<TMessage> mess(raw_mess);
-
-      // Handle BuiltEvent object
-      if (mess->GetClass() && mess->GetClass()->InheritsFrom(BuiltEvent::Class())) {
-        auto * event = static_cast<BuiltEvent *>(mess->ReadObject(mess->GetClass()));
-        int daqid = event->GetDAQID();
-
-        // Critical: Protect the event buffer from concurrent access
-        std::lock_guard<std::mutex> lock(fRecvBufferMutex);
-        for (auto & buf : fRecvEventBuffer) {
-          if (buf.first == daqid) {
-            buf.second->push_back(std::shared_ptr<BuiltEvent>(event));
-            break;
-          }
-        }
-      }
-      else {
-        WARNING("[%s] Received unknown TMessage format", name.c_str());
-      }
-    }
-  }
-
-  INFO("[%s] ROOT Data Server ended", name.c_str());
 }
 
 void CupDAQManager::TF_ShrinkToFit()

@@ -89,6 +89,17 @@ unsigned long BuiltEvent::GetTriggerTime() const
   return fastttime;
 }
 
+int BuiltEvent::GetSize() const
+{
+  int size = sizeof(BuiltEvent);
+  const int n = GetLast() + 1;
+  for (int i = 0; i < n; i++) {
+    auto * obj = static_cast<AbsADCRaw *>(At(i));
+    if (obj) { size += obj->GetSize(); }
+  }
+  return size;
+}
+
 int BuiltEvent::Compare(const TObject * object) const
 {
   auto * comp = static_cast<const BuiltEvent *>(object);

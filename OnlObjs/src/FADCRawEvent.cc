@@ -56,6 +56,17 @@ FADCRawEvent::~FADCRawEvent()
   }
 }
 
+int FADCRawEvent::GetSize() const
+{
+  int size = AbsADCRaw::GetSize();
+  size += sizeof(FADCRawEvent) - sizeof(AbsADCRaw);
+  size += fNCH * sizeof(FADCRawChannel *);
+  for (int i = 0; i < fNCH; i++) {
+    if (fChannel[i]) { size += fChannel[i]->GetSize(); }
+  }
+  return size;
+}
+
 void FADCRawEvent::Unpack(AbsConf * config, int verbose)
 {
   switch (fType) {

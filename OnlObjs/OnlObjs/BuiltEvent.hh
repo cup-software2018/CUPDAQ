@@ -23,6 +23,8 @@ public:
   unsigned int GetTriggerType() const;
   unsigned long GetTriggerTime() const;
 
+  int GetSize() const override;
+
   bool IsSortable() const override;
   int Compare(const TObject * object) const override;
 

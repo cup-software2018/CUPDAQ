@@ -13,9 +13,9 @@ class AbsADCRaw : public TObject {
 protected:
   ADC::TYPE fType;
   ADC::MODE fMode;
-  ADCHeader * fHeader;
-  int fSize;
-  unsigned char * fData;
+  ADCHeader * fHeader; //!
+  int fSize; //!
+  unsigned char * fData; //!
 
 public:
   AbsADCRaw();
@@ -38,6 +38,7 @@ public:
   virtual unsigned int GetTriggerType() const;
   virtual unsigned int GetTriggerNumber() const;
   virtual unsigned long GetTriggerTime() const;
+  virtual int GetSize() const;
 
   virtual void PrintHeader() const;
 
@@ -74,3 +75,8 @@ inline unsigned int AbsADCRaw::GetTriggerType() const { return fHeader ? fHeader
 inline unsigned int AbsADCRaw::GetTriggerNumber() const { return fHeader ? fHeader->GetLocalTriggerNumber() : 0U; }
 
 inline unsigned long AbsADCRaw::GetTriggerTime() const { return fHeader ? fHeader->GetLocalTriggerTime() : 0UL; }
+
+inline int AbsADCRaw::GetSize() const
+{
+  return sizeof(AbsADCRaw);
+}

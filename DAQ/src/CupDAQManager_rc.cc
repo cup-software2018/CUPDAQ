@@ -377,7 +377,7 @@ void CupDAQManager::RC_TCBCTRLDAQ()
 
     if (!fDoSendEvent) { th5 = std::thread(&CupDAQManager::TF_WriteEvent, this); }
     else {
-      th5 = std::thread(&CupDAQManager::TF_SendEvent, this);
+      th5 = std::thread(&CupDAQManager::TF_SendData, this);
     }
 
     th6 = std::thread(&CupDAQManager::TF_TriggerMon, this);
@@ -613,7 +613,6 @@ void CupDAQManager::RC_TCBDAQ()
     if (fVerboseLevel > 0) { th9 = std::thread(&CupDAQManager::TF_DebugMon, this); }
     std::thread th10;
     if (fDoHistograming) { th10 = std::thread(&CupDAQManager::TF_Histogramer, this); }
-
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);

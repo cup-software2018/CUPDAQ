@@ -20,6 +20,7 @@ public:
   unsigned int * GetADCs() const;
   unsigned int GetTime(int n) const;
   unsigned int * GetTimes() const;
+  int GetSize() const override;
 
 private:
   void Unpack_SADC(AbsConf * config, int verbose = 0);

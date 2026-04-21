@@ -3,7 +3,6 @@
 #include "OnlObjs/AbsADCRaw.hh"
 
 class FADCRawChannel;
-
 class FADCRawEvent : public AbsADCRaw {
 private:
   int fNCH;
@@ -21,6 +20,7 @@ public:
   int GetNCH() const;
   int GetNDP() const;
   FADCRawChannel * GetChannel(int n) const;
+  int GetSize() const override;
 
 private:
   void Unpack_FADC(AbsConf * conf, int verbose);

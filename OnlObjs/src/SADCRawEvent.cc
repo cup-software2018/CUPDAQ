@@ -59,6 +59,14 @@ SADCRawEvent::~SADCRawEvent()
   delete[] fTime;
 }
 
+int SADCRawEvent::GetSize() const
+{
+  int size = AbsADCRaw::GetSize();
+  size += sizeof(SADCRawEvent) - sizeof(AbsADCRaw);
+  size += fNCH * sizeof(unsigned int) * 2;
+  return size;
+}
+
 void SADCRawEvent::Unpack(AbsConf * config, int verbose)
 {
   switch (fType) {
