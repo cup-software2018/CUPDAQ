@@ -91,7 +91,13 @@ unsigned long BuiltEvent::GetTriggerTime() const
 
 int BuiltEvent::GetSize() const
 {
-  int size = sizeof(BuiltEvent);
+  // ROOT serialized size estimate:
+  // - TObjArray base (framing + internal array info): ~40 bytes
+  // - BuiltEvent class framing: version(2) + bytecount(4) = 6 bytes
+  // - BuiltEvent own fields: fDAQID(4) + fEventNumber(4) = 8 bytes
+  // - Each contained AbsADCRaw object (FADCRawEvent or SADCRawEvent)
+  constexpr int kBase = 40 + 6 + 8;
+  int size = kBase;
   const int n = GetLast() + 1;
   for (int i = 0; i < n; i++) {
     auto * obj = static_cast<AbsADCRaw *>(At(i));

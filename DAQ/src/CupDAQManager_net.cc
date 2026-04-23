@@ -1,5 +1,7 @@
 #include <algorithm> // Required for std::clamp
 #include <chrono>
+#include <sys/socket.h> // for SO_SNDTIMEO / SO_RCVTIMEO
+#include <sys/time.h>
 #include <thread>
 
 #include "TMessage.h"
@@ -29,7 +31,7 @@ void CupDAQManager::TF_SendData()
     if (daq->GetDAQName(i).find(daqname) != std::string::npos) { ndaq++; }
   }
 
-  if (fVerboseLevel > 2) {
+  if (fVerboseLevel > 1) {
     DEBUG("Parsed DAQ base name '%s', found %d matching nodes.", daqname.c_str(), ndaq);
   }
 
@@ -50,6 +52,25 @@ void CupDAQManager::TF_SendData()
 
   // Expand TCP send buffer to absorb micro-bursts (8MB)
   socket->SetOption(kSendBuffer, 8 * 1024 * 1024);
+
+  // Set OS-level send/recv timeout to prevent SendObject() from blocking forever.
+  // If the server cannot drain its receive buffer in time, SendObject() would
+  // block indefinitely due to TCP flow control. 10s timeout breaks that deadlock.
+  {
+    struct timeval tv;
+    tv.tv_sec  = 10;
+    tv.tv_usec = 0;
+    int fd = socket->GetDescriptor();
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
+      WARNING("Failed to set SO_SNDTIMEO on send socket");
+    }
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+      WARNING("Failed to set SO_RCVTIMEO on send socket");
+    }
+    if (fVerboseLevel > 1) {
+      DEBUG("Socket send/recv timeout set to %lds", tv.tv_sec);
+    }
+  }
 
   INFO("connection to Data Server succeeded");
   fSendStatus = RUNNING;
@@ -91,11 +112,10 @@ void CupDAQManager::TF_SendData()
 
   // Main Transmission Loop
 
+  size_t current_batch_bytes = 0;
+
   while (true) {
     if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
-
-    batchArray.Clear();
-    keep_alive_buffer.clear();
 
     size_t estimated_buffer_bytes =
         fBuiltEventBuffer1.size() * static_cast<size_t>(moving_avg_event_size);
@@ -111,8 +131,6 @@ void CupDAQManager::TF_SendData()
       target_batch_bytes = burst_watermark_bytes;
       current_timeout_ms = 0;
     }
-
-    size_t current_batch_bytes = 0;
 
     while (!fBuiltEventBuffer1.empty() && current_batch_bytes < target_batch_bytes) {
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
@@ -141,25 +159,40 @@ void CupDAQManager::TF_SendData()
         should_send = true;
         is_timeout = true;
       }
+      else if (fBuildStatus == ENDED && fBuiltEventBuffer1.empty()) {
+        should_send = true; // Flush any remaining data before exiting
+      }
     }
 
     if (should_send) {
-      if (fVerboseLevel > 2) {
-        DEBUG("Flushing: %zu bytes, %d events. Trigger: %s (Elapsed: %lld ms)", current_batch_bytes,
-              batchArray.GetEntriesFast(), is_timeout ? "TIMEOUT" : "SIZE LIMIT", elapsed_ms);
+      if (fVerboseLevel > 1) {
+        DEBUG("Flushing: %zu bytes (estimated), %d events. Trigger: %s (Elapsed: %lld ms)",
+              current_batch_bytes, batchArray.GetEntriesFast(),
+              is_timeout ? "TIMEOUT" : "SIZE LIMIT", elapsed_ms);
       }
 
       int state = socket->SendObject(&batchArray);
 
       if (state < 0) {
+        // state == -4 (EWOULDBLOCK/EAGAIN) means the OS send timeout fired —
+        // i.e. the server's receive buffer was full and we waited 10 s.
+        // Any negative value is treated as a fatal error.
         RUNSTATE::SetError(fRunStatus);
-        ERROR("sending BuiltEvent array failed. Return state: %d", state);
+        ERROR("SendObject failed (state=%d). Possible causes: server buffer full "
+              "(TCP flow-control timeout), network error, or server crash.", state);
         break;
       }
 
-      if (fVerboseLevel > 2) { DEBUG("Send complete. Socket return bytes: %d", state); }
+      if (fVerboseLevel > 1) {
+        DEBUG("Send complete. Socket returned %d bytes (actual serialized size, "
+              "estimated was %zu bytes)", state, current_batch_bytes);
+      }
 
       last_flush_time = std::chrono::steady_clock::now();
+
+      batchArray.Clear();
+      keep_alive_buffer.clear();
+      current_batch_bytes = 0;
     }
     else {
       if (fBuildStatus == ENDED && fBuiltEventBuffer1.empty()) { break; }
@@ -205,8 +238,7 @@ void CupDAQManager::TF_DataServer()
         monitor->Add(raw_client);
         client_sockets.push_back(std::unique_ptr<TSocket>(raw_client));
         INFO("New ROOT client connected");
-
-        if (fVerboseLevel > 2) {
+        if (fVerboseLevel > 1) {
           DEBUG("Total active client connections: %zu", client_sockets.size());
         }
       }
@@ -224,7 +256,7 @@ void CupDAQManager::TF_DataServer()
                                             }),
                              client_sockets.end());
 
-        if (fVerboseLevel > 2) {
+        if (fVerboseLevel > 1) {
           DEBUG("Remaining client connections: %zu", client_sockets.size());
         }
         continue;
@@ -232,7 +264,7 @@ void CupDAQManager::TF_DataServer()
 
       std::unique_ptr<TMessage> mess(raw_mess);
 
-      if (fVerboseLevel > 2) {
+      if (fVerboseLevel > 1) {
         DEBUG("Received message of class: %s",
               mess->GetClass() ? mess->GetClass()->GetName() : "UNKNOWN");
       }
@@ -242,7 +274,9 @@ void CupDAQManager::TF_DataServer()
         if (array) {
           int entries = array->GetEntriesFast();
 
-          if (fVerboseLevel > 2) { DEBUG("Processing TObjArray with %d entries.", entries); }
+          if (fVerboseLevel > 1) {
+            DEBUG("Processing TObjArray with %d entries.", entries);
+          }
 
           int last_daqid = -1;
           ConcurrentDeque<std::shared_ptr<BuiltEvent>> * target_queue = nullptr;
@@ -263,8 +297,7 @@ void CupDAQManager::TF_DataServer()
                   if (buf.first == current_daqid) {
                     target_queue = buf.second.get();
                     last_daqid = current_daqid;
-
-                    if (fVerboseLevel > 2) {
+                    if (fVerboseLevel > 1) {
                       DEBUG("Switched target queue to DAQID: %d", current_daqid);
                     }
                     break;
@@ -274,9 +307,7 @@ void CupDAQManager::TF_DataServer()
             }
 
             if (target_queue) { target_queue->push_back(event); }
-            else {
-              WARNING("Event dropped: Unknown DAQID %d", current_daqid);
-            }
+            else { WARNING("Event dropped: Unknown DAQID %d", current_daqid); }
           }
 
           array->SetOwner(kFALSE);
@@ -290,7 +321,9 @@ void CupDAQManager::TF_DataServer()
         int daqid = event->GetDAQID();
         ConcurrentDeque<std::shared_ptr<BuiltEvent>> * target_queue = nullptr;
 
-        if (fVerboseLevel > 2) { DEBUG("Processing single BuiltEvent for DAQID: %d", daqid); }
+        if (fVerboseLevel > 1) {
+          DEBUG("Processing single BuiltEvent for DAQID: %d", daqid);
+        }
 
         {
           std::lock_guard<std::mutex> lock(fRecvBufferMutex);
@@ -303,9 +336,7 @@ void CupDAQManager::TF_DataServer()
         }
 
         if (target_queue) { target_queue->push_back(event); }
-        else {
-          WARNING("Event dropped: Unknown DAQID %d", daqid);
-        }
+        else { WARNING("Event dropped: Unknown DAQID %d", daqid); }
       }
       else {
         WARNING("Received unknown TMessage format");

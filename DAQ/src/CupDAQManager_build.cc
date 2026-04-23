@@ -297,7 +297,8 @@ void CupDAQManager::TF_MergeEvent()
         BuiltEvent * bevent = bevent_ptr.get();
 
         evtnum[nd] = bevent->GetEventNumber();
-        std::lock_guard<std::mutex> lock(fRecvBufferMutex);
+        // NOTE: fRecvBufferMutex is already held by block.lock() above.
+        // Do NOT re-acquire it here (std::mutex is non-recursive → deadlock).
         evttime[nd] = bevent->GetTriggerTime();
 
         int nadc = bevent->GetEntries();

@@ -34,5 +34,7 @@ inline unsigned short * FADCRawChannel::GetADC() const { return fADC; }
 
 inline int FADCRawChannel::GetSize() const
 {
-  return sizeof(FADCRawChannel) + fNDP * sizeof(unsigned short);
+  // ROOT framing: version(2) + bytecount(4) = 6 bytes.
+  // Serialized fields: fNDP(4) + fADC[fNDP](2*fNDP).
+  return 6 + 4 + fNDP * 2;
 }

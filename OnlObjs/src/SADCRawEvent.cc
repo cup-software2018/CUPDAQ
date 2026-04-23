@@ -61,9 +61,13 @@ SADCRawEvent::~SADCRawEvent()
 
 int SADCRawEvent::GetSize() const
 {
+  // AbsADCRaw base serialized size (TObject + ADCHeader + AbsADCRaw fields).
   int size = AbsADCRaw::GetSize();
-  size += sizeof(SADCRawEvent) - sizeof(AbsADCRaw);
-  size += fNCH * sizeof(unsigned int) * 2;
+
+  // SADCRawEvent class framing: version(2) + bytecount(4) = 6 bytes.
+  // Own fields: fNCH(4) + fADC[fNCH](4*fNCH) + fTime[fNCH](4*fNCH).
+  size += 6 + 4 + fNCH * 4 + fNCH * 4;
+
   return size;
 }
 

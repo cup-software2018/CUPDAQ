@@ -5,6 +5,7 @@
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
+#include "OnlConsts/adcconsts.hh"
 #include "OnlObjs/ADCHeader.hh"
 #include "OnlObjs/FADCRawChannel.hh"
 #include "OnlObjs/FADCRawEvent.hh"
@@ -26,14 +27,20 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
   double perror = 0;
   double integral = 0;
 
-  int nadcch = 4;
+  int nadcch = 0;
   ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(fADCType) % 10);
   switch (adctype) {
-    case ADC::FADC: nadcch = 4; break;
-    case ADC::GADC: nadcch = 16; break;
-    case ADC::MADC: nadcch = 4; break;
-    case ADC::IADC: nadcch = 40; break;
+    case ADC::FADC: nadcch = kNCHFADC; break;
+    case ADC::GADC: nadcch = kNCHGADC; break;
+    case ADC::MADC: nadcch = kNCHMADC; break;
+    case ADC::IADC: nadcch = kNCHIADC; break;
     default: break;
+  }
+
+  if (nadcch == 0) {
+    ERROR("invalid adc type");
+    RUNSTATE::SetError(fRunStatus);
+    return;
   }
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);

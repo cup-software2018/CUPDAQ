@@ -55,15 +55,18 @@ FADCRawEvent::~FADCRawEvent()
     delete[] fChannel;
   }
 }
-
 int FADCRawEvent::GetSize() const
 {
+  // AbsADCRaw base serialized size (TObject + ADCHeader + AbsADCRaw fields).
   int size = AbsADCRaw::GetSize();
-  size += sizeof(FADCRawEvent) - sizeof(AbsADCRaw);
-  size += fNCH * sizeof(FADCRawChannel *);
-  for (int i = 0; i < fNCH; i++) {
-    if (fChannel[i]) { size += fChannel[i]->GetSize(); }
-  }
+
+  // FADCRawEvent class framing: version(2) + bytecount(4) = 6 bytes.
+  // Own fields: fNCH(4) + fNDP(4).
+  size += 6 + 4 + 4;
+
+  // Each FADCRawChannel: framing(6) + fNDP(4) + fADC[fNDP](2*fNDP).
+  size += fNCH * (6 + 4 + fNDP * 2);
+
   return size;
 }
 
