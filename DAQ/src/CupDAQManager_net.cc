@@ -58,7 +58,7 @@ void CupDAQManager::TF_SendData()
   // block indefinitely due to TCP flow control. 10s timeout breaks that deadlock.
   {
     struct timeval tv;
-    tv.tv_sec  = 10;
+    tv.tv_sec = 10;
     tv.tv_usec = 0;
     int fd = socket->GetDescriptor();
     if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)) < 0) {
@@ -67,9 +67,7 @@ void CupDAQManager::TF_SendData()
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
       WARNING("Failed to set SO_RCVTIMEO on send socket");
     }
-    if (fVerboseLevel > 1) {
-      DEBUG("Socket send/recv timeout set to %lds", tv.tv_sec);
-    }
+    if (fVerboseLevel > 1) { DEBUG("Socket send/recv timeout set to %lds", tv.tv_sec); }
   }
 
   INFO("connection to Data Server succeeded");
@@ -85,7 +83,8 @@ void CupDAQManager::TF_SendData()
   low_watermark_bytes = std::clamp<size_t>(low_watermark_bytes, 100 * 1024, 2 * 1024 * 1024);
 
   size_t burst_watermark_bytes = static_cast<size_t>(node_bw_share * 0.25);
-  burst_watermark_bytes = std::clamp<size_t>(burst_watermark_bytes, 1 * 1024 * 1024, 5 * 1024 * 1024);
+  burst_watermark_bytes =
+      std::clamp<size_t>(burst_watermark_bytes, 1 * 1024 * 1024, 5 * 1024 * 1024);
 
   const size_t panic_watermark_bytes = 50 * 1024 * 1024;
 
@@ -179,13 +178,15 @@ void CupDAQManager::TF_SendData()
         // Any negative value is treated as a fatal error.
         RUNSTATE::SetError(fRunStatus);
         ERROR("SendObject failed (state=%d). Possible causes: server buffer full "
-              "(TCP flow-control timeout), network error, or server crash.", state);
+              "(TCP flow-control timeout), network error, or server crash.",
+              state);
         break;
       }
 
       if (fVerboseLevel > 1) {
         DEBUG("Send complete. Socket returned %d bytes (actual serialized size, "
-              "estimated was %zu bytes)", state, current_batch_bytes);
+              "estimated was %zu bytes)",
+              state, current_batch_bytes);
       }
 
       last_flush_time = std::chrono::steady_clock::now();
@@ -230,7 +231,12 @@ void CupDAQManager::TF_DataServer()
     if (fDoExit) { break; }
 
     TSocket * active_socket = monitor->Select(1000);
-    if (active_socket == (TSocket *)-1) { continue; }
+    if (active_socket == (TSocket *)-1) {
+      // Select() timed out. Exit if the merger has finished and all
+      // DAQ clients have already disconnected — no more data will arrive.
+      if (fMergeStatus == ENDED && client_sockets.empty()) { break; }
+      continue;
+    }
 
     if (active_socket->IsA() == TServerSocket::Class()) {
       TSocket * raw_client = server_socket->Accept();
@@ -274,9 +280,7 @@ void CupDAQManager::TF_DataServer()
         if (array) {
           int entries = array->GetEntriesFast();
 
-          if (fVerboseLevel > 1) {
-            DEBUG("Processing TObjArray with %d entries.", entries);
-          }
+          if (fVerboseLevel > 1) { DEBUG("Processing TObjArray with %d entries.", entries); }
 
           int last_daqid = -1;
           ConcurrentDeque<std::shared_ptr<BuiltEvent>> * target_queue = nullptr;
@@ -307,7 +311,9 @@ void CupDAQManager::TF_DataServer()
             }
 
             if (target_queue) { target_queue->push_back(event); }
-            else { WARNING("Event dropped: Unknown DAQID %d", current_daqid); }
+            else {
+              WARNING("Event dropped: Unknown DAQID %d", current_daqid);
+            }
           }
 
           array->SetOwner(kFALSE);
@@ -321,9 +327,7 @@ void CupDAQManager::TF_DataServer()
         int daqid = event->GetDAQID();
         ConcurrentDeque<std::shared_ptr<BuiltEvent>> * target_queue = nullptr;
 
-        if (fVerboseLevel > 1) {
-          DEBUG("Processing single BuiltEvent for DAQID: %d", daqid);
-        }
+        if (fVerboseLevel > 1) { DEBUG("Processing single BuiltEvent for DAQID: %d", daqid); }
 
         {
           std::lock_guard<std::mutex> lock(fRecvBufferMutex);
@@ -336,7 +340,9 @@ void CupDAQManager::TF_DataServer()
         }
 
         if (target_queue) { target_queue->push_back(event); }
-        else { WARNING("Event dropped: Unknown DAQID %d", daqid); }
+        else {
+          WARNING("Event dropped: Unknown DAQID %d", daqid);
+        }
       }
       else {
         WARNING("Received unknown TMessage format");
