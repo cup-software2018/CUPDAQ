@@ -171,7 +171,9 @@ void CupDAQManager::TF_SendData()
               is_timeout ? "TIMEOUT" : "SIZE LIMIT", elapsed_ms);
       }
 
+      int current_obj_count = TProcessID::GetObjectCount();
       int state = socket->SendObject(&batchArray);
+      TProcessID::SetObjectCount(current_obj_count);
 
       if (state < 0) {
         // state == -4 (EWOULDBLOCK/EAGAIN) means the OS send timeout fired —
