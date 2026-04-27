@@ -270,6 +270,7 @@ void CupDAQManager::TF_DataServer()
       }
 
       std::unique_ptr<TMessage> mess(raw_mess);
+      int current_obj_count = TProcessID::GetObjectCount();
 
       if (fVerboseLevel > 1) {
         DEBUG("Received message of class: %s",
@@ -319,8 +320,6 @@ void CupDAQManager::TF_DataServer()
 
           array->SetOwner(kFALSE);
           delete array;
-
-          TProcessID::Cleanup();
         }
       }
       else if (mess->GetClass() && mess->GetClass()->InheritsFrom(BuiltEvent::Class())) {
@@ -350,6 +349,8 @@ void CupDAQManager::TF_DataServer()
       else {
         WARNING("Received unknown TMessage format");
       }
+
+      TProcessID::SetObjectCount(current_obj_count);
     }
   }
 
