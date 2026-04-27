@@ -170,14 +170,7 @@ void CupDAQManager::TF_SendData()
               is_timeout ? "TIMEOUT" : "SIZE LIMIT", elapsed_ms);
       }
 
-      auto send_start = std::chrono::steady_clock::now();
       int state = socket->SendObject(&batchArray);
-      auto send_end = std::chrono::steady_clock::now();
-      long long send_dur = std::chrono::duration_cast<std::chrono::milliseconds>(send_end - send_start).count();
-
-      INFO("[DEBUG-TF_SendData] SendObject(%d events, est %zu B) took %lld ms. State: %d", 
-           batchArray.GetEntriesFast(), current_batch_bytes, send_dur, state);
-
 
       if (state < 0) {
         // state == -4 (EWOULDBLOCK/EAGAIN) means the OS send timeout fired —
@@ -259,7 +252,6 @@ void CupDAQManager::TF_DataServer()
     else {
       TMessage * raw_mess = nullptr;
 
-      auto recv_start = std::chrono::steady_clock::now();
       if (active_socket->Recv(raw_mess) <= 0 || raw_mess == nullptr) {
         INFO("ROOT client disconnected");
 
@@ -275,8 +267,6 @@ void CupDAQManager::TF_DataServer()
         }
         continue;
       }
-      auto recv_end = std::chrono::steady_clock::now();
-      long long recv_dur = std::chrono::duration_cast<std::chrono::milliseconds>(recv_end - recv_start).count();
 
       std::unique_ptr<TMessage> mess(raw_mess);
 
@@ -286,17 +276,11 @@ void CupDAQManager::TF_DataServer()
       }
 
       if (mess->GetClass() && mess->GetClass()->InheritsFrom(TObjArray::Class())) {
-        auto read_start = std::chrono::steady_clock::now();
         auto * array = static_cast<TObjArray *>(mess->ReadObject(mess->GetClass()));
-        auto read_end = std::chrono::steady_clock::now();
-        long long read_dur = std::chrono::duration_cast<std::chrono::milliseconds>(read_end - read_start).count();
-
         if (array) {
           int entries = array->GetEntriesFast();
 
-          INFO("[DEBUG-TF_DataServer] Recv() took %lld ms, ReadObject() took %lld ms. Extracted TObjArray with %d entries.", 
-               recv_dur, read_dur, entries);
-
+          if (fVerboseLevel > 1) { DEBUG("Processing TObjArray with %d entries.", entries); }
 
           int last_daqid = -1;
           ConcurrentDeque<std::shared_ptr<BuiltEvent>> * target_queue = nullptr;
