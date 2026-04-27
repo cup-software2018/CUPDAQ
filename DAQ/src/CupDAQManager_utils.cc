@@ -221,12 +221,12 @@ bool CupDAQManager::WaitDAQStatus(RUNSTATE::STATE state)
       unsigned long daqstate = QueryDAQStatus(socket_ptr, daq_name);
 
       if (daqstate == 0) {
-        Error("%s connection down", daq_name.c_str());
+        ERROR("%s connection down", daq_name.c_str());
         socket_ptr.reset();
         return false;
       }
       if (RUNSTATE::CheckError(daqstate)) {
-        Error("%s got error", daq_name.c_str());
+        ERROR("%s got error", daq_name.c_str());
         return false;
       }
       if (!RUNSTATE::CheckState(daqstate, state)) { totalstate = false; }
@@ -249,13 +249,13 @@ bool CupDAQManager::IsDAQRunning()
     unsigned long daqstate = QueryDAQStatus(socket_ptr, daq_name);
 
     if (daqstate == 0) {
-      Error("%s connection down", daq_name.c_str());
+      ERROR("%s connection down", daq_name.c_str());
       socket_ptr.reset();
       retval = false;
     }
     else if (!RUNSTATE::CheckState(daqstate, RUNSTATE::kRUNNING)) {
-      Error("%s is not running", daq_name.c_str());
-      if (RUNSTATE::CheckError(daqstate)) { Error("error in %s", daq_name.c_str()); }
+      ERROR("%s is not running", daq_name.c_str());
+      if (RUNSTATE::CheckError(daqstate)) { ERROR("error in %s", daq_name.c_str()); }
       retval = false;
     }
   }
@@ -273,12 +273,12 @@ bool CupDAQManager::IsDAQFail()
     unsigned long daqstate = QueryDAQStatus(socket_ptr, daq_name);
 
     if (daqstate == 0) {
-      Error("%s connection down", daq_name.c_str());
+      ERROR("%s connection down", daq_name.c_str());
       socket_ptr.reset();
       retval = true;
     }
     else if (RUNSTATE::CheckError(daqstate)) {
-      Error("error in %s", daq_name.c_str());
+      ERROR("error in %s", daq_name.c_str());
       retval = true;
     }
   }

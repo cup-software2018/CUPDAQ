@@ -262,11 +262,22 @@ void CupDAQManager::TF_MergeEvent()
     bool dobuild = true;
     int totalsize = 0;
     int nd = 0;
+    std::string empty_daqs = "";
     for (auto & buf : fRecvEventBuffer) {
       size[nd] = static_cast<int>(buf.second->size());
-      if (size[nd] == 0) { dobuild = false; }
+      if (size[nd] == 0) { 
+        dobuild = false; 
+        if (fVerboseLevel > 1) { empty_daqs += std::to_string(buf.first) + " "; }
+      }
       totalsize += size[nd];
       nd += 1;
+    }
+
+    if (!dobuild && fVerboseLevel > 1) {
+      static int wait_count = 0;
+      if (wait_count++ % 100 == 0) { // log periodically to avoid spam
+        DEBUG("[DEBUG-TF_MergeEvent] Waiting for data from DAQs: %s (Wait count: %d)", empty_daqs.c_str(), wait_count);
+      }
     }
 
     if (!dobuild) {
@@ -285,6 +296,7 @@ void CupDAQManager::TF_MergeEvent()
       nd = 0;
       bool iserror = false;
 
+      auto merge_start = std::chrono::steady_clock::now();
       block.lock();
       for (auto & buf : fRecvEventBuffer) {
         auto bevent_opt = buf.second->pop_front();
@@ -329,6 +341,13 @@ void CupDAQManager::TF_MergeEvent()
         nd += 1;
       }
       block.unlock();
+      auto merge_end = std::chrono::steady_clock::now();
+      long long merge_dur_us = std::chrono::duration_cast<std::chrono::microseconds>(merge_end - merge_start).count();
+
+      if (nmerge % 100 == 0 || merge_dur_us > 5000) {
+        INFO("[DEBUG-TF_MergeEvent] Built %d-th event from %d DAQs. Lock+Copy took %lld us. (totalsize before merge=%d)", 
+             nmerge, ndaq, merge_dur_us, totalsize * ndaq);
+      }
 
       if (iserror) {
         RUNSTATE::SetError(fRunStatus);
