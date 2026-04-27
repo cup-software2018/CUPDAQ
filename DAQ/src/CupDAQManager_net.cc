@@ -6,6 +6,7 @@
 
 #include "TMessage.h"
 #include "TMonitor.h"
+#include "TProcessID.h"
 #include "TServerSocket.h"
 #include "TSocket.h"
 
@@ -318,6 +319,8 @@ void CupDAQManager::TF_DataServer()
 
           array->SetOwner(kFALSE);
           delete array;
+
+          TProcessID::Cleanup();
         }
       }
       else if (mess->GetClass() && mess->GetClass()->InheritsFrom(BuiltEvent::Class())) {
