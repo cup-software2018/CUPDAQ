@@ -97,7 +97,6 @@ public:
   // for merging event
   virtual void TF_DataServer();
   virtual void TF_SendData();
-  virtual void TF_MergeEvent();
 
   virtual void ClearBuffers();
 
@@ -125,6 +124,7 @@ protected:
   virtual void BuildEvent_GLT();
   virtual void BuildEvent_MOD();
   virtual void BuildEvent_SLF();
+  virtual void MergeEvent();
   virtual void WriteSADC_MOD_ROOT();
   virtual void WriteFADC_MOD_ROOT();
   virtual void WriteSADC_MOD_HDF5();

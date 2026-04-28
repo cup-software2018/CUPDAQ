@@ -480,7 +480,7 @@ void CupDAQManager::RC_MERGER()
 
   auto execute_run = [&]() {
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
-    th2 = std::thread(&CupDAQManager::TF_MergeEvent, this);
+    th2 = std::thread(&CupDAQManager::TF_BuildEvent, this);
     th3 = std::thread(&CupDAQManager::TF_WriteEvent, this);
     th4 = std::thread(&CupDAQManager::TF_TriggerMon, this);
     th5 = std::thread(&CupDAQManager::TF_ShrinkToFit, this);
