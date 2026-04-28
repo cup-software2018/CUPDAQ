@@ -3,8 +3,8 @@
 #include <string>
 #include <zmq.hpp>
 
-#include "TClonesArray.h"
 #include "TMessage.h"
+#include "TObjArray.h"
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
@@ -41,7 +41,8 @@ void CupDAQManager::TF_SendData()
   int batchSize = 0; // determined dynamically after first event
   int eventSize = 0; // measured once from first event
 
-  TClonesArray batch("BuiltEvent", 64);
+  TObjArray batch;
+  batch.SetOwner(kTRUE); // Delete() will call BuiltEvent destructor
   int batchCount = 0;
   auto lastFlushTime = std::chrono::steady_clock::now();
 
@@ -52,7 +53,7 @@ void CupDAQManager::TF_SendData()
     msg.WriteObject(&batch);
 
     zmq::message_t empty(0);
-    zmq::message_t zmqmsg(msg.Buffer(), static_cast<size_t>(msg.Length())); // safe copy
+    zmq::message_t zmqmsg(msg.Buffer(), static_cast<size_t>(msg.Length()));
 
     if (fVerboseLevel > 1) {
       DEBUG("flushing batch (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
@@ -70,7 +71,7 @@ void CupDAQManager::TF_SendData()
       DEBUG("batch sent (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
     }
 
-    batch.Clear("C");
+    batch.Delete(); // SetOwner(kTRUE) -> BuiltEvent destructor called
     batchCount = 0;
     lastFlushTime = std::chrono::steady_clock::now();
     return true;
@@ -84,7 +85,6 @@ void CupDAQManager::TF_SendData()
     }
     if (fBuildStatus == ENDED && fBuiltEventBuffer1.empty()) {
       INFO("build ended and buffer empty, flushing remaining batch (count=%d)", batchCount);
-      // Flush remaining events before exit
       if (!flushBatch()) {
         RUNSTATE::SetError(fRunStatus);
         fSendStatus = ERROR;
@@ -108,7 +108,7 @@ void CupDAQManager::TF_SendData()
               batchCount + 1, batchSize);
       }
 
-      new (batch[batchCount]) BuiltEvent(*event);
+      batch.Add(new BuiltEvent(*event)); // TObjArray takes ownership
       batchCount += 1;
     }
 
@@ -128,6 +128,9 @@ void CupDAQManager::TF_SendData()
       }
     }
   }
+
+  // Clear any remaining events in batch
+  batch.Delete();
 
   // Send disconnect signal to DataServer before exiting
   INFO("sending disconnect signal to DataServer");
@@ -259,13 +262,13 @@ void CupDAQManager::TF_DataServer()
       DEBUG("received message from DAQID=%s (size=%zu bytes)", clientId.c_str(), zmqmsg.size());
     }
 
-    // Deserialize TClonesArray
+    // Deserialize TObjArray
     TMessage msg(kMESS_OBJECT);
     msg.SetBuffer(zmqmsg.data<char>(), static_cast<UInt_t>(zmqmsg.size()), kFALSE);
     msg.SetReadMode();
     msg.Reset();
 
-    auto * arr = static_cast<TClonesArray *>(msg.ReadObject(TClonesArray::Class()));
+    auto * arr = static_cast<TObjArray *>(msg.ReadObject(TObjArray::Class()));
     if (!arr) {
       ERROR("deserialization failed");
       continue;
@@ -284,7 +287,6 @@ void CupDAQManager::TF_DataServer()
       }
 
       int daqId = ev->GetDAQID();
-
       if (fVerboseLevel > 1) {
         DEBUG("processing event [%d/%d] (daqId=%d, trigNum=%u)", i + 1, nEvents, daqId,
               ev->GetTriggerNumber());
@@ -299,6 +301,8 @@ void CupDAQManager::TF_DataServer()
       bufIt->second->push_back(std::make_shared<BuiltEvent>(*ev));
     }
 
+    arr->SetOwner(kTRUE);
+    arr->Delete(); // BuiltEvent destructor called for each element
     delete arr;
   }
 
