@@ -67,7 +67,15 @@ void CupDAQManager::TF_SendData()
     ThreadSleep(fSendSleep, perror, integral, totalsize);
   }
 
+  // Send disconnect signal to DataServer before exiting
+  INFO("sending disconnect signal to DataServer");
+  zmq::message_t empty(0);
+  zmq::message_t disconnect(0);
+  socket.send(empty, zmq::send_flags::sndmore);
+  socket.send(disconnect, zmq::send_flags::none);
+
   fSendStatus = ENDED;
+  INFO("ended");
 }
 
 void CupDAQManager::TF_DataServer()
@@ -80,6 +88,7 @@ void CupDAQManager::TF_DataServer()
     WARNING("exited by exit command");
     return;
   }
+
   INFO("started");
 
   zmq::context_t context(1);
@@ -97,7 +106,48 @@ void CupDAQManager::TF_DataServer()
 
   fRecvStatus = RUNNING;
 
-  while (!fDoExit && !RUNSTATE::CheckError(fRunStatus)) {
+  bool everConnected = false;
+  bool isShuttingDown = false;
+  auto shutdownStartTime = std::chrono::steady_clock::now();
+  const auto SHUTDOWN_TIMEOUT = std::chrono::seconds(10);
+
+  while (true) {
+    // Immediate exit on error (highest priority)
+    if (RUNSTATE::CheckError(fRunStatus)) {
+      ERROR("error state detected, exiting");
+      break;
+    }
+
+    // Enter shutdown mode on exit signal
+    if (fDoExit && !isShuttingDown) {
+      isShuttingDown = true;
+      shutdownStartTime = std::chrono::steady_clock::now();
+      INFO("shutdown initiated, waiting for clients to disconnect (connected: %zu/%d)",
+           connectedClients.size(), nExpected);
+    }
+
+    // Force exit on shutdown timeout (network failure or client crash)
+    if (isShuttingDown) {
+      auto elapsedTime = std::chrono::steady_clock::now() - shutdownStartTime;
+      if (elapsedTime > SHUTDOWN_TIMEOUT) {
+        WARNING("shutdown timeout reached, forcing exit (remaining clients: %zu)",
+                connectedClients.size());
+        break;
+      }
+    }
+
+    // Graceful exit once all clients have disconnected
+    if (everConnected && connectedClients.empty()) {
+      INFO("all clients disconnected, exiting gracefully");
+      break;
+    }
+
+    // No client ever connected and shutdown requested -> exit immediately
+    if (!everConnected && isShuttingDown) {
+      INFO("no clients were connected, exiting");
+      break;
+    }
+
     zmq::message_t identity;
     zmq::message_t empty;
     zmq::message_t zmqmsg;
@@ -129,13 +179,15 @@ void CupDAQManager::TF_DataServer()
 
     if (connectedClients.find(clientId) == connectedClients.end()) {
       connectedClients.insert(clientId);
+      everConnected = true;
       INFO("client connected DAQID=%s (%zu/%d)", clientId.c_str(), connectedClients.size(),
            nExpected);
     }
 
     if (zmqmsg.size() == 0) {
       connectedClients.erase(clientId);
-      INFO("client disconnected DAQID=%s", clientId.c_str());
+      INFO("client disconnected DAQID=%s (remaining: %zu/%d)", clientId.c_str(),
+           connectedClients.size(), nExpected);
       continue;
     }
 
@@ -163,4 +215,5 @@ void CupDAQManager::TF_DataServer()
   }
 
   fRecvStatus = ENDED;
+  INFO("ended");
 }
