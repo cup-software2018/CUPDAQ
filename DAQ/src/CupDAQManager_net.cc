@@ -98,6 +98,9 @@ void CupDAQManager::TF_SendData()
 
 void CupDAQManager::TF_DataServer()
 {
+  int data_port = fDAQPort + PORT_OFFSET::DATA;
+  std::string name = fDAQName;
+
   fRecvStatus = READY;
   if (!ThreadWait(fRunStatus, fDoExit)) {
     WARNING("exited by exit command");
@@ -105,13 +108,13 @@ void CupDAQManager::TF_DataServer()
   }
   INFO("started");
 
-  auto serverSocket = std::make_unique<TServerSocket>(fMergeServerPort, true);
+  auto serverSocket = std::make_unique<TServerSocket>(data_port, true);
   if (!serverSocket->IsValid()) {
-    ERROR("failed to bind port %d", fMergeServerPort);
+    ERROR("failed to bind port %d", data_port);
     fRecvStatus = ERROR;
     return;
   }
-  INFO("listening on port %d", fMergeServerPort);
+  INFO("listening on port %d", data_port);
 
   fRecvStatus = RUNNING;
 
