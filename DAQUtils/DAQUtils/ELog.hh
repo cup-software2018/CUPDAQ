@@ -182,6 +182,8 @@ private:
     }
 
     if (_file) { (*_file) << line << std::endl; }
+
+    _flush_outputs();
   }
 
   void _output_no_newline(const std::string & s)
