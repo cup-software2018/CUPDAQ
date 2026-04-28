@@ -414,9 +414,9 @@ void CupDAQManager::TF_ShrinkToFit()
       fBuiltEventBuffer1.shrink_to_fit();
       fBuiltEventBuffer2.shrink_to_fit();
 
-      if (!fRecvEventBuffer.empty()) {
-        for (auto & buf : fRecvEventBuffer) {
-          buf.second->shrink_to_fit();
+      if (!fRecvEventBuffers.empty()) {
+        for (auto & [daqId, buf] : fRecvEventBuffers) {
+          buf->shrink_to_fit();
         }
       }
 

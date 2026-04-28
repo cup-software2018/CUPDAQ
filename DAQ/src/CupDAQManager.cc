@@ -148,7 +148,7 @@ void CupDAQManager::ClearBuffers()
     fBuiltEventBuffer2.pop_front();
   }
 
-  fRecvEventBuffer.clear();
+  fRecvEventBuffers.clear();
 }
 
 void CupDAQManager::AddADC(AbsADC * adc)

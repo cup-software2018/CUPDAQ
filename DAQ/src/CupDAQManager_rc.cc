@@ -297,7 +297,7 @@ void CupDAQManager::RC_TCBCTRLDAQ()
       const std::string & daq_name = daq->GetDAQName(id);
 
       if (daq_name.find(target_name) != std::string::npos) {
-        fMergeServerIPAddr = daq->GetIPAddr(id);
+        fMergeServerHost = daq->GetIPAddr(id);
         fMergeServerPort = daq->GetPort(id) + PORT_OFFSET::DATA;
       }
     }
@@ -447,9 +447,7 @@ void CupDAQManager::RC_MERGER()
     const std::string & daq_name = daq->GetDAQName(id);
 
     if (daq_name.find(adcname) != std::string::npos) {
-      auto evtbuf = std::make_unique<ConcurrentDeque<std::shared_ptr<BuiltEvent>>>();
-      fRecvEventBuffer.emplace_back(id, std::move(evtbuf));
-
+      fRecvEventBuffers[id] = std::make_unique<BuiltEventBuffer>();
       INFO("event buffer for %s prepared", daq_name.c_str());
     }
   }
@@ -517,7 +515,7 @@ void CupDAQManager::RC_MERGER()
   if (th3.joinable()) th3.join();
   if (th2.joinable()) th2.join();
 
-  fRecvEventBuffer.clear();
+  fRecvEventBuffers.clear();
 
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kPROCENDED);

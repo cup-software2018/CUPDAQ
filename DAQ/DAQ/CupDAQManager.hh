@@ -2,6 +2,7 @@
 #pragma once
 
 #include <ctime>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -229,8 +230,10 @@ protected:
   int fWriteSleep;
 
   std::vector<ConcurrentDeque<std::unique_ptr<AbsADCRaw>> *> fADCRawBuffers;
-  ConcurrentDeque<std::shared_ptr<BuiltEvent>> fBuiltEventBuffer1;
-  ConcurrentDeque<std::shared_ptr<BuiltEvent>> fBuiltEventBuffer2;
+
+  using BuiltEventBuffer = ConcurrentDeque<std::shared_ptr<BuiltEvent>>;
+  BuiltEventBuffer fBuiltEventBuffer1;
+  BuiltEventBuffer fBuiltEventBuffer2;
 
   OUTPUT::FORMAT fOutputFileFormat;
   std::string fOutputFilename;
@@ -285,9 +288,7 @@ protected:
   double fCurrentTriggerRate;
 
   bool fDoSendEvent;
-  using BuiltEventQueue = ConcurrentDeque<std::shared_ptr<BuiltEvent>>;
-  using RecvBufferEntry = std::pair<int, std::unique_ptr<BuiltEventQueue>>;
-  std::vector<RecvBufferEntry> fRecvEventBuffer;
+  std::map<int, std::unique_ptr<BuiltEventBuffer>> fRecvEventBuffers;
 
   PROCSTATE fSendStatus;
   PROCSTATE fRecvStatus;
@@ -296,7 +297,7 @@ protected:
   int fSendSleep;
   int fMergeSleep;
 
-  std::string fMergeServerIPAddr;
+  std::string fMergeServerHost;
   int fMergeServerPort;
   unsigned long fTotalRawDataSize;
 

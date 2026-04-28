@@ -225,6 +225,122 @@ void CupDAQManager::CheckEventSanity(ADCHeader ** header, unsigned int * tn, uns
 
 void CupDAQManager::TF_MergeEvent()
 {
+  if (fRecvEventBuffers.empty()) {
+    ERROR("TF_MergeEvent called with empty fRecvEventBuffers");
+    fBuildStatus = ERROR;
+    return;
+  }
+
+  std::size_t ndaq = fRecvEventBuffers.size();
+
+  double perror = 0;
+  double integral = 0;
+
+  std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
+
+  fBuildStatus = RUNNING;
+  while (true) {
+    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
+
+    if (fRecvStatus == ENDED) {
+      std::size_t nready = 0;
+      for (auto & [id, buf] : fRecvEventBuffers) {
+        if (!buf->empty()) { nready += 1; }
+      }
+      if (nready < ndaq) { break; }
+    }
+
+    int totalsize = 0;
+    std::size_t nready = 0;
+    for (auto & [id, buf] : fRecvEventBuffers) {
+      totalsize += static_cast<int>(buf->size());
+      if (buf->front_ptr() != nullptr) { nready += 1; }
+    }
+
+    StartBenchmark("TF_MergeEvent");
+
+    if (nready == ndaq) {
+      if (ndaq > 0) { totalsize /= static_cast<int>(ndaq); }
+
+      int nerror = 0;
+      unsigned int refTrigNum = 0;
+      unsigned long refTrigTime = 0;
+      bool isFirst = true;
+
+      for (auto & [daqId, buf] : fRecvEventBuffers) {
+        auto * ev = buf->front_ptr();
+        if (isFirst) {
+          refTrigNum = ev->GetTriggerNumber();
+          refTrigTime = ev->GetTriggerTime();
+          isFirst = false;
+          continue;
+        }
+        if (ev->GetTriggerNumber() != refTrigNum) {
+          ERROR("TF_MergeEvent: TriggerNumber mismatch [daqId=%d] got=%u expected=%u", daqId,
+                ev->GetTriggerNumber(), refTrigNum);
+          nerror += 1;
+        }
+        if (ev->GetTriggerTime() != refTrigTime) {
+          ERROR("TF_MergeEvent: TriggerTime mismatch [daqId=%d] got=%lu expected=%lu", daqId,
+                ev->GetTriggerTime(), refTrigTime);
+          nerror += 1;
+        }
+      }
+
+      if (nerror > 0) {
+        RUNSTATE::SetError(fRunStatus);
+        fBuildStatus = ERROR;
+        break;
+      }
+
+      auto builtevent = std::make_shared<BuiltEvent>();
+
+      for (auto & [daqId, buf] : fRecvEventBuffers) {
+        auto opt = buf->pop_front();
+        if (!opt) {
+          ERROR("TF_MergeEvent: buffer empty after sanity check [daqId=%d]", daqId);
+          RUNSTATE::SetError(fRunStatus);
+          fBuildStatus = ERROR;
+          goto done;
+        }
+        auto & ev = *opt;
+        for (int j = 0; j < ev->GetSize(); j++)
+          builtevent->AddADCEvent(static_cast<AbsADCRaw *>(ev->At(j)));
+      }
+
+      bool istriggered = true;
+
+      if (!fDoSendEvent && fSoftTrigger != nullptr && fSoftTrigger->IsEnabled() &&
+          !fSoftTrigger->DoTrigger(builtevent.get())) {
+        istriggered = false;
+      }
+
+      if (istriggered) {
+        mlock.lock();
+        fNBuiltEvent += 1;
+        mlock.unlock();
+
+        builtevent->SetEventNumber(fNBuiltEvent);
+
+        fBuiltEventBuffer1.push_back(builtevent);
+
+        if (fDoHistograming) { fBuiltEventBuffer2.push_back(builtevent); }
+      }
+
+      totalsize -= 1;
+    }
+
+    StopBenchmark("TF_MergeEvent");
+    ThreadSleep(fBuildSleep, perror, integral, totalsize);
+  }
+
+done:
+  fBuildStatus = ENDED;
+}
+
+/*
+void CupDAQManager::TF_MergeEvent()
+{
   fTotalRawDataSize = 0;
 
   int nmerge = 0;
@@ -381,3 +497,4 @@ void CupDAQManager::TF_MergeEvent()
 
   INFO("TF_MergeEvent: event merger ended");
 }
+*/
