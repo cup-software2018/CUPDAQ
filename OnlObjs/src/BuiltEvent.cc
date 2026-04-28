@@ -42,17 +42,8 @@ BuiltEvent::BuiltEvent(const BuiltEvent & builtevent)
 
 BuiltEvent::~BuiltEvent()
 {
-  this->SetOwner(kFALSE);
-  this->ResetBit(kIsOwner);
-
-  std::vector<TObject *> toDelete;
-  for (int i = 0; i <= GetLast(); ++i) {
-    TObject * obj = this->RemoveAt(i);
-    if (obj) {
-      obj->ResetBit(kMustCleanup);
-      delete obj;
-    }
-  }
+  this->SetOwner(kTRUE);
+  this->Delete();
 }
 
 unsigned int BuiltEvent::GetTriggerType() const

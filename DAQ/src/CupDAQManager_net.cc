@@ -70,7 +70,7 @@ void CupDAQManager::TF_SendData()
       DEBUG("batch sent (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
     }
 
-    batch.Clear();
+    batch.Clear("C");
     batchCount = 0;
     lastFlushTime = std::chrono::steady_clock::now();
     return true;

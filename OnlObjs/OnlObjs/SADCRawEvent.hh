@@ -1,4 +1,5 @@
 #pragma once
+
 #include "OnlObjs/AbsADCRaw.hh"
 
 class SADCRawEvent : public AbsADCRaw {
