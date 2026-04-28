@@ -1,13 +1,12 @@
 #include <chrono>
 #include <set>
 #include <string>
-#include <thread>
 #include <zmq.hpp>
 
+#include "TClonesArray.h"
 #include "TMessage.h"
 
 #include "DAQ/CupDAQManager.hh"
-#include "DAQConfig/DAQConf.hh"
 #include "DAQUtils/ELog.hh"
 
 void CupDAQManager::TF_SendData()
@@ -35,36 +34,88 @@ void CupDAQManager::TF_SendData()
 
   fSendStatus = RUNNING;
 
+  // Batch settings
+  constexpr int TARGET_BYTES = 1 * 1024 * 1024; // 1MB
+  constexpr auto TIME_THRESHOLD = std::chrono::milliseconds(100);
+
+  int batchSize = 0; // determined dynamically after first event
+  int eventSize = 0; // measured once from first event
+
+  TClonesArray batch("BuiltEvent", 64);
+  int batchCount = 0;
+  auto lastFlushTime = std::chrono::steady_clock::now();
+
+  auto flushBatch = [&]() -> bool {
+    if (batchCount == 0) return true;
+
+    TMessage msg(kMESS_OBJECT);
+    msg.WriteObject(&batch);
+
+    zmq::message_t empty(0);
+    zmq::message_t zmqmsg(msg.Buffer(), static_cast<size_t>(msg.Length())); // safe copy
+
+    DEBUG("flushing batch (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
+
+    socket.send(empty, zmq::send_flags::sndmore);
+    auto result = socket.send(zmqmsg, zmq::send_flags::none);
+
+    if (!result) {
+      ERROR("batch send failed (batchCount=%d)", batchCount);
+      return false;
+    }
+
+    DEBUG("batch sent (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
+
+    batch.Clear();
+    batchCount = 0;
+    lastFlushTime = std::chrono::steady_clock::now();
+    return true;
+  };
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
-    if (fBuildStatus == ENDED && fBuiltEventBuffer1.empty()) { break; }
+    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) {
+      INFO("exit condition met (fDoExit=%d, error=%d)", (int)fDoExit,
+           (int)RUNSTATE::CheckError(fRunStatus));
+      break;
+    }
+    if (fBuildStatus == ENDED && fBuiltEventBuffer1.empty()) {
+      INFO("build ended and buffer empty, flushing remaining batch (count=%d)", batchCount);
+      // Flush remaining events before exit
+      if (!flushBatch()) {
+        RUNSTATE::SetError(fRunStatus);
+        fSendStatus = ERROR;
+      }
+      break;
+    }
 
-    int totalsize = static_cast<int>(fBuiltEventBuffer1.size());
-
-    auto opt = fBuiltEventBuffer1.pop_front(std::chrono::milliseconds(200));
+    auto opt = fBuiltEventBuffer1.pop_front(std::chrono::milliseconds(50));
     if (opt) {
       const auto & event = *opt;
 
-      TMessage msg(kMESS_OBJECT);
-      msg.WriteObject(event.get());
+      // Measure event size once from first event
+      if (eventSize == 0) {
+        eventSize = event->GetSize();
+        batchSize = std::max(1, TARGET_BYTES / eventSize);
+        INFO("event size=%d bytes, batch size set to %d events", eventSize, batchSize);
+      }
 
-      zmq::message_t empty(0);
-      zmq::message_t zmqmsg(msg.Buffer(), static_cast<size_t>(msg.Length()));
+      new (batch[batchCount]) BuiltEvent(*event);
+      batchCount += 1;
+    }
 
-      socket.send(empty, zmq::send_flags::sndmore);
-      auto result = socket.send(zmqmsg, zmq::send_flags::none);
+    // Flush conditions
+    bool batchFull = (batchSize > 0 && batchCount >= batchSize);
+    bool timeLimitReached = (std::chrono::steady_clock::now() - lastFlushTime) > TIME_THRESHOLD;
 
-      if (!result) {
-        ERROR("send failed (trigNum=%u)", event->GetTriggerNumber());
+    if ((batchFull || timeLimitReached) && batchCount > 0) {
+      DEBUG("flush triggered (batchFull=%d, timeLimitReached=%d)", (int)batchFull,
+            (int)timeLimitReached);
+      if (!flushBatch()) {
         RUNSTATE::SetError(fRunStatus);
         fSendStatus = ERROR;
         break;
       }
-
-      totalsize -= 1;
     }
-
-    ThreadSleep(fSendSleep, perror, integral, totalsize);
   }
 
   // Send disconnect signal to DataServer before exiting
@@ -108,7 +159,7 @@ void CupDAQManager::TF_DataServer()
 
   bool everConnected = false;
   bool isShuttingDown = false;
-  auto shutdownStartTime = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point shutdownStartTime;
   const auto SHUTDOWN_TIMEOUT = std::chrono::seconds(10);
 
   while (true) {
@@ -128,8 +179,7 @@ void CupDAQManager::TF_DataServer()
 
     // Force exit on shutdown timeout (network failure or client crash)
     if (isShuttingDown) {
-      auto elapsedTime = std::chrono::steady_clock::now() - shutdownStartTime;
-      if (elapsedTime > SHUTDOWN_TIMEOUT) {
+      if (std::chrono::steady_clock::now() - shutdownStartTime > SHUTDOWN_TIMEOUT) {
         WARNING("shutdown timeout reached, forcing exit (remaining clients: %zu)",
                 connectedClients.size());
         break;
@@ -153,7 +203,10 @@ void CupDAQManager::TF_DataServer()
     zmq::message_t zmqmsg;
 
     auto result = socket.recv(identity);
-    if (!result) { continue; }
+    if (!result) {
+      WARNING("recv timeout, no message received");
+      continue;
+    }
 
     if (identity.more()) { (void)socket.recv(empty); }
     else {
@@ -177,41 +230,56 @@ void CupDAQManager::TF_DataServer()
 
     std::string clientId(identity.data<char>(), identity.size());
 
-    if (connectedClients.find(clientId) == connectedClients.end()) {
-      connectedClients.insert(clientId);
+    auto [it, inserted] = connectedClients.insert(clientId);
+    if (inserted) {
       everConnected = true;
       INFO("client connected DAQID=%s (%zu/%d)", clientId.c_str(), connectedClients.size(),
            nExpected);
     }
 
     if (zmqmsg.size() == 0) {
-      connectedClients.erase(clientId);
+      connectedClients.erase(it);
       INFO("client disconnected DAQID=%s (remaining: %zu/%d)", clientId.c_str(),
            connectedClients.size(), nExpected);
       continue;
     }
 
+    DEBUG("received message from DAQID=%s (size=%zu bytes)", clientId.c_str(), zmqmsg.size());
+
+    // Deserialize TClonesArray
     TMessage msg(kMESS_OBJECT);
     msg.SetBuffer(zmqmsg.data<char>(), static_cast<UInt_t>(zmqmsg.size()), kFALSE);
     msg.SetReadMode();
     msg.Reset();
 
-    auto * ev = static_cast<BuiltEvent *>(msg.ReadObject(BuiltEvent::Class()));
-    if (!ev) {
+    auto * arr = static_cast<TClonesArray *>(msg.ReadObject(TClonesArray::Class()));
+    if (!arr) {
       ERROR("deserialization failed");
       continue;
     }
 
-    int daqId = ev->GetDAQID();
+    int nEvents = arr->GetEntriesFast();
+    DEBUG("deserialized batch from DAQID=%s (nEvents=%d)", clientId.c_str(), nEvents);
 
-    auto it = fRecvEventBuffers.find(daqId);
-    if (it == fRecvEventBuffers.end()) {
-      ERROR("unknown DAQID=%d, dropping event", daqId);
-      delete ev;
-      continue;
+    for (int i = 0; i < nEvents; i++) {
+      auto * ev = static_cast<BuiltEvent *>(arr->At(i));
+      if (!ev) {
+        ERROR("null event at index %d in batch", i);
+        continue;
+      }
+
+      int daqId = ev->GetDAQID();
+
+      auto bufIt = fRecvEventBuffers.find(daqId);
+      if (bufIt == fRecvEventBuffers.end()) {
+        ERROR("unknown DAQID=%d, dropping event", daqId);
+        continue;
+      }
+
+      bufIt->second->push_back(std::make_shared<BuiltEvent>(*ev));
     }
 
-    it->second->push_back(std::shared_ptr<BuiltEvent>(ev));
+    delete arr;
   }
 
   fRecvStatus = ENDED;
