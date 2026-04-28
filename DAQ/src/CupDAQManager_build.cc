@@ -293,6 +293,11 @@ void CupDAQManager::TF_MergeEvent()
         break;
       }
 
+      mlock.lock();
+      fTriggerNumber = refTrigNum;
+      fTriggerTime = refTrigTime;
+      mlock.unlock();
+
       auto builtevent = std::make_shared<BuiltEvent>();
 
       for (auto & [daqId, buf] : fRecvEventBuffers) {
