@@ -54,7 +54,9 @@ void CupDAQManager::TF_SendData()
     zmq::message_t empty(0);
     zmq::message_t zmqmsg(msg.Buffer(), static_cast<size_t>(msg.Length())); // safe copy
 
-    DEBUG("flushing batch (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
+    if (fVerboseLevel > 1) {
+      DEBUG("flushing batch (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
+    }
 
     socket.send(empty, zmq::send_flags::sndmore);
     auto result = socket.send(zmqmsg, zmq::send_flags::none);
@@ -64,7 +66,9 @@ void CupDAQManager::TF_SendData()
       return false;
     }
 
-    DEBUG("batch sent (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
+    if (fVerboseLevel > 1) {
+      DEBUG("batch sent (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
+    }
 
     batch.Clear();
     batchCount = 0;
@@ -99,6 +103,11 @@ void CupDAQManager::TF_SendData()
         INFO("event size=%d bytes, batch size set to %d events", eventSize, batchSize);
       }
 
+      if (fVerboseLevel > 1) {
+        DEBUG("adding event to batch (trigNum=%u, batchCount=%d/%d)", event->GetTriggerNumber(),
+              batchCount + 1, batchSize);
+      }
+
       new (batch[batchCount]) BuiltEvent(*event);
       batchCount += 1;
     }
@@ -108,8 +117,10 @@ void CupDAQManager::TF_SendData()
     bool timeLimitReached = (std::chrono::steady_clock::now() - lastFlushTime) > TIME_THRESHOLD;
 
     if ((batchFull || timeLimitReached) && batchCount > 0) {
-      DEBUG("flush triggered (batchFull=%d, timeLimitReached=%d)", (int)batchFull,
-            (int)timeLimitReached);
+      if (fVerboseLevel > 1) {
+        DEBUG("flush triggered (batchFull=%d, timeLimitReached=%d)", (int)batchFull,
+              (int)timeLimitReached);
+      }
       if (!flushBatch()) {
         RUNSTATE::SetError(fRunStatus);
         fSendStatus = ERROR;
@@ -204,7 +215,7 @@ void CupDAQManager::TF_DataServer()
 
     auto result = socket.recv(identity);
     if (!result) {
-      WARNING("recv timeout, no message received");
+      if (fVerboseLevel > 1) { DEBUG("recv timeout, no message received"); }
       continue;
     }
 
@@ -244,7 +255,9 @@ void CupDAQManager::TF_DataServer()
       continue;
     }
 
-    DEBUG("received message from DAQID=%s (size=%zu bytes)", clientId.c_str(), zmqmsg.size());
+    if (fVerboseLevel > 1) {
+      DEBUG("received message from DAQID=%s (size=%zu bytes)", clientId.c_str(), zmqmsg.size());
+    }
 
     // Deserialize TClonesArray
     TMessage msg(kMESS_OBJECT);
@@ -259,7 +272,9 @@ void CupDAQManager::TF_DataServer()
     }
 
     int nEvents = arr->GetEntriesFast();
-    DEBUG("deserialized batch from DAQID=%s (nEvents=%d)", clientId.c_str(), nEvents);
+    if (fVerboseLevel > 1) {
+      DEBUG("deserialized batch from DAQID=%s (nEvents=%d)", clientId.c_str(), nEvents);
+    }
 
     for (int i = 0; i < nEvents; i++) {
       auto * ev = static_cast<BuiltEvent *>(arr->At(i));
@@ -269,6 +284,11 @@ void CupDAQManager::TF_DataServer()
       }
 
       int daqId = ev->GetDAQID();
+
+      if (fVerboseLevel > 1) {
+        DEBUG("processing event [%d/%d] (daqId=%d, trigNum=%u)", i + 1, nEvents, daqId,
+              ev->GetTriggerNumber());
+      }
 
       auto bufIt = fRecvEventBuffers.find(daqId);
       if (bufIt == fRecvEventBuffers.end()) {
