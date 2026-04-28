@@ -304,8 +304,26 @@ void CupDAQManager::TF_MergeEvent()
           goto done;
         }
         auto & ev = *opt;
-        for (int j = 0; j < ev->GetSize(); j++)
-          builtevent->AddADCEvent(static_cast<AbsADCRaw *>(ev->At(j)));
+        int nadc = ev->GetEntries();
+        for (int i = 0; i < nadc; i++) {
+          switch (fADCMode) {
+            case ADC::SMODE: {
+              auto * adc = static_cast<SADCRawEvent *>(ev->At(i));
+              auto * newadc = new SADCRawEvent(*adc);
+              builtevent->Add(newadc);
+              fTotalRawDataSize += adc->GetRawDataSize();
+              break;
+            }
+            case ADC::FMODE: {
+              auto * adc = static_cast<FADCRawEvent *>(ev->At(i));
+              auto * newadc = new FADCRawEvent(*adc);
+              builtevent->Add(newadc);
+              fTotalRawDataSize += adc->GetRawDataSize();
+              break;
+            }
+            default: break;
+          }
+        }
       }
 
       bool istriggered = true;
@@ -337,7 +355,6 @@ void CupDAQManager::TF_MergeEvent()
 done:
   fBuildStatus = ENDED;
 }
-
 /*
 void CupDAQManager::TF_MergeEvent()
 {
