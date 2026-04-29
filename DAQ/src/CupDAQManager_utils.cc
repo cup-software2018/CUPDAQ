@@ -73,12 +73,12 @@ void CupDAQManager::PrintDAQSummary()
   std::cout << std::endl;
 }
 
-bool CupDAQManager::ThreadWait(unsigned long & state, bool & exit)
+bool CupDAQManager::ThreadWait(std::atomic<unsigned long> & state, std::atomic<bool> & exit)
 {
   while (true) {
     if (RUNSTATE::CheckState(state, RUNSTATE::kRUNNING)) { break; }
     if (RUNSTATE::CheckError(state)) { return false; }
-    if (exit) { return false; }
+    if (exit.load()) { return false; }
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   return true;
@@ -286,7 +286,7 @@ bool CupDAQManager::IsDAQFail()
   return retval;
 }
 
-bool CupDAQManager::WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit)
+bool CupDAQManager::WaitState(std::atomic<unsigned long> & state, RUNSTATE::STATE pstate, bool errorexit)
 {
   while (true) {
     if (RUNSTATE::CheckState(state, pstate)) break;
@@ -298,11 +298,11 @@ bool CupDAQManager::WaitState(unsigned long & state, RUNSTATE::STATE pstate, boo
   return true;
 }
 
-int CupDAQManager::WaitCommand(bool & isgo)
+int CupDAQManager::WaitCommand(std::atomic<bool> & isgo)
 {
   while (true) {
     if (IsDAQFail()) { return -1; }
-    if (isgo) { break; }
+    if (isgo.load()) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
@@ -310,12 +310,12 @@ int CupDAQManager::WaitCommand(bool & isgo)
   return 0;
 }
 
-int CupDAQManager::WaitCommand(bool & isgo, bool & exit)
+int CupDAQManager::WaitCommand(std::atomic<bool> & isgo, std::atomic<bool> & exit)
 {
   while (true) {
     if (IsDAQFail()) { return -1; }
-    if (exit) { return 1; }
-    if (isgo) { break; }
+    if (exit.load()) { return 1; }
+    if (isgo.load()) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
@@ -323,12 +323,12 @@ int CupDAQManager::WaitCommand(bool & isgo, bool & exit)
   return 0;
 }
 
-int CupDAQManager::WaitCommand(bool & isgo, unsigned long & state)
+int CupDAQManager::WaitCommand(std::atomic<bool> & isgo, std::atomic<unsigned long> & state)
 {
   while (true) {
     if (IsDAQFail()) { return -1; }
     if (RUNSTATE::CheckError(state)) { return 1; }
-    if (isgo) { break; }
+    if (isgo.load()) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }

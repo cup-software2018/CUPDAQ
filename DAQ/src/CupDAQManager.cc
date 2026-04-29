@@ -104,10 +104,8 @@ CupDAQManager::CupDAQManager()
 
   fSendStatus = NONE;
   fRecvStatus = NONE;
-  fMergeStatus = NONE;
 
   fSendSleep = 100000;
-  fMergeSleep = 100000;
 }
 
 CupDAQManager::~CupDAQManager()

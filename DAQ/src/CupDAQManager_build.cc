@@ -8,12 +8,13 @@
 
 void CupDAQManager::TF_BuildEvent()
 {
-  fBuildStatus = READY;
+  fBuildStatus.store(READY);
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
+
   INFO("started");
 
   auto adctype = static_cast<ADC::TYPE>(fADCType % 10);
@@ -38,7 +39,7 @@ void CupDAQManager::TF_BuildEvent()
     }
   }
 
-  if (fBuildStatus != ERROR) { fBuildStatus = ENDED; }
+  if (fBuildStatus.load() != ERROR) { fBuildStatus.store(ENDED); }
 
   INFO("ended");
 }
@@ -59,17 +60,19 @@ void CupDAQManager::BuildEvent_GLT()
 
   if (fADCRawBuffers.empty()) {
     ERROR("BuildEvent_GLT called with empty fADCRawBuffers");
-    fBuildStatus = ERROR;
+    fBuildStatus.store(ERROR);
     return;
   }
+
   auto ** buffers = fADCRawBuffers.data();
 
-  fBuildStatus = RUNNING;
-  while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
+  fBuildStatus.store(RUNNING);
 
-    std::size_t nmod = 0;
-    if (fSortStatus == ENDED) {
+  while (true) {
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
+    if (fSortStatus.load() == ENDED) {
+      std::size_t nmod = 0;
       for (std::size_t i = 0; i < nadc; i++) {
         auto * adceventbuffer = buffers[i];
         if (adceventbuffer == nullptr || adceventbuffer->empty()) { continue; }
@@ -79,8 +82,8 @@ void CupDAQManager::BuildEvent_GLT()
     }
 
     int totalsize = 0;
+    std::size_t nmod = 0;
 
-    nmod = 0;
     for (std::size_t i = 0; i < nadc; i++) {
       auto * adceventbuffer = buffers[i];
       if (adceventbuffer == nullptr) { continue; }
@@ -95,6 +98,7 @@ void CupDAQManager::BuildEvent_GLT()
     }
 
     StartBenchmark("BuildEvent");
+
     if (nmod == nadc) {
       if (nadc > 0) { totalsize /= static_cast<int>(nadc); }
 
@@ -157,12 +161,11 @@ void CupDAQManager::BuildEvent_GLT()
 
       if (nerror > 0) {
         RUNSTATE::SetError(fRunStatus);
-        fBuildStatus = ERROR;
+        fBuildStatus.store(ERROR);
         break;
       }
 
       bool istriggered = true;
-
       if (!fDoSendEvent && fSoftTrigger != nullptr && fSoftTrigger->IsEnabled() &&
           !fSoftTrigger->DoTrigger(builtevent.get())) {
         istriggered = false;
@@ -171,21 +174,144 @@ void CupDAQManager::BuildEvent_GLT()
       if (istriggered) {
         mlock.lock();
         fNBuiltEvent += 1;
+        builtevent->SetEventNumber(fNBuiltEvent);
         mlock.unlock();
 
-        builtevent->SetEventNumber(fNBuiltEvent);
-
         fBuiltEventBuffer1.push_back(builtevent);
-
         if (fDoHistograming) { fBuiltEventBuffer2.push_back(builtevent); }
       }
 
       totalsize -= 1;
     }
-    StopBenchmark("BuildEvent");
 
+    StopBenchmark("BuildEvent");
     ThreadSleep(fBuildSleep, perror, integral, totalsize);
   }
+}
+
+void CupDAQManager::MergeEvent()
+{
+  double perror = 0;
+  double integral = 0;
+  bool recvEnded = false;
+  std::size_t ndaq = fRecvEventBuffers.size();
+
+  if (ndaq == 0) {
+    ERROR("MergeEvent called with empty fRecvEventBuffers");
+    RUNSTATE::SetError(fRunStatus);
+    fBuildStatus.store(ERROR);
+    return;
+  }
+
+  std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
+
+  fBuildStatus.store(RUNNING);
+
+  while (true) {
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
+    int totalsize = 0;
+    std::size_t nready = 0;
+    int nerror = 0;
+    bool isFirst = true;
+    unsigned int refTrigNum = 0;
+    unsigned long refTrigTime = 0;
+
+    for (auto & [daqId, buf] : fRecvEventBuffers) {
+      totalsize += static_cast<int>(buf->size());
+      auto * ev = buf->front_ptr();
+      if (ev != nullptr) {
+        nready += 1;
+        if (isFirst) {
+          refTrigNum = ev->GetTriggerNumber();
+          refTrigTime = ev->GetTriggerTime();
+          isFirst = false;
+        }
+        else {
+          if (ev->GetTriggerNumber() != refTrigNum) {
+            ERROR("MergeEvent: TriggerNumber mismatch [daqId=%d] got=%u expected=%u", daqId,
+                  ev->GetTriggerNumber(), refTrigNum);
+            nerror += 1;
+          }
+          if (ev->GetTriggerTime() != refTrigTime) {
+            ERROR("MergeEvent: TriggerTime mismatch [daqId=%d] got=%lu expected=%lu", daqId,
+                  ev->GetTriggerTime(), refTrigTime);
+            nerror += 1;
+          }
+        }
+      }
+    }
+
+    if (nerror > 0) {
+      RUNSTATE::SetError(fRunStatus);
+      fBuildStatus.store(ERROR);
+      break;
+    }
+
+    if (!recvEnded && fRecvStatus.load() == ENDED) { recvEnded = true; }
+    if (recvEnded && nready < ndaq) { break; }
+
+    StartBenchmark("BuildEvent");
+
+    if (nready == ndaq) {
+      totalsize /= static_cast<int>(ndaq);
+
+      mlock.lock();
+      fTriggerNumber = refTrigNum;
+      fTriggerTime = refTrigTime;
+      mlock.unlock();
+
+      auto builtevent = std::make_shared<BuiltEvent>();
+      for (auto & [daqId, buf] : fRecvEventBuffers) {
+        auto ev = *buf->pop_front();
+        int nadc = ev->GetEntries();
+        for (int i = 0; i < nadc; i++) {
+          switch (fADCMode) {
+            case ADC::SMODE: {
+              auto * adc = static_cast<SADCRawEvent *>(ev->RemoveAt(i));
+              if (adc) {
+                fTotalRawDataSize += adc->GetRawDataSize();
+                builtevent->Add(adc);
+              }
+              break;
+            }
+            case ADC::FMODE: {
+              auto * adc = static_cast<FADCRawEvent *>(ev->RemoveAt(i));
+              if (adc) {
+                fTotalRawDataSize += adc->GetRawDataSize();
+                builtevent->Add(adc);
+              }
+              break;
+            }
+            default: break;
+          }
+        }
+      }
+
+      bool istriggered = true;
+      if (!fDoSendEvent && fSoftTrigger != nullptr && fSoftTrigger->IsEnabled() &&
+          !fSoftTrigger->DoTrigger(builtevent.get())) {
+        istriggered = false;
+      }
+
+      if (istriggered) {
+        mlock.lock();
+        fNBuiltEvent += 1;
+        builtevent->SetEventNumber(fNBuiltEvent);
+        mlock.unlock();
+
+        fBuiltEventBuffer1.push_back(builtevent);
+        if (fDoHistograming) { fBuiltEventBuffer2.push_back(builtevent); }
+      }
+
+      totalsize -= 1;
+    }
+
+    StopBenchmark("BuildEvent");
+    ThreadSleep(fBuildSleep, perror, integral, totalsize);
+  }
+
+  if (fBuildStatus.load() != ERROR) { fBuildStatus.store(ENDED); }
 }
 
 void CupDAQManager::BuildEvent_MOD() {}
@@ -225,139 +351,4 @@ void CupDAQManager::CheckEventSanity(ADCHeader ** header, unsigned int * tn, uns
       }
     }
   }
-}
-
-void CupDAQManager::MergeEvent()
-{
-  double perror = 0;
-  double integral = 0;
-
-  bool recvEnded = false;
-  std::size_t ndaq = fRecvEventBuffers.size();
-
-  if (ndaq == 0) {
-    ERROR("MergeEvent called with empty fRecvEventBuffers");
-    RUNSTATE::SetError(fRunStatus);
-    fBuildStatus = ERROR;
-    return;
-  }
-
-  std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
-
-  fBuildStatus = RUNNING;
-
-  while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
-
-    // Single pass: totalsize + nready + sanity check
-    int totalsize = 0;
-    std::size_t nready = 0;
-    int nerror = 0;
-    bool isFirst = true;
-
-    unsigned int refTrigNum = 0;
-    unsigned long refTrigTime = 0;
-
-
-    for (auto & [daqId, buf] : fRecvEventBuffers) {
-      totalsize += static_cast<int>(buf->size());
-      auto * ev = buf->front_ptr();
-      if (ev != nullptr) {
-        nready += 1;
-        if (isFirst) {
-          refTrigNum = ev->GetTriggerNumber();
-          refTrigTime = ev->GetTriggerTime();
-          isFirst = false;
-        }
-        else {
-          if (ev->GetTriggerNumber() != refTrigNum) {
-            ERROR("MergeEvent: TriggerNumber mismatch [daqId=%d] got=%u expected=%u", daqId,
-                  ev->GetTriggerNumber(), refTrigNum);
-            nerror += 1;
-          }
-          if (ev->GetTriggerTime() != refTrigTime) {
-            ERROR("MergeEvent: TriggerTime mismatch [daqId=%d] got=%lu expected=%lu", daqId,
-                  ev->GetTriggerTime(), refTrigTime);
-            nerror += 1;
-          }
-        }
-      }
-    }
-
-    // Check sanity error immediately after single pass
-    if (nerror > 0) {
-      RUNSTATE::SetError(fRunStatus);
-      fBuildStatus = ERROR;
-      break;
-    }
-
-    // Track recv ended state once
-    if (!recvEnded && fRecvStatus == ENDED) { recvEnded = true; }
-
-    // If recv ended and not all buffers have events ready, we are done
-    if (recvEnded && nready < ndaq) { break; }
-
-    StartBenchmark("BuildEvent");
-
-    if (nready == ndaq) {
-      totalsize /= static_cast<int>(ndaq);
-
-      // Update trigger info before software trigger decision
-      mlock.lock();
-      fTriggerNumber = refTrigNum;
-      fTriggerTime = refTrigTime;
-      mlock.unlock();
-
-      // Build merged event by moving ADC objects (no deep copy)
-      auto builtevent = std::make_shared<BuiltEvent>();
-      for (auto & [daqId, buf] : fRecvEventBuffers) {
-        auto ev = *buf->pop_front();
-        int nadc = ev->GetEntries();
-        for (int i = 0; i < nadc; i++) {
-          switch (fADCMode) {
-            case ADC::SMODE: {
-              auto * adc = static_cast<SADCRawEvent *>(ev->RemoveAt(i));
-              if (adc) {
-                fTotalRawDataSize += adc->GetRawDataSize();
-                builtevent->Add(adc);
-              }
-              break;
-            }
-            case ADC::FMODE: {
-              auto * adc = static_cast<FADCRawEvent *>(ev->RemoveAt(i));
-              if (adc) {
-                fTotalRawDataSize += adc->GetRawDataSize();
-                builtevent->Add(adc);
-              }
-              break;
-            }
-            default: break;
-          }
-        }
-      }
-
-      // Software trigger decision
-      bool istriggered = true;
-      if (!fDoSendEvent && fSoftTrigger != nullptr && fSoftTrigger->IsEnabled() &&
-          !fSoftTrigger->DoTrigger(builtevent.get())) {
-        istriggered = false;
-      }
-
-      if (istriggered) {
-        mlock.lock();
-        fNBuiltEvent += 1;
-        mlock.unlock();
-        builtevent->SetEventNumber(fNBuiltEvent);
-        fBuiltEventBuffer1.push_back(builtevent);
-        if (fDoHistograming) { fBuiltEventBuffer2.push_back(builtevent); }
-      }
-
-      totalsize -= 1;
-    }
-
-    StopBenchmark("BuildEvent");
-    ThreadSleep(fBuildSleep, perror, integral, totalsize);
-  }
-
-  fBuildStatus = ENDED;
 }

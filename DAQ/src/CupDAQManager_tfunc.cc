@@ -35,11 +35,11 @@ void CupDAQManager::TF_RunManager()
   std::unique_lock<std::mutex> mlock(fMonitorMutex, std::defer_lock);
 
   while (true) {
-    if (fDoExit) { break; }
+    if (fDoExit.load()) { break; }
 
     if (IsForcedEndRunFile()) {
       INFO("daq will be ended by ENDRUN command");
-      fDoEndRun = true;
+      fDoEndRun.store(true);
       break;
     }
 
@@ -53,25 +53,25 @@ void CupDAQManager::TF_RunManager()
       if (fSetDAQTime > 0 && triggertime > fSetDAQTime) { iendrun = true; }
       if (iendrun) {
         INFO("daq will be ended by preset condition");
-        fDoEndRun = true;
+        fDoEndRun.store(true);
         break;
       }
     }
 
     if (RUNSTATE::CheckError(fRunStatus)) {
       WARNING("daq will be ended by error");
-      fDoEndRun = true;
+      fDoEndRun.store(true);
       break;
     }
 
-    if (fDoEndRun) {
+    if (fDoEndRun.load()) {
       INFO("daq will be ended by ENDRUN command");
       break;
     }
 
-    if (fDoSplitOutputFile && !fDoSendEvent) {
+    if (fDoSplitOutputFile.load() && !fDoSendEvent) {
       if (!OpenNewOutputFile()) { RUNSTATE::SetError(fRunStatus); }
-      fDoSplitOutputFile = false;
+      fDoSplitOutputFile.store(false);
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -124,7 +124,6 @@ void CupDAQManager::TF_TriggerMon()
   };
 
   while (true) {
-    // Calculate the elapsed time in seconds
     auto current_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = current_time - start_time;
     double elapsetime = elapsed.count();
@@ -153,7 +152,7 @@ void CupDAQManager::TF_TriggerMon()
     }
 
     bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
+                    RUNSTATE::CheckError(fRunStatus) || fDoExit.load();
     if (runstate) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -177,7 +176,6 @@ void CupDAQManager::TF_DebugMon()
   auto start_time = std::chrono::steady_clock::now();
 
   while (true) {
-    // Calculate the elapsed time in seconds
     auto current_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = current_time - start_time;
     double elapsetime = elapsed.count();
@@ -191,17 +189,21 @@ void CupDAQManager::TF_DebugMon()
 
       char buf[32];
 
-      for (int i = 0; i < nadc_int; ++i) {
-        std::snprintf(buf, sizeof(buf), "%5d ", fRemainingBCount[i]);
-        adcbcountsize += buf;
+      {
+        std::lock_guard<std::mutex> lock(fMonitorMutex);
 
-        auto * adc = static_cast<AbsADC *>(fCont[i]);
-        std::snprintf(buf, sizeof(buf), "%5d ", adc->Bsize());
-        adcbufsize += buf;
+        for (int i = 0; i < nadc_int; ++i) {
+          std::snprintf(buf, sizeof(buf), "%5d ", fRemainingBCount[i]);
+          adcbcountsize += buf;
 
-        auto * modraw = fADCRawBuffers.at(static_cast<std::size_t>(i));
-        std::snprintf(buf, sizeof(buf), "%5d ", static_cast<int>(modraw->size()));
-        sortbufsize += buf;
+          auto * adc = static_cast<AbsADC *>(fCont[i]);
+          std::snprintf(buf, sizeof(buf), "%5d ", adc->Bsize());
+          adcbufsize += buf;
+
+          auto * modraw = fADCRawBuffers.at(static_cast<std::size_t>(i));
+          std::snprintf(buf, sizeof(buf), "%5d ", static_cast<int>(modraw->size()));
+          sortbufsize += buf;
+        }
       }
 
       DEBUG("ADC bcount size: %s", adcbcountsize.c_str());
@@ -214,7 +216,7 @@ void CupDAQManager::TF_DebugMon()
     }
 
     bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
+                    RUNSTATE::CheckError(fRunStatus) || fDoExit.load();
     if (runstate) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -229,12 +231,8 @@ void CupDAQManager::TF_MsgServer()
   std::string name = fDAQName;
   bool istcb = (fDAQID == 0);
 
-  // Initialize ZeroMQ context and socket in ROUTER mode instead of REP
   zmq::context_t context(1);
   zmq::socket_t zmq_socket(context, zmq::socket_type::router);
-
-  // Set receive timeout to 1000ms.
-  // This allows the while loop to check for exit flags periodically without blocking forever.
   zmq_socket.set(zmq::sockopt::rcvtimeo, 1000);
 
   std::string endpoint = "tcp://*:" + std::to_string(port);
@@ -250,37 +248,28 @@ void CupDAQManager::TF_MsgServer()
 
   INFO("[%s] Message Server started on port %d (ROUTER Mode)", name.c_str(), port);
 
-  // Main Event Loop
   while (true) {
-    // 1. Check exit flags
-    if (fDoExit || fDoExitTCB) { break; }
+    if (fDoExit.load() || fDoExitTCB.load()) { break; }
 
     zmq::message_t identity;
     zmq::message_t delimiter;
     zmq::message_t request;
 
-    // 2. Wait for a message from clients
-    // In ROUTER mode, the first frame is ALWAYS the routing identity
     auto res = zmq_socket.recv(identity, zmq::recv_flags::none);
-
-    // If timeout occurs (no message for 1000ms), loop again to check exit flags
     if (!res) { continue; }
 
-    // Read the empty delimiter frame (mandatory in REQ-ROUTER pattern)
     if (identity.more()) { (void)zmq_socket.recv(delimiter, zmq::recv_flags::none); }
     else {
       WARNING("[%s] Invalid ROUTER frame received (no delimiter)", name.c_str());
       continue;
     }
 
-    // Read the actual payload frame (JSON data)
     if (delimiter.more()) { (void)zmq_socket.recv(request, zmq::recv_flags::none); }
     else {
       WARNING("[%s] Invalid ROUTER frame received (no payload)", name.c_str());
       continue;
     }
 
-    // Flush any remaining parts properly to prevent lingering messages
     bool has_more = request.more();
     while (has_more) {
       zmq::message_t dummy;
@@ -289,7 +278,6 @@ void CupDAQManager::TF_MsgServer()
       WARNING("[%s] Discarded extra multipart frame from client", name.c_str());
     }
 
-    // 3. Parse the received message as JSON
     std::string msg_str(static_cast<char *>(request.data()), request.size());
     nlohmann::json req_json = nlohmann::json::parse(msg_str, nullptr, false);
     nlohmann::json rep_json;
@@ -301,23 +289,19 @@ void CupDAQManager::TF_MsgServer()
     }
     else {
       std::string command = req_json.value("command", "UNKNOWN");
-      rep_json["status"] = "ok"; // Default success status
-      rep_json["name"] = name;   // Default success status
+      rep_json["status"] = "ok";
+      rep_json["name"] = name;
 
-      // -------------------------------------------------------------------
-      // Status & Information Queries
-      // -------------------------------------------------------------------
       if (command == "kQUERYDAQSTATUS") {
-        rep_json["run_status"] = istcb ? fRunStatusTCB : fRunStatus;
+        rep_json["run_status"] = istcb ? fRunStatusTCB.load() : fRunStatus.load();
       }
       else if (command == "kQUERYRUNINFO") {
         rep_json["run_number"] = fRunNumber;
-        rep_json["subrun_number"] = fSubRunNumber;
+        rep_json["subrun_number"] = fSubRunNumber.load();
         rep_json["start_time"] = fStartDatime;
         rep_json["end_time"] = fEndDatime;
       }
       else if (command == "kQUERYTRGINFO") {
-        // Protect shared variables with the existing monitor mutex
         std::lock_guard<std::mutex> lock(fMonitorMutex);
         rep_json["nevent"] = static_cast<unsigned long>(fTriggerNumber);
         rep_json["trgtime"] = static_cast<unsigned long>(fTriggerTime);
@@ -325,24 +309,20 @@ void CupDAQManager::TF_MsgServer()
       else if (command == "kQUERYMONITOR") {
         rep_json["monitor_server_on"] = fMonitorServerOn;
       }
-
-      // -------------------------------------------------------------------
-      // Run Control Commands
-      // -------------------------------------------------------------------
       else if (command == "kCONFIGRUN") {
-        istcb ? fDoConfigRunTCB = true : fDoConfigRun = true;
+        istcb ? fDoConfigRunTCB.store(true) : fDoConfigRun.store(true);
         INFO("[%s] CONFIGRUN command received", name.c_str());
       }
       else if (command == "kSTARTRUN") {
-        istcb ? fDoStartRunTCB = true : fDoStartRun = true;
+        istcb ? fDoStartRunTCB.store(true) : fDoStartRun.store(true);
         INFO("[%s] STARTRUN command received", name.c_str());
       }
       else if (command == "kENDRUN") {
-        istcb ? fDoEndRunTCB = true : fDoEndRun = true;
+        istcb ? fDoEndRunTCB.store(true) : fDoEndRun.store(true);
         INFO("[%s] ENDRUN command received", name.c_str());
       }
       else if (command == "kSPLITOUTPUTFILE") {
-        istcb ? fDoSplitOutputFileTCB = true : fDoSplitOutputFile = true;
+        istcb ? fDoSplitOutputFileTCB.store(true) : fDoSplitOutputFile.store(true);
         INFO("[%s] SPLITOUTPUTFILE command received", name.c_str());
       }
       else if (command == "kSETERROR") {
@@ -350,12 +330,9 @@ void CupDAQManager::TF_MsgServer()
         INFO("[%s] SETERROR command received", name.c_str());
       }
       else if (command == "kEXIT") {
-        istcb ? fDoExitTCB = true : fDoExit = true;
+        istcb ? fDoExitTCB.store(true) : fDoExit.store(true);
         INFO("[%s] EXIT command received", name.c_str());
       }
-      // -------------------------------------------------------------------
-      // Unknown Command
-      // -------------------------------------------------------------------
       else {
         rep_json["status"] = "error";
         rep_json["message"] = "Unknown command string";
@@ -363,18 +340,12 @@ void CupDAQManager::TF_MsgServer()
       }
     }
 
-    // 4. Send the JSON reply back to the client using ROUTER envelope structure
     std::string rep_str = rep_json.dump();
     zmq::message_t reply(rep_str.size());
     std::memcpy(reply.data(), rep_str.c_str(), rep_str.size());
 
-    // Send the routing identity first
     zmq_socket.send(identity, zmq::send_flags::sndmore);
-
-    // Send the empty delimiter
     zmq_socket.send(delimiter, zmq::send_flags::sndmore);
-
-    // Send the actual payload
     zmq_socket.send(reply, zmq::send_flags::none);
   }
 
@@ -395,7 +366,6 @@ void CupDAQManager::TF_ShrinkToFit()
   const int nadc_int = GetEntries();
 
   while (true) {
-    // Calculate the elapsed time in seconds
     auto current_time = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = current_time - start_time;
     double elapsetime = elapsed.count();
@@ -424,7 +394,7 @@ void CupDAQManager::TF_ShrinkToFit()
     }
 
     bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                    RUNSTATE::CheckError(fRunStatus) || fDoExit;
+                    RUNSTATE::CheckError(fRunStatus) || fDoExit.load();
     if (runstate) { break; }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -435,8 +405,8 @@ void CupDAQManager::TF_ShrinkToFit()
 
 void CupDAQManager::TF_SplitOutput(bool ontcb)
 {
-  unsigned long & current_run_status = ontcb ? fRunStatusTCB : fRunStatus;
-  bool & current_do_exit = ontcb ? fDoExitTCB : fDoExit;
+  std::atomic<unsigned long> & current_run_status = ontcb ? fRunStatusTCB : fRunStatus;
+  std::atomic<bool> & current_do_exit = ontcb ? fDoExitTCB : fDoExit;
 
   if (!ThreadWait(current_run_status, current_do_exit)) { return; }
 
@@ -451,21 +421,20 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
 
     if (elapsetime >= fOutputSplitTime) {
       start_time = std::chrono::steady_clock::now();
-
-      fDoSplitOutputFile = true;
-      fSubRunNumber += 1;
+      fDoSplitOutputFile.store(true);
+      fSubRunNumber.fetch_add(1);
 
       if (fVerboseLevel >= 1) { INFO("output file will be split"); }
     }
 
-    // Check exit conditions cleanly
     if (ontcb) {
-      if (fDoEndRunTCB || RUNSTATE::CheckError(fRunStatusTCB)) { break; }
+      if (fDoEndRunTCB.load() || RUNSTATE::CheckError(fRunStatusTCB)) { break; }
     }
     else {
-      bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
-                      RUNSTATE::CheckError(fRunStatus) || fDoExit;
-      if (runstate) { break; }
+      if (RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
+          RUNSTATE::CheckError(fRunStatus) || fDoExit.load()) {
+        break;
+      }
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

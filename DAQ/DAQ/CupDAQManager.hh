@@ -1,6 +1,7 @@
 // CupDAQManager.hh
 #pragma once
 
+#include <atomic>
 #include <ctime>
 #include <map>
 #include <memory>
@@ -143,7 +144,7 @@ protected:
                                 int * status);
   virtual void PrintDAQSummary();
 
-  virtual bool ThreadWait(unsigned long & state, bool & exit);
+  virtual bool ThreadWait(std::atomic<unsigned long> & state, std::atomic<bool> & exit);
   virtual void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
                            double ki = 0.01);
 
@@ -161,10 +162,10 @@ protected:
   virtual bool IsDAQRunning();
   virtual bool IsDAQFail();
 
-  virtual bool WaitState(unsigned long & state, RUNSTATE::STATE pstate, bool errorexit = true);
-  virtual int WaitCommand(bool & isgo);
-  virtual int WaitCommand(bool & isgo, bool & exit);
-  virtual int WaitCommand(bool & isgo, unsigned long & state);
+  virtual bool WaitState(std::atomic<unsigned long> & state, RUNSTATE::STATE pstate, bool errorexit = true);
+  virtual int WaitCommand(std::atomic<bool> & isgo);
+  virtual int WaitCommand(std::atomic<bool> & isgo, std::atomic<bool> & exit);
+  virtual int WaitCommand(std::atomic<bool> & isgo, std::atomic<unsigned long> & state);
   virtual bool IsForcedEndRunFile(bool useRC = false);
 
   virtual const char * GetADCName() const;
@@ -175,7 +176,7 @@ protected:
 
 protected:
   int fRunNumber;
-  int fSubRunNumber;
+  std::atomic<int> fSubRunNumber;
 
   int fDAQID;
   std::string fDAQName;
@@ -203,26 +204,26 @@ protected:
   bool fIsOwnADC;
   bool fIsDAQOpen;
 
-  unsigned long fRunStatus;
-  unsigned long fErrorCode;
-  bool fDoConfigRun;
-  bool fDoStartRun;
-  bool fDoEndRun;
-  bool fDoExit;
-  bool fDoSplitOutputFile;
+  std::atomic<unsigned long> fRunStatus;
+  std::atomic<unsigned long> fErrorCode;
+  std::atomic<bool> fDoConfigRun;
+  std::atomic<bool> fDoStartRun;
+  std::atomic<bool> fDoEndRun;
+  std::atomic<bool> fDoExit;
+  std::atomic<bool> fDoSplitOutputFile;
 
-  unsigned long fRunStatusTCB;
-  unsigned long fErrorCodeTCB;
-  bool fDoConfigRunTCB;
-  bool fDoStartRunTCB;
-  bool fDoEndRunTCB;
-  bool fDoExitTCB;
-  bool fDoSplitOutputFileTCB;
+  std::atomic<unsigned long> fRunStatusTCB;
+  std::atomic<unsigned long> fErrorCodeTCB;
+  std::atomic<bool> fDoConfigRunTCB;
+  std::atomic<bool> fDoStartRunTCB;
+  std::atomic<bool> fDoEndRunTCB;
+  std::atomic<bool> fDoExitTCB;
+  std::atomic<bool> fDoSplitOutputFileTCB;
 
-  PROCSTATE fReadStatus;
-  PROCSTATE fSortStatus;
-  PROCSTATE fBuildStatus;
-  PROCSTATE fWriteStatus;
+  std::atomic<PROCSTATE> fReadStatus;
+  std::atomic<PROCSTATE> fSortStatus;
+  std::atomic<PROCSTATE> fBuildStatus;
+  std::atomic<PROCSTATE> fWriteStatus;
 
   int fReadSleep;
   int fSortSleep;
@@ -290,9 +291,8 @@ protected:
   bool fDoSendEvent;
   std::map<int, std::unique_ptr<BuiltEventBuffer>> fRecvEventBuffers;
 
-  PROCSTATE fSendStatus;
-  PROCSTATE fRecvStatus;
-  PROCSTATE fMergeStatus;
+  std::atomic<PROCSTATE> fSendStatus;
+  std::atomic<PROCSTATE> fRecvStatus;
 
   int fSendSleep;
   int fMergeSleep;

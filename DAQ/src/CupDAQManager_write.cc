@@ -9,7 +9,7 @@
 
 void CupDAQManager::TF_WriteEvent()
 {
-  fWriteStatus = READY;
+  fWriteStatus.store(READY);
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
     WARNING("exited by exit command");
@@ -24,7 +24,6 @@ void CupDAQManager::TF_WriteEvent()
     return;
   }
 
-  // Delegate writing based on ADC mode and file format
   if (fADCMode == ADC::SMODE) {
     switch (fOutputFileFormat) {
       case OUTPUT::ROOT: WriteSADC_MOD_ROOT(); break;
@@ -42,20 +41,23 @@ void CupDAQManager::TF_WriteEvent()
     }
   }
 
-  // Close ROOT file safely
-  if (fROOTFile && fROOTFile->IsOpen()) {
-    fROOTFile->cd();
-    fROOTTree->Write();
-    fTotalWrittenDataSize += fROOTFile->GetEND();
-    std::string fname = fROOTFile->GetName();
-    fROOTFile->Close();
-    INFO("output data %s closed", fname.c_str());
+  {
+    std::lock_guard<std::mutex> lock(fWriteFileMutex);
+    if (fROOTFile && fROOTFile->IsOpen()) {
+      fROOTFile->cd();
+      fROOTTree->Write();
+
+      fTotalWrittenDataSize += fROOTFile->GetEND();
+      std::string fname = fROOTFile->GetName();
+
+      fROOTFile->Close();
+      INFO("output data %s closed", fname.c_str());
+    }
   }
 
-  // Close HDF5 file using the clean helper function (No #ifdef clutter here!)
   CloseHDF5Output();
 
-  fWriteStatus = ENDED;
+  fWriteStatus.store(ENDED);
   INFO("writing output data ended");
 }
 

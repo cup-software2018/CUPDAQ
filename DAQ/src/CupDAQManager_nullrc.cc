@@ -19,7 +19,6 @@ void CupDAQManager::RC_NullTCB()
   auto execute_run = [&]() {
     bool socketerror = false;
 
-    // prepare client sockets correspond to DAQs (ZeroMQ REQ)
     for (int i = 0; i < daq->GetN(); i++) {
       int id = daq->GetID(i);
       if (id == fDAQID) { continue; }
@@ -78,7 +77,7 @@ void CupDAQManager::RC_NullTCB()
     int state = WaitCommand(fDoConfigRunTCB, fDoExitTCB);
     if (state != 0) {
       if (state == 1) { INFO("run=%d exited by Run Control", fRunNumber); }
-      else if (state < 0) {
+      else {
         RUNSTATE::SetError(fRunStatusTCB);
       }
       return;
@@ -98,9 +97,10 @@ void CupDAQManager::RC_NullTCB()
     state = WaitCommand(fDoStartRunTCB, fDoExitTCB);
     if (state != 0) {
       if (state == 1) { INFO("run=%d exited by Run Control", fRunNumber); }
-      else if (state < 0) {
+      else {
         RUNSTATE::SetError(fRunStatusTCB);
       }
+      fDoEndRunTCB.store(true); // TF_SplitOutput 종료 보장
       return;
     }
 
@@ -109,20 +109,21 @@ void CupDAQManager::RC_NullTCB()
 
     if (!WaitDAQStatus(RUNSTATE::kRUNNING)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      fDoEndRunTCB.store(true); // TF_SplitOutput 종료 보장
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kRUNNING);
     INFO("all DAQs are running");
 
     while (true) {
-      if (fDoEndRunTCB || IsForcedEndRunFile()) { break; }
+      if (fDoEndRunTCB.load() || IsForcedEndRunFile()) { break; }
       if (!IsDAQRunning()) {
         RUNSTATE::SetError(fRunStatusTCB);
         break;
       }
-      if (fDoSplitOutputFile) {
+      if (fDoSplitOutputFile.load()) {
         SendCommandToDAQs("kSPLITOUTPUTFILE");
-        fDoSplitOutputFile = false;
+        fDoSplitOutputFile.store(false);
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -182,6 +183,7 @@ void CupDAQManager::RC_NullDAQ()
 
     if (WaitCommand(fDoStartRun, fDoExit) != 0) {
       WARNING("run=%d exited by TCB", fRunNumber);
+      RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED); // 스레드 종료 조건 보장
       return;
     }
 
@@ -190,7 +192,7 @@ void CupDAQManager::RC_NullDAQ()
     time(&fStartDatime);
 
     while (true) {
-      if (fDoEndRun) { break; }
+      if (fDoEndRun.load()) { break; }
       if (RUNSTATE::CheckError(fRunStatus)) { break; }
 
       fTriggerNumber += 10;
@@ -237,10 +239,9 @@ void CupDAQManager::RC_NullMERGER()
 
   for (int i = 0; i < daq->GetN(); i++) {
     int id = daq->GetID(i);
-    if (id == fDAQID) continue;
+    if (id == fDAQID) { continue; }
 
     const std::string & daq_name = daq->GetDAQName(id);
-
     if (daq_name.find(adcname) != std::string::npos) {
       INFO("event buffer for %s prepared", daq_name.c_str());
     }
@@ -280,6 +281,7 @@ void CupDAQManager::RC_NullMERGER()
 
     if (WaitCommand(fDoStartRun, fDoExit) != 0) {
       WARNING("run=%d exited by TCB", fRunNumber);
+      RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED); // 스레드 종료 조건 보장
       return;
     }
 
@@ -287,7 +289,7 @@ void CupDAQManager::RC_NullMERGER()
     time(&fStartDatime);
 
     while (true) {
-      if (fDoEndRun) { break; }
+      if (fDoEndRun.load()) { break; }
       if (RUNSTATE::CheckError(fRunStatus)) { break; }
 
       fTriggerNumber += 10;

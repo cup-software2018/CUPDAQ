@@ -57,20 +57,22 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
 
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata.clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
@@ -97,7 +99,7 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         }
 
         for (int i = 0; i < nadcch; ++i) {
-          if (header->GetZero(i)) continue;
+          if (header->GetZero(i)) { continue; }
 
           FChannel_t channel{};
           channel.id = conf->PID(i);
@@ -123,10 +125,11 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         RUNSTATE::SetError(fRunStatus);
         break;
       }
+
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }
@@ -162,20 +165,22 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
 
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata.clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
@@ -202,7 +207,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
         AbsConf * conf = fConfigList->FindConfig(fADCType, header->GetMID());
 
         for (int i = 0; i < nadcch; ++i) {
-          if (header->GetZero(i)) continue;
+          if (header->GetZero(i)) { continue; }
 
           AChannel_t channel{};
           channel.id = conf->PID(i);
@@ -233,7 +238,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }

@@ -34,26 +34,49 @@ enum STATE {
   kEXIT = 8
 };
 
-inline STATE GetState(unsigned long state)
+inline STATE GetState(const std::atomic<unsigned long> & state)
 {
+  unsigned long val = state.load();
   for (int i = 1; i <= 16; i++) {
-    if (TESTBIT(state, i)) return (STATE)i;
+    if (val & (1UL << i)) return static_cast<STATE>(i);
   }
   return kDOWN;
 }
 
-inline void SetState(unsigned long & state, STATE cstate)
+inline STATE GetState(unsigned long val)
 {
-  STATE pstate = GetState(state);
-  CLRBIT(state, pstate);
-  SETBIT(state, cstate);
+  for (int i = 1; i <= 16; i++) {
+    if (val & (1UL << i)) return static_cast<STATE>(i);
+  }
+  return kDOWN;
 }
 
-inline void SetError(unsigned long & state) { SETBIT(state, kERROR); }
+inline void SetState(std::atomic<unsigned long> & state, STATE cstate)
+{
+  unsigned long oldval = state.load();
+  unsigned long newval;
+  do {
+    newval = oldval;
+    STATE pstate = GetState(newval);
+    newval &= ~(1UL << pstate);  // CLRBIT
+    newval |=  (1UL << cstate);  // SETBIT
+  } while (!state.compare_exchange_weak(oldval, newval));
+}
 
-inline bool CheckError(unsigned long state) { return TESTBIT(state, kERROR); }
+inline void SetError(std::atomic<unsigned long> & state)
+{
+  state.fetch_or(1UL << kERROR);
+}
 
-inline bool CheckState(unsigned long state, STATE pstate) { return TESTBIT(state, pstate); }
+inline bool CheckError(const std::atomic<unsigned long> & state)
+{
+  return state.load() & (1UL << kERROR);
+}
+
+inline bool CheckState(const std::atomic<unsigned long> & state, STATE pstate)
+{
+  return state.load() & (1UL << pstate);
+}
 } // namespace RUNSTATE
 
 //

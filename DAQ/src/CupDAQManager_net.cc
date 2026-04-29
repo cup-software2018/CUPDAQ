@@ -14,11 +14,13 @@ void CupDAQManager::TF_SendData()
   double perror = 0;
   double integral = 0;
 
-  fSendStatus = READY;
+  fSendStatus.store(READY);
+
   if (!ThreadWait(fRunStatus, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
+
   INFO("started");
 
   zmq::context_t context(1);
@@ -32,22 +34,21 @@ void CupDAQManager::TF_SendData()
   socket.connect(endpoint);
   INFO("connecting to %s (DAQID=%d)", endpoint.c_str(), fDAQID);
 
-  fSendStatus = RUNNING;
+  fSendStatus.store(RUNNING);
 
-  // Batch settings
-  constexpr int TARGET_BYTES = 1 * 1024 * 1024; // 1MB
+  constexpr int TARGET_BYTES = 1 * 1024 * 1024;
   constexpr auto TIME_THRESHOLD = std::chrono::milliseconds(100);
 
-  int batchSize = 0; // determined dynamically after first event
-  int eventSize = 0; // measured once from first event
+  int batchSize = 0;
+  int eventSize = 0;
 
   TObjArray batch;
-  batch.SetOwner(kTRUE); // Delete() will call BuiltEvent destructor
+  batch.SetOwner(kTRUE);
   int batchCount = 0;
   auto lastFlushTime = std::chrono::steady_clock::now();
 
   auto flushBatch = [&]() -> bool {
-    if (batchCount == 0) return true;
+    if (batchCount == 0) { return true; }
 
     TMessage msg(kMESS_OBJECT);
     msg.WriteObject(&batch);
@@ -71,23 +72,24 @@ void CupDAQManager::TF_SendData()
       DEBUG("batch sent (count=%d, size=%d bytes)", batchCount, static_cast<int>(msg.Length()));
     }
 
-    batch.Delete(); // SetOwner(kTRUE) -> BuiltEvent destructor called
+    batch.Delete();
     batchCount = 0;
     lastFlushTime = std::chrono::steady_clock::now();
     return true;
   };
 
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) {
-      INFO("exit condition met (fDoExit=%d, error=%d)", (int)fDoExit,
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) {
+      INFO("exit condition met (fDoExit=%d, error=%d)", (int)fDoExit.load(),
            (int)RUNSTATE::CheckError(fRunStatus));
       break;
     }
-    if (fBuildStatus == ENDED && fBuiltEventBuffer1.empty()) {
+
+    if (fBuildStatus.load() == ENDED && fBuiltEventBuffer1.empty()) {
       INFO("build ended and buffer empty, flushing remaining batch (count=%d)", batchCount);
       if (!flushBatch()) {
         RUNSTATE::SetError(fRunStatus);
-        fSendStatus = ERROR;
+        fSendStatus.store(ERROR);
       }
       break;
     }
@@ -96,7 +98,6 @@ void CupDAQManager::TF_SendData()
     if (opt) {
       const auto & event = *opt;
 
-      // Measure event size once from first event
       if (eventSize == 0) {
         eventSize = event->GetSize();
         batchSize = std::max(1, TARGET_BYTES / eventSize);
@@ -108,11 +109,10 @@ void CupDAQManager::TF_SendData()
               batchCount + 1, batchSize);
       }
 
-      batch.Add(new BuiltEvent(*event)); // TObjArray takes ownership
+      batch.Add(new BuiltEvent(*event));
       batchCount += 1;
     }
 
-    // Flush conditions
     bool batchFull = (batchSize > 0 && batchCount >= batchSize);
     bool timeLimitReached = (std::chrono::steady_clock::now() - lastFlushTime) > TIME_THRESHOLD;
 
@@ -123,23 +123,21 @@ void CupDAQManager::TF_SendData()
       }
       if (!flushBatch()) {
         RUNSTATE::SetError(fRunStatus);
-        fSendStatus = ERROR;
+        fSendStatus.store(ERROR);
         break;
       }
     }
   }
 
-  // Clear any remaining events in batch
   batch.Delete();
 
-  // Send disconnect signal to DataServer before exiting
   INFO("sending disconnect signal to DataServer");
   zmq::message_t empty(0);
   zmq::message_t disconnect(0);
   socket.send(empty, zmq::send_flags::sndmore);
   socket.send(disconnect, zmq::send_flags::none);
 
-  fSendStatus = ENDED;
+  if (fSendStatus.load() != ERROR) { fSendStatus.store(ENDED); }
   INFO("ended");
 }
 
@@ -148,7 +146,8 @@ void CupDAQManager::TF_DataServer()
   int data_port = fDAQPort + PORT_OFFSET::DATA;
   std::string name = fDAQName;
 
-  fRecvStatus = READY;
+  fRecvStatus.store(READY);
+
   if (!ThreadWait(fRunStatus, fDoExit)) {
     WARNING("exited by exit command");
     return;
@@ -169,7 +168,7 @@ void CupDAQManager::TF_DataServer()
   std::set<std::string> connectedClients;
   int nExpected = static_cast<int>(fRecvEventBuffers.size());
 
-  fRecvStatus = RUNNING;
+  fRecvStatus.store(RUNNING);
 
   bool everConnected = false;
   bool isShuttingDown = false;
@@ -177,21 +176,18 @@ void CupDAQManager::TF_DataServer()
   const auto SHUTDOWN_TIMEOUT = std::chrono::seconds(10);
 
   while (true) {
-    // Immediate exit on error (highest priority)
     if (RUNSTATE::CheckError(fRunStatus)) {
       ERROR("error state detected, exiting");
       break;
     }
 
-    // Enter shutdown mode on exit signal
-    if (fDoExit && !isShuttingDown) {
+    if (fDoExit.load() && !isShuttingDown) {
       isShuttingDown = true;
       shutdownStartTime = std::chrono::steady_clock::now();
       INFO("shutdown initiated, waiting for clients to disconnect (connected: %zu/%d)",
            connectedClients.size(), nExpected);
     }
 
-    // Force exit on shutdown timeout (network failure or client crash)
     if (isShuttingDown) {
       if (std::chrono::steady_clock::now() - shutdownStartTime > SHUTDOWN_TIMEOUT) {
         WARNING("shutdown timeout reached, forcing exit (remaining clients: %zu)",
@@ -200,13 +196,11 @@ void CupDAQManager::TF_DataServer()
       }
     }
 
-    // Graceful exit once all clients have disconnected
     if (everConnected && connectedClients.empty()) {
       INFO("all clients disconnected, exiting gracefully");
       break;
     }
 
-    // No client ever connected and shutdown requested -> exit immediately
     if (!everConnected && isShuttingDown) {
       INFO("no clients were connected, exiting");
       break;
@@ -262,7 +256,6 @@ void CupDAQManager::TF_DataServer()
       DEBUG("received message from DAQID=%s (size=%zu bytes)", clientId.c_str(), zmqmsg.size());
     }
 
-    // Deserialize TObjArray
     TMessage msg(kMESS_OBJECT);
     msg.SetBuffer(zmqmsg.data<char>(), static_cast<UInt_t>(zmqmsg.size()), kFALSE);
     msg.SetReadMode();
@@ -302,10 +295,10 @@ void CupDAQManager::TF_DataServer()
     }
 
     arr->SetOwner(kTRUE);
-    arr->Delete(); // BuiltEvent destructor called for each element
+    arr->Delete();
     delete arr;
   }
 
-  fRecvStatus = ENDED;
+  fRecvStatus.store(ENDED);
   INFO("ended");
 }

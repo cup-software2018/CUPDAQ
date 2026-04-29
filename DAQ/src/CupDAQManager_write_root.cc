@@ -45,29 +45,37 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata->Clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
+
       std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
       BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
       eventinfo->SetTriggerTime(ev->GetTriggerTime());
       eventinfo->SetTriggerType(ev->GetTriggerType());
-      eventinfo->SetEventNumber(fNBuiltEvent);
+
+      {
+        std::lock_guard<std::mutex> lock(fMonitorMutex);
+        eventinfo->SetEventNumber(fNBuiltEvent);
+      }
 
       int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
@@ -82,8 +90,7 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
         }
 
         for (int i = 0; i < nadcch; i++) {
-          if (header->GetZero(i)) continue;
-
+          if (header->GetZero(i)) { continue; }
           FChannel * channel = chdata->Add(conf->PID(i), adcraw->GetNDP());
           channel->SetPedestal(header->GetPedestal(i));
           auto * rawchannel = adcraw->GetChannel(i);
@@ -99,7 +106,7 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }
@@ -125,29 +132,37 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
 
   std::unique_lock<std::mutex> wlock(fWriteFileMutex, std::defer_lock);
 
-  fWriteStatus = RUNNING;
+  fWriteStatus.store(RUNNING);
+
   while (true) {
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) break;
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
     if (fBuiltEventBuffer1.empty()) {
-      if (fBuildStatus == ENDED || fMergeStatus == ENDED) break;
+      if (fBuildStatus.load() == ENDED) { break; }
     }
     else {
       StartBenchmark("WriteEvent");
+
       chdata->Clear();
 
       auto bevent_opt = fBuiltEventBuffer1.pop_front();
       if (!bevent_opt.has_value()) {
-        int size_empty = fBuiltEventBuffer1.size();
+        int size_empty = static_cast<int>(fBuiltEventBuffer1.size());
         ThreadSleep(fWriteSleep, perror, integral, size_empty);
         continue;
       }
+
       std::shared_ptr<BuiltEvent> bevent_ptr = bevent_opt.value();
       BuiltEvent * ev = bevent_ptr.get();
 
       eventinfo->SetTriggerNumber(ev->GetTriggerNumber());
       eventinfo->SetTriggerTime(ev->GetTriggerTime());
       eventinfo->SetTriggerType(ev->GetTriggerType());
-      eventinfo->SetEventNumber(fNBuiltEvent);
+
+      {
+        std::lock_guard<std::mutex> lock(fMonitorMutex);
+        eventinfo->SetEventNumber(fNBuiltEvent);
+      }
 
       int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
@@ -162,8 +177,7 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
         }
 
         for (int i = 0; i < nadcch; i++) {
-          if (header->GetZero(i)) continue;
-
+          if (header->GetZero(i)) { continue; }
           AChannel * channel = chdata->Add(conf->PID(i));
           channel->SetBit(header->GetTriggerBit(i));
           channel->SetADC(adcraw->GetADC(i));
@@ -178,7 +192,7 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
       StopBenchmark("WriteEvent");
     }
 
-    int size = fBuiltEventBuffer1.size();
+    int size = static_cast<int>(fBuiltEventBuffer1.size());
     ThreadSleep(fWriteSleep, perror, integral, size);
   }
 }

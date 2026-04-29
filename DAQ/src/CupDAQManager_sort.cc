@@ -8,12 +8,13 @@
 
 void CupDAQManager::TF_SortEvent()
 {
-  fSortStatus = READY;
+  fSortStatus.store(READY);
 
   if (!ThreadWait(fRunStatus, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
+
   INFO("sorting data started");
 
   if (fTriggerMode == TRIGGER::SELF) { SortEvent_CHA(); }
@@ -21,7 +22,8 @@ void CupDAQManager::TF_SortEvent()
     SortEvent_MOD();
   }
 
-  fSortStatus = ENDED;
+  fSortStatus.store(ENDED);
+
   INFO("sorting data ended");
 }
 
@@ -36,12 +38,12 @@ void CupDAQManager::SortEvent_MOD()
   double perror = 0.0;
   double integral = 0.0;
 
-  fSortStatus = RUNNING;
-  while (true) {
-    // emergent exit
-    if (fDoExit || RUNSTATE::CheckError(fRunStatus)) { break; }
+  fSortStatus.store(RUNNING);
 
-    if (fReadStatus == ENDED) {
+  while (true) {
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
+
+    if (fReadStatus.load() == ENDED) {
       int remain = 0;
       for (int i = 0; i < nadc_int; ++i) {
         auto * adc = static_cast<AbsADC *>(fCont[i]);
@@ -51,11 +53,11 @@ void CupDAQManager::SortEvent_MOD()
     }
 
     StartBenchmark("SortEvent");
+
     int totalsize = 0;
     for (int i = 0; i < nadc_int; ++i) {
       auto * adc = static_cast<AbsADC *>(fCont[i]);
       totalsize += adc->Bsize();
-
       if (adc->Bempty()) { continue; }
 
       auto chunkdata = adc->Bpop_front();
@@ -66,7 +68,6 @@ void CupDAQManager::SortEvent_MOD()
 
       for (int j = 0; j < nevent; ++j) {
         std::unique_ptr<AbsADCRaw> adcevent;
-
         switch (fADCType) {
           case ADC::FADCS:
           case ADC::FADCT:
@@ -105,14 +106,13 @@ void CupDAQManager::SortEvent_MOD()
         buffer->push_back(std::move(adcevent));
       }
     }
+
     StopBenchmark("SortEvent");
 
     const int denom = (nadc_int > 0) ? nadc_int : 1;
     totalsize /= denom;
-
     ThreadSleep(fSortSleep, perror, integral, totalsize);
   }
 }
 
 void CupDAQManager::SortEvent_CHA() {}
-
