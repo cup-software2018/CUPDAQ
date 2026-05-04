@@ -253,6 +253,7 @@ void CupDAQManager::RC_TCB()
         SendCommandToDAQs("kSETERROR");
         return;
       }
+      if (fDoExitTCB.load()) { return; }
       if (fDoSplitOutputFile.load()) {
         SendCommandToDAQs("kSPLITOUTPUTFILE");
         fDoSplitOutputFile.store(false);
