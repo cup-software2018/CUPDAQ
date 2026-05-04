@@ -51,6 +51,10 @@ void CupDAQManager::RC_TCB()
   {
     bool socketerror = false;
 
+    // Max retries and wait interval (ms)
+    const int MAX_RETRIES = 5;
+    const int RETRY_WAIT_MS = 1000;
+
     for (int i = 0; i < daq->GetN(); i++) {
       int id = daq->GetID(i);
       if (id == fDAQID) { continue; }
@@ -61,35 +65,55 @@ void CupDAQManager::RC_TCB()
       std::string endpoint = "tcp://" + ip + ":" + std::to_string(port);
 
       auto socket = std::make_unique<zmq::socket_t>(fZMQContext, zmq::socket_type::req);
+
+      // Set socket options for resilient connection
       socket->set(zmq::sockopt::req_relaxed, 1);
       socket->set(zmq::sockopt::rcvtimeo, 2000);
       socket->set(zmq::sockopt::sndtimeo, 2000);
+      socket->set(zmq::sockopt::linger, 0); // Avoid hanging on close
+
       socket->connect(endpoint);
 
       nlohmann::json ping_json;
       ping_json["command"] = "kQUERYDAQSTATUS";
       std::string ping_str = ping_json.dump();
 
-      zmq::message_t request(ping_str.size());
-      std::memcpy(request.data(), ping_str.c_str(), ping_str.size());
+      bool connected_and_verified = false;
 
-      INFO("[%s] Sending kQUERYDAQSTATUS to %s", daq_name.c_str(), endpoint.c_str());
+      for (int retry = 0; retry < MAX_RETRIES; retry++) {
+        INFO("[%s] Attempting to connect... (%d/%d) at %s", daq_name.c_str(), retry + 1,
+             MAX_RETRIES, endpoint.c_str());
 
-      auto send_res = socket->send(request, zmq::send_flags::none);
-      if (!send_res) {
-        socketerror = true;
-        ERROR("[%s] Send failed at %s", daq_name.c_str(), endpoint.c_str());
+        zmq::message_t request(ping_str.size());
+        std::memcpy(request.data(), ping_str.c_str(), ping_str.size());
+
+        auto send_res = socket->send(request, zmq::send_flags::none);
+        if (!send_res) {
+          WARNING("[%s] Send failed, retrying...", daq_name.c_str());
+          std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_WAIT_MS));
+          continue;
+        }
+
+        zmq::message_t reply;
+        auto recv_res = socket->recv(reply, zmq::recv_flags::none);
+        if (!recv_res) {
+          WARNING("[%s] Receive timeout, server might be starting up...", daq_name.c_str());
+          std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_WAIT_MS));
+          continue;
+        }
+
+        // Successfully received a reply
+        connected_and_verified = true;
         break;
       }
 
-      INFO("[%s] Waiting for reply from %s", daq_name.c_str(), endpoint.c_str());
-
-      zmq::message_t reply;
-      auto recv_res = socket->recv(reply, zmq::recv_flags::none);
-      if (!recv_res) {
+      if (!connected_and_verified) {
         socketerror = true;
-        ERROR("[%s] Connection failed (timeout) at %s", daq_name.c_str(), endpoint.c_str());
-        break;
+        ERROR("[%s] Failed to connect after %d attempts at %s", daq_name.c_str(), MAX_RETRIES,
+              endpoint.c_str());
+        // Depending on system requirements, you might 'continue' to check other nodes
+        // or 'break' if all nodes are mandatory.
+        continue;
       }
 
       fDAQSocket.push_back(std::move(socket));
