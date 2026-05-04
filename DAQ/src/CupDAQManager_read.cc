@@ -50,7 +50,7 @@ void CupDAQManager::ReadData_GLT()
   while (true) {
     if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
 
-    if (RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDING) && !endsleep) {
+    if (fDoEndRun.load() && !endsleep) {
       INFO("waiting for reading remaining data in ADCs");
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       endsleep = true;
