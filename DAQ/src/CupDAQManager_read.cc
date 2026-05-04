@@ -15,7 +15,9 @@ void CupDAQManager::TF_ReadData()
   INFO("started");
 
   if (fTriggerMode == TRIGGER::GLOBAL) { ReadData_GLT(); }
-  else { ReadData_MOD(); }
+  else {
+    ReadData_MOD();
+  }
 
   fReadStatus.store(ENDED);
 

@@ -21,8 +21,10 @@ const unsigned long kQUERYCHTRGINFO = 19;
 const unsigned long kSETERROR = 20;
 const unsigned long kQUERYMONITOR = 21;
 
-namespace RUNSTATE {
-enum STATE {
+namespace RUNSTATE
+{
+enum STATE
+{
   kDOWN = 0,
   kBOOTED = 1,
   kCONFIGURED = 2,
@@ -32,7 +34,6 @@ enum STATE {
   kPROCENDED = 6,
   kWARNING = 7,
   kERROR = 8,
-  kEXIT = 9
 };
 
 inline STATE GetState(const std::atomic<unsigned long> & state)
@@ -59,15 +60,12 @@ inline void SetState(std::atomic<unsigned long> & state, STATE cstate)
   do {
     newval = oldval;
     STATE pstate = GetState(newval);
-    newval &= ~(1UL << pstate);  // CLRBIT
-    newval |=  (1UL << cstate);  // SETBIT
+    newval &= ~(1UL << pstate); // CLRBIT
+    newval |= (1UL << cstate);  // SETBIT
   } while (!state.compare_exchange_weak(oldval, newval));
 }
 
-inline void SetError(std::atomic<unsigned long> & state)
-{
-  state.fetch_or(1UL << kERROR);
-}
+inline void SetError(std::atomic<unsigned long> & state) { state.fetch_or(1UL << kERROR); }
 
 inline bool CheckError(const std::atomic<unsigned long> & state)
 {
@@ -106,13 +104,22 @@ const double kMAXEVENTBUFFERSIZE = 1.0; // gigabytes
 const double kOUTPUTSWITCHINGTIME = 60 * 60; // seconds
 
 // output file format
-namespace OUTPUT {
-enum FORMAT { NONE = 0, ROOT = 1, HDF5 = 2, GZIP = 3 };
+namespace OUTPUT
+{
+enum FORMAT
+{
+  NONE = 0,
+  ROOT = 1,
+  HDF5 = 2,
+  GZIP = 3
+};
 }
 
 // DAQ types
-namespace DAQ {
-enum TYPE {
+namespace DAQ
+{
+enum TYPE
+{
   TCB = 0,
   STDDAQ = 1,
   TCBDAQ = 2,
@@ -124,14 +131,23 @@ enum TYPE {
   NULLDAQ = 91,
   NULLMERGER = 92
 };
-enum EXPERIMENT { NONE = 0, NEOS = 1, COSINE = 2, NEON = 3, AMORE1 = 4, AMORE2 = 5 };
+enum EXPERIMENT
+{
+  NONE = 0,
+  NEOS = 1,
+  COSINE = 2,
+  NEON = 3,
+  AMORE1 = 4,
+  AMORE2 = 5
+};
 } // namespace DAQ
 
 // =========================================================================
 // Network Port Offsets
 // Offset values added to the Base Port to determine the port for each specific function.
 // =========================================================================
-namespace PORT_OFFSET {
+namespace PORT_OFFSET
+{
 constexpr int CONTROL = 0;  // Control port (ZMQ REP - command reception)
 constexpr int CONFIG = 10;  // Configuration sync port (ROOT TSocket - ConfigList transfer)
 constexpr int DATA = 20;    // Data transfer port (ZMQ PUSH/PULL or TCP)

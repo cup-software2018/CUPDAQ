@@ -12,9 +12,10 @@
 
 void CupDAQManager::TF_MsgServer()
 {
+  bool istcb = (fDAQType == DAQ::TCB);
+
   int port = fDAQPort;
   std::string name = fDAQName;
-  bool istcb = (fDAQID == 0);
 
   zmq::context_t context(1);
   zmq::socket_t zmq_socket(context, zmq::socket_type::router);

@@ -428,6 +428,7 @@ void CupDAQManager::RC_TCBCTRLDAQ()
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDING);
+    INFO("changed run state to RUNENDING");
 
     while (true) {
       bool allEnded = fReadStatus.load() == ENDED && fSortStatus.load() == ENDED &&
