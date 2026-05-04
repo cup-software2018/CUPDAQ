@@ -14,7 +14,7 @@
 
 void CupDAQManager::TF_Histogramer()
 {
-  if (!ThreadWait(fRunStatus, fDoExit)) { return; }
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) { return; }
   INFO("histogramer started");
 
   std::unique_ptr<AbsHistogramer> histogramer;

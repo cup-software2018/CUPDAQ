@@ -73,49 +73,9 @@ void CupDAQManager::PrintDAQSummary()
   std::cout << std::endl;
 }
 
-bool CupDAQManager::ThreadWait(std::atomic<unsigned long> & state, std::atomic<bool> & exit)
-{
-  while (true) {
-    if (RUNSTATE::CheckState(state, RUNSTATE::kRUNNING)) { break; }
-    if (RUNSTATE::CheckError(state)) { return false; }
-    if (exit.load()) { return false; }
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
-  return true;
-}
-
-void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral, int size,
-                                int tsize, double ki)
-{
-  if (!RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNNING)) { return; }
-
-  const double Kp = sleep / 20.0;
-  const double Kd = sleep / 10.0;
-  const double Ki = ki;
-  const double dt = 1.0;
-
-  const double max = 1000000.0;
-  const double min = -1000000.0;
-
-  double error = static_cast<double>(tsize - size);
-  double Pout = Kp * error;
-
-  integral += error * dt;
-  if (integral < 0.0) { integral = 0.0; }
-  double Iout = Ki * integral;
-
-  double derivative = (error - perror) / dt;
-  double Dout = Kd * derivative;
-
-  double output = Pout + Iout + Dout;
-  output = std::max(min, std::min(max, output));
-
-  sleep = static_cast<int>(output);
-  if (sleep < 0) { sleep = 0; }
-  perror = error;
-
-  std::this_thread::sleep_for(std::chrono::microseconds(sleep));
-}
+//
+// TCB Server utilities
+//
 
 nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
                                                const std::string & cmd, std::string & daq_name)
@@ -166,29 +126,16 @@ nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket
   return rep_json;
 }
 
-nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
-                                               const std::string & cmd)
-{
-  std::string dummy_name;
-  return SendCommandToDAQ(socket_ptr, cmd, dummy_name);
-}
-
 void CupDAQManager::SendCommandToDAQs(const std::string & cmd)
 {
   INFO("Broadcasting command [%s] to all connected DAQs", cmd.c_str());
 
-  int idx = 0;
   for (auto & socket_ptr : fDAQSocket) {
-    if (!socket_ptr) {
-      idx++;
-      continue;
-    }
+    if (!socket_ptr) continue;
 
-    // Log the target index before calling SendCommandToDAQ
-    INFO("Forwarding command [%s] to socket index [%d]", cmd.c_str(), idx);
-
-    SendCommandToDAQ(socket_ptr, cmd);
-    idx++;
+    std::string daq_name;
+    SendCommandToDAQ(socket_ptr, cmd, daq_name);
+    INFO("Sent command [%s] to DAQ [%s]", cmd.c_str(), daq_name.c_str());
   }
 
   INFO("Finished broadcasting command [%s]", cmd.c_str());
@@ -204,16 +151,10 @@ unsigned long CupDAQManager::QueryDAQStatus(const std::unique_ptr<zmq::socket_t>
   return 0;
 }
 
-unsigned long CupDAQManager::QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr)
-{
-  std::string dummy_name;
-  return QueryDAQStatus(socket_ptr, dummy_name);
-}
-
 bool CupDAQManager::WaitDAQStatus(RUNSTATE::STATE state)
 {
   while (true) {
-    bool totalstate = true;
+    bool all_ready = true;
     for (auto & socket_ptr : fDAQSocket) {
       if (!socket_ptr) continue;
 
@@ -229,17 +170,15 @@ bool CupDAQManager::WaitDAQStatus(RUNSTATE::STATE state)
         ERROR("%s got error", daq_name.c_str());
         return false;
       }
-      if (!RUNSTATE::CheckState(daqstate, state)) { totalstate = false; }
+      if (!RUNSTATE::CheckState(daqstate, state)) all_ready = false;
     }
-    if (totalstate) break;
+    if (all_ready) return true;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
-
-  return true;
 }
 
-bool CupDAQManager::IsDAQRunning()
+bool CupDAQManager::CheckDAQStatus()
 {
   bool retval = true;
   for (auto & socket_ptr : fDAQSocket) {
@@ -253,9 +192,8 @@ bool CupDAQManager::IsDAQRunning()
       socket_ptr.reset();
       retval = false;
     }
-    else if (!RUNSTATE::CheckState(daqstate, RUNSTATE::kRUNNING)) {
-      ERROR("%s is not running", daq_name.c_str());
-      if (RUNSTATE::CheckError(daqstate)) { ERROR("error in %s", daq_name.c_str()); }
+    else if (RUNSTATE::CheckError(daqstate)) {
+      ERROR("error in %s", daq_name.c_str());
       retval = false;
     }
   }
@@ -263,9 +201,10 @@ bool CupDAQManager::IsDAQRunning()
   return retval;
 }
 
-bool CupDAQManager::IsDAQFail()
+
+bool CupDAQManager::CheckDAQStatus(RUNSTATE::STATE state)
 {
-  bool retval = false;
+  bool retval = true;
   for (auto & socket_ptr : fDAQSocket) {
     if (!socket_ptr) continue;
 
@@ -275,66 +214,86 @@ bool CupDAQManager::IsDAQFail()
     if (daqstate == 0) {
       ERROR("%s connection down", daq_name.c_str());
       socket_ptr.reset();
-      retval = true;
+      retval = false;
     }
-    else if (RUNSTATE::CheckError(daqstate)) {
-      ERROR("error in %s", daq_name.c_str());
-      retval = true;
+    else if (!RUNSTATE::CheckState(daqstate, state)) {
+      ERROR("%s is not in expected state", daq_name.c_str());
+      if (RUNSTATE::CheckError(daqstate)) { ERROR("error in %s", daq_name.c_str()); }
+      retval = false;
     }
   }
 
   return retval;
 }
 
-bool CupDAQManager::WaitState(std::atomic<unsigned long> & state, RUNSTATE::STATE pstate, bool errorexit)
+//
+// TCB/DAQ client Utilities
+//
+
+bool CupDAQManager::WaitRunState(std::atomic<unsigned long> & state, RUNSTATE::STATE pstate,
+                                 std::atomic<bool> & exit)
 {
   while (true) {
     if (RUNSTATE::CheckState(state, pstate)) break;
-    if (errorexit && RUNSTATE::CheckError(state)) return false;
+    if (RUNSTATE::CheckError(state)) return false;
+    if (exit.load()) return false;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
-
   return true;
 }
 
-int CupDAQManager::WaitCommand(std::atomic<bool> & isgo)
+int CupDAQManager::WaitCommand(std::atomic<bool> & command, std::atomic<bool> & exit,
+                               std::atomic<unsigned long> & state)
 {
   while (true) {
-    if (IsDAQFail()) { return -1; }
-    if (isgo.load()) { break; }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
-
-  return 0;
-}
-
-int CupDAQManager::WaitCommand(std::atomic<bool> & isgo, std::atomic<bool> & exit)
-{
-  while (true) {
-    if (IsDAQFail()) { return -1; }
     if (exit.load()) { return 1; }
-    if (isgo.load()) { break; }
+    if (!CheckDAQStatus()) { return -1; } // for tcb, daq will return true
+    if (RUNSTATE::CheckError(state)) { return -1; } // for daq
+    if (command.load()) { break; }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
   return 0;
 }
 
-int CupDAQManager::WaitCommand(std::atomic<bool> & isgo, std::atomic<unsigned long> & state)
+void CupDAQManager::ThreadSleep(int & sleep, double & perror, double & integral, int size,
+                                int tsize, double ki)
 {
-  while (true) {
-    if (IsDAQFail()) { return -1; }
-    if (RUNSTATE::CheckError(state)) { return 1; }
-    if (isgo.load()) { break; }
+  if (!RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNNING)) { return; }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
+  const double Kp = sleep / 20.0;
+  const double Kd = sleep / 10.0;
+  const double Ki = ki;
+  const double dt = 1.0;
 
-  return 0;
+  const double max = 1000000.0;
+  const double min = -1000000.0;
+
+  double error = static_cast<double>(tsize - size);
+  double Pout = Kp * error;
+
+  integral += error * dt;
+  if (integral < 0.0) { integral = 0.0; }
+  double Iout = Ki * integral;
+
+  double derivative = (error - perror) / dt;
+  double Dout = Kd * derivative;
+
+  double output = Pout + Iout + Dout;
+  output = std::max(min, std::min(max, output));
+
+  sleep = static_cast<int>(output);
+  if (sleep < 0) { sleep = 0; }
+  perror = error;
+
+  std::this_thread::sleep_for(std::chrono::microseconds(sleep));
 }
+
+//
+// Misc utilities
+//
 
 bool CupDAQManager::IsForcedEndRunFile(bool useRC)
 {

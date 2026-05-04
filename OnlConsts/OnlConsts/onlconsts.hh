@@ -27,11 +27,12 @@ enum STATE {
   kBOOTED = 1,
   kCONFIGURED = 2,
   kRUNNING = 3,
-  kRUNENDED = 4,
-  kPROCENDED = 5,
-  kWARNING = 6,
-  kERROR = 7,
-  kEXIT = 8
+  kRUNENDING = 4,
+  kRUNENDED = 5,
+  kPROCENDED = 6,
+  kWARNING = 7,
+  kERROR = 8,
+  kEXIT = 9
 };
 
 inline STATE GetState(const std::atomic<unsigned long> & state)

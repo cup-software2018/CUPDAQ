@@ -110,22 +110,6 @@ CupDAQManager::CupDAQManager()
 
 CupDAQManager::~CupDAQManager()
 {
-  for (auto * buffer : fADCRawBuffers) {
-    delete buffer;
-  }
-  fADCRawBuffers.clear();
-
-  /*
-  while (!fBuiltEventBuffer1.empty()) {
-    fBuiltEventBuffer1.pop_front();
-  }
-  while (!fBuiltEventBuffer2.empty()) {
-    fBuiltEventBuffer2.pop_front();
-  }
-  */
-
-  // fRecvEventBuffer.clear();
-
   if (fIsOwnADC) { Clear(); }
 
   if (fRemainingBCount) {
@@ -135,18 +119,6 @@ CupDAQManager::~CupDAQManager()
 
   delete fBenchmark;
   fBenchmark = nullptr;
-}
-
-void CupDAQManager::ClearBuffers()
-{
-  while (!fBuiltEventBuffer1.empty()) {
-    fBuiltEventBuffer1.pop_front();
-  }
-  while (!fBuiltEventBuffer2.empty()) {
-    fBuiltEventBuffer2.pop_front();
-  }
-
-  fRecvEventBuffers.clear();
 }
 
 void CupDAQManager::AddADC(AbsADC * adc)

@@ -8,6 +8,133 @@
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQUtils/ELog.hh"
+#include "OnlConsts/onlconsts.hh"
+
+void CupDAQManager::TF_MsgServer()
+{
+  int port = fDAQPort;
+  std::string name = fDAQName;
+  bool istcb = (fDAQID == 0);
+
+  zmq::context_t context(1);
+  zmq::socket_t zmq_socket(context, zmq::socket_type::router);
+  zmq_socket.set(zmq::sockopt::rcvtimeo, 1000);
+
+  std::string endpoint = "tcp://*:" + std::to_string(port);
+
+  try {
+    zmq_socket.bind(endpoint);
+  } catch (const zmq::error_t & e) {
+    ERROR("[%s] socket bind failed on port %d: %s", name.c_str(), port, e.what());
+    istcb ? RUNSTATE::SetError(fRunStatusTCB) : RUNSTATE::SetError(fRunStatus);
+    return;
+  }
+
+  INFO("[%s] Message Server started on port %d (ROUTER Mode)", name.c_str(), port);
+
+  while (true) {
+    if (fDoExit.load() || fDoExitTCB.load()) { break; }
+
+    zmq::message_t identity;
+    zmq::message_t delimiter;
+    zmq::message_t request;
+
+    auto res = zmq_socket.recv(identity, zmq::recv_flags::none);
+    if (!res) { continue; }
+
+    if (identity.more()) { (void)zmq_socket.recv(delimiter, zmq::recv_flags::none); }
+    else {
+      WARNING("[%s] Invalid ROUTER frame received (no delimiter)", name.c_str());
+      continue;
+    }
+
+    if (delimiter.more()) { (void)zmq_socket.recv(request, zmq::recv_flags::none); }
+    else {
+      WARNING("[%s] Invalid ROUTER frame received (no payload)", name.c_str());
+      continue;
+    }
+
+    bool has_more = request.more();
+    while (has_more) {
+      zmq::message_t dummy;
+      (void)zmq_socket.recv(dummy, zmq::recv_flags::none);
+      has_more = dummy.more();
+      WARNING("[%s] Discarded extra multipart frame from client", name.c_str());
+    }
+
+    std::string msg_str(static_cast<char *>(request.data()), request.size());
+    nlohmann::json req_json = nlohmann::json::parse(msg_str, nullptr, false);
+    nlohmann::json rep_json;
+
+    if (req_json.is_discarded()) {
+      rep_json["status"] = "error";
+      rep_json["message"] = "Invalid JSON format received";
+      WARNING("[%s] Invalid JSON received from client", name.c_str());
+    }
+    else {
+      std::string command = req_json.value("command", "UNKNOWN");
+      rep_json["status"] = "ok";
+      rep_json["name"] = name;
+
+      if (command == "kQUERYDAQSTATUS") {
+        rep_json["run_status"] = istcb ? fRunStatusTCB.load() : fRunStatus.load();
+      }
+      else if (command == "kQUERYRUNINFO") {
+        rep_json["run_number"] = fRunNumber;
+        rep_json["subrun_number"] = fSubRunNumber.load();
+        rep_json["start_time"] = fStartDatime;
+        rep_json["end_time"] = fEndDatime;
+      }
+      else if (command == "kQUERYTRGINFO") {
+        std::lock_guard<std::mutex> lock(fMonitorMutex);
+        rep_json["nevent"] = static_cast<unsigned long>(fTriggerNumber);
+        rep_json["trgtime"] = static_cast<unsigned long>(fTriggerTime);
+      }
+      else if (command == "kQUERYMONITOR") {
+        rep_json["monitor_server_on"] = fMonitorServerOn;
+      }
+      else if (command == "kCONFIGRUN") {
+        istcb ? fDoConfigRunTCB.store(true) : fDoConfigRun.store(true);
+        INFO("[%s] CONFIGRUN command received", name.c_str());
+      }
+      else if (command == "kSTARTRUN") {
+        istcb ? fDoStartRunTCB.store(true) : fDoStartRun.store(true);
+        INFO("[%s] STARTRUN command received", name.c_str());
+      }
+      else if (command == "kENDRUN") {
+        istcb ? fDoEndRunTCB.store(true) : fDoEndRun.store(true);
+        INFO("[%s] ENDRUN command received", name.c_str());
+      }
+      else if (command == "kSPLITOUTPUTFILE") {
+        istcb ? fDoSplitOutputFileTCB.store(true) : fDoSplitOutputFile.store(true);
+        INFO("[%s] SPLITOUTPUTFILE command received", name.c_str());
+      }
+      else if (command == "kSETERROR") {
+        RUNSTATE::SetError(fRunStatus);
+        INFO("[%s] SETERROR command received", name.c_str());
+      }
+      else if (command == "kEXIT") {
+        istcb ? fDoExitTCB.store(true) : fDoExit.store(true);
+        INFO("[%s] EXIT command received", name.c_str());
+      }
+      else {
+        rep_json["status"] = "error";
+        rep_json["message"] = "Unknown command string";
+        WARNING("[%s] Unknown command [%s] received", name.c_str(), command.c_str());
+      }
+    }
+
+    std::string rep_str = rep_json.dump();
+    zmq::message_t reply(rep_str.size());
+    std::memcpy(reply.data(), rep_str.c_str(), rep_str.size());
+
+    zmq_socket.send(identity, zmq::send_flags::sndmore);
+    zmq_socket.send(delimiter, zmq::send_flags::sndmore);
+    zmq_socket.send(reply, zmq::send_flags::none);
+  }
+
+  INFO("[%s] Message Server ended cleanly", name.c_str());
+}
 
 void CupDAQManager::TF_SendData()
 {
@@ -16,7 +143,7 @@ void CupDAQManager::TF_SendData()
 
   fSendStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
@@ -47,7 +174,8 @@ void CupDAQManager::TF_SendData()
   int batchCount = 0;
   auto lastFlushTime = std::chrono::steady_clock::now();
 
-  auto flushBatch = [&]() -> bool {
+  auto flushBatch = [&]() -> bool
+  {
     if (batchCount == 0) { return true; }
 
     TMessage msg(kMESS_OBJECT);
@@ -79,52 +207,47 @@ void CupDAQManager::TF_SendData()
   };
 
   while (true) {
-    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) {
-      INFO("exit condition met (fDoExit=%d, error=%d)", (int)fDoExit.load(),
-           (int)RUNSTATE::CheckError(fRunStatus));
-      break;
-    }
+    if (fDoExit.load() || RUNSTATE::CheckError(fRunStatus)) { break; }
 
-    if (fBuildStatus.load() == ENDED && fBuiltEventBuffer1.empty()) {
-      INFO("build ended and buffer empty, flushing remaining batch (count=%d)", batchCount);
-      if (!flushBatch()) {
-        RUNSTATE::SetError(fRunStatus);
-        fSendStatus.store(ERROR);
-      }
-      break;
-    }
-
-    auto opt = fBuiltEventBuffer1.pop_front(std::chrono::milliseconds(50));
-    if (opt) {
-      const auto & event = *opt;
-
-      if (eventSize == 0) {
-        eventSize = event->GetSize();
-        batchSize = std::max(1, TARGET_BYTES / eventSize);
-        INFO("event size=%d bytes, batch size set to %d events", eventSize, batchSize);
-      }
-
-      if (fVerboseLevel > 1) {
-        DEBUG("adding event to batch (trigNum=%u, batchCount=%d/%d)", event->GetTriggerNumber(),
-              batchCount + 1, batchSize);
-      }
-
-      batch.Add(new BuiltEvent(*event));
-      batchCount += 1;
-    }
-
-    bool batchFull = (batchSize > 0 && batchCount >= batchSize);
-    bool timeLimitReached = (std::chrono::steady_clock::now() - lastFlushTime) > TIME_THRESHOLD;
-
-    if ((batchFull || timeLimitReached) && batchCount > 0) {
-      if (fVerboseLevel > 1) {
-        DEBUG("flush triggered (batchFull=%d, timeLimitReached=%d)", (int)batchFull,
-              (int)timeLimitReached);
-      }
-      if (!flushBatch()) {
-        RUNSTATE::SetError(fRunStatus);
-        fSendStatus.store(ERROR);
+    if (fBuiltEventBuffer1.empty()) {
+      if (fBuildStatus.load() == ENDED) {
+        INFO("build ended and buffer empty, flushing remaining batch (count=%d) and exit", batchCount);
+        if (!flushBatch()) { RUNSTATE::SetError(fRunStatus); }
         break;
+      }
+    }
+    else {
+      auto opt = fBuiltEventBuffer1.pop_front();
+      if (opt) {
+        const auto & event = *opt;
+
+        if (eventSize == 0) {
+          eventSize = event->GetSize();
+          batchSize = std::max(1, TARGET_BYTES / eventSize);
+          INFO("event size=%d bytes, batch size set to %d events", eventSize, batchSize);
+        }
+
+        if (fVerboseLevel > 1) {
+          DEBUG("adding event to batch (trigNum=%u, batchCount=%d/%d)", event->GetTriggerNumber(),
+                batchCount + 1, batchSize);
+        }
+
+        batch.Add(new BuiltEvent(*event));
+        batchCount += 1;
+      }
+
+      bool batchFull = (batchSize > 0 && batchCount >= batchSize);
+      bool timeLimitReached = (std::chrono::steady_clock::now() - lastFlushTime) > TIME_THRESHOLD;
+
+      if ((batchFull || timeLimitReached) && batchCount > 0) {
+        if (fVerboseLevel > 1) {
+          DEBUG("flush triggered (batchFull=%d, timeLimitReached=%d)", (int)batchFull,
+                (int)timeLimitReached);
+        }
+        if (!flushBatch()) {
+          RUNSTATE::SetError(fRunStatus);
+          break;
+        }
       }
     }
   }
@@ -137,7 +260,14 @@ void CupDAQManager::TF_SendData()
   socket.send(empty, zmq::send_flags::sndmore);
   socket.send(disconnect, zmq::send_flags::none);
 
-  if (fSendStatus.load() != ERROR) { fSendStatus.store(ENDED); }
+  fSendStatus.store(ENDED);
+
+  // build already ended, clear fBuiltEventBuffer1
+  if (!fBuiltEventBuffer1.empty()) {
+    INFO("fBuiltEventBuffer1 is not empty, clearing");
+    fBuiltEventBuffer1.clear();
+  }
+
   INFO("ended");
 }
 
@@ -148,7 +278,8 @@ void CupDAQManager::TF_DataServer()
 
   fRecvStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  // run before SendData
+  if (!WaitRunState(fRunStatus, RUNSTATE::kCONFIGURED, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }

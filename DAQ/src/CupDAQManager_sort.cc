@@ -10,12 +10,12 @@ void CupDAQManager::TF_SortEvent()
 {
   fSortStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
 
-  INFO("sorting data started");
+  INFO("started");
 
   if (fTriggerMode == TRIGGER::SELF) { SortEvent_CHA(); }
   else {
@@ -24,7 +24,14 @@ void CupDAQManager::TF_SortEvent()
 
   fSortStatus.store(ENDED);
 
-  INFO("sorting data ended");
+  // read already ended, clear remaining data in ADCs
+  const int nadc_int = GetEntries();
+  for (int i = 0; i < nadc_int; ++i) {
+    auto * adc = static_cast<AbsADC *>(fCont[i]);
+    adc->Bclear();
+  }
+
+  INFO("ended");
 }
 
 void CupDAQManager::SortEvent_MOD()
@@ -49,7 +56,10 @@ void CupDAQManager::SortEvent_MOD()
         auto * adc = static_cast<AbsADC *>(fCont[i]);
         remain += adc->Bsize();
       }
-      if (remain == 0) { break; }
+      if (remain == 0) {
+        INFO("all ADC buffers are empty, exit");
+        break;
+      }
     }
 
     StartBenchmark("SortEvent");

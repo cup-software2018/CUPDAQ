@@ -11,13 +11,13 @@ void CupDAQManager::TF_WriteEvent()
 {
   fWriteStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
 
   const char * adcmode = (fADCMode == ADC::SMODE) ? "SADC mode" : "FADC mode";
-  INFO("writing output data started as %s", adcmode);
+  INFO("started as %s", adcmode);
 
   if (!OpenNewOutputFile()) {
     RUNSTATE::SetError(fRunStatus);
@@ -58,7 +58,14 @@ void CupDAQManager::TF_WriteEvent()
   CloseHDF5Output();
 
   fWriteStatus.store(ENDED);
-  INFO("writing output data ended");
+
+  // build already ended, clear fBuiltEventBuffer1
+  if (!fBuiltEventBuffer1.empty()) {
+    INFO("fBuiltEventBuffer1 is not empty, clearing");
+    fBuiltEventBuffer1.clear();
+  }
+
+  INFO("ended");
 }
 
 bool CupDAQManager::OpenNewOutputFile()

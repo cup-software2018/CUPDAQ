@@ -39,7 +39,6 @@ int main(int argc, char ** argv)
   DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();
-  DAQ->ClearBuffers();
 
   delete swtrigger;
   delete DAQ;

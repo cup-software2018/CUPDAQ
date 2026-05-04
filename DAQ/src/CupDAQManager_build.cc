@@ -10,12 +10,10 @@ void CupDAQManager::TF_BuildEvent()
 {
   fBuildStatus.store(READY);
 
-  if (!ThreadWait(fRunStatus, fDoExit)) {
+  if (!WaitRunState(fRunStatus, RUNSTATE::kRUNNING, fDoExit)) {
     WARNING("exited by exit command");
     return;
   }
-
-  INFO("started");
 
   auto adctype = static_cast<ADC::TYPE>(fADCType % 10);
   auto * conf = (fConfigList != nullptr) ? fConfigList->GetSTRGConfig(adctype) : nullptr;
@@ -28,6 +26,8 @@ void CupDAQManager::TF_BuildEvent()
     }
   }
 
+  INFO("started");
+
   if (fDAQType == DAQ::MERGER) { MergeEvent(); }
   else {
     if (fTriggerMode == TRIGGER::GLOBAL) { BuildEvent_GLT(); }
@@ -39,7 +39,12 @@ void CupDAQManager::TF_BuildEvent()
     }
   }
 
-  if (fBuildStatus.load() != ERROR) { fBuildStatus.store(ENDED); }
+  fBuildStatus.store(ENDED);
+
+  // sort already ended, clear fADCRawBuffers
+  for (auto * buffer : fADCRawBuffers) {
+    if (buffer) { buffer->clear(); }
+  }
 
   INFO("ended");
 }
@@ -60,7 +65,6 @@ void CupDAQManager::BuildEvent_GLT()
 
   if (fADCRawBuffers.empty()) {
     ERROR("BuildEvent_GLT called with empty fADCRawBuffers");
-    fBuildStatus.store(ERROR);
     return;
   }
 
@@ -78,7 +82,10 @@ void CupDAQManager::BuildEvent_GLT()
         if (adceventbuffer == nullptr || adceventbuffer->empty()) { continue; }
         nmod += 1;
       }
-      if (nmod < nadc) { break; }
+      if (nmod < nadc) {
+        INFO("all ADC event buffers are empty, exit");
+        break;
+      }
     }
 
     int totalsize = 0;
@@ -161,7 +168,6 @@ void CupDAQManager::BuildEvent_GLT()
 
       if (nerror > 0) {
         RUNSTATE::SetError(fRunStatus);
-        fBuildStatus.store(ERROR);
         break;
       }
 
@@ -199,7 +205,6 @@ void CupDAQManager::MergeEvent()
   if (ndaq == 0) {
     ERROR("MergeEvent called with empty fRecvEventBuffers");
     RUNSTATE::SetError(fRunStatus);
-    fBuildStatus.store(ERROR);
     return;
   }
 
@@ -244,12 +249,14 @@ void CupDAQManager::MergeEvent()
 
     if (nerror > 0) {
       RUNSTATE::SetError(fRunStatus);
-      fBuildStatus.store(ERROR);
       break;
     }
 
     if (!recvEnded && fRecvStatus.load() == ENDED) { recvEnded = true; }
-    if (recvEnded && nready < ndaq) { break; }
+    if (recvEnded && nready < ndaq) { 
+      INFO("all Received event buffers are empty, exit");
+      break; 
+    }
 
     StartBenchmark("BuildEvent");
 
@@ -311,7 +318,12 @@ void CupDAQManager::MergeEvent()
     ThreadSleep(fBuildSleep, perror, integral, totalsize);
   }
 
-  if (fBuildStatus.load() != ERROR) { fBuildStatus.store(ENDED); }
+  // data server already ended, clear fRecvEventBuffers
+  for (auto & [daqId, buf] : fRecvEventBuffers) {
+    if (buf) { buf->clear(); }
+  }
+
+  fBuildStatus.store(ENDED);
 }
 
 void CupDAQManager::BuildEvent_MOD() {}

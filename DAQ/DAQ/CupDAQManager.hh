@@ -33,7 +33,14 @@
 
 class CupDAQManager : public TObjArray {
 public:
-  enum PROCSTATE { NONE, READY, RUNNING, ENDED, ERROR };
+  enum PROCSTATE
+  {
+    NONE,
+    READY,
+    RUNNING,
+    ENDED,
+    ERROR
+  };
 
   CupDAQManager();
   ~CupDAQManager() override;
@@ -99,8 +106,6 @@ public:
   virtual void TF_DataServer();
   virtual void TF_SendData();
 
-  virtual void ClearBuffers();
-
 protected:
   virtual bool IsStandaloneDAQ() const;
 
@@ -114,9 +119,6 @@ protected:
   virtual void RC_TCBDAQ();
   virtual void RC_TCBCTRLDAQ();
   virtual void RC_MERGER();
-  virtual void RC_NullTCB();
-  virtual void RC_NullDAQ();
-  virtual void RC_NullMERGER();
 
   virtual void ReadData_GLT();
   virtual void ReadData_MOD();
@@ -144,28 +146,23 @@ protected:
                                 int * status);
   virtual void PrintDAQSummary();
 
-  virtual bool ThreadWait(std::atomic<unsigned long> & state, std::atomic<bool> & exit);
   virtual void ThreadSleep(int & sleep, double & perror, double & integral, int size, int tsize = 1,
                            double ki = 0.01);
 
   virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
                                           const std::string & cmd, std::string & daq_name);
-  virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
-                                          const std::string & cmd);
   virtual void SendCommandToDAQs(const std::string & cmd);
 
   virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
                                        std::string & daq_name);
-  virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr);
-
   virtual bool WaitDAQStatus(RUNSTATE::STATE status);
-  virtual bool IsDAQRunning();
-  virtual bool IsDAQFail();
+  virtual bool CheckDAQStatus(RUNSTATE::STATE state);
+  virtual bool CheckDAQStatus();
 
-  virtual bool WaitState(std::atomic<unsigned long> & state, RUNSTATE::STATE pstate, bool errorexit = true);
-  virtual int WaitCommand(std::atomic<bool> & isgo);
-  virtual int WaitCommand(std::atomic<bool> & isgo, std::atomic<bool> & exit);
-  virtual int WaitCommand(std::atomic<bool> & isgo, std::atomic<unsigned long> & state);
+  virtual bool WaitRunState(std::atomic<unsigned long> & state, RUNSTATE::STATE pstate,
+                            std::atomic<bool> & exit);
+  virtual int WaitCommand(std::atomic<bool> & command, std::atomic<bool> & exit,
+                          std::atomic<unsigned long> & state);
   virtual bool IsForcedEndRunFile(bool useRC = false);
 
   virtual const char * GetADCName() const;

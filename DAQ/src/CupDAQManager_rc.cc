@@ -32,9 +32,6 @@ void CupDAQManager::Run()
     case DAQ::TCBCTRL: RC_TCBCTRLDAQ(); break;
     case DAQ::TCB: RC_TCB(); break;
     case DAQ::MERGER: RC_MERGER(); break;
-    case DAQ::NULLTCB: RC_NullTCB(); break;
-    case DAQ::NULLDAQ: RC_NullDAQ(); break;
-    case DAQ::NULLMERGER: RC_NullMERGER(); break;
     default: break;
   }
 }
@@ -50,7 +47,8 @@ void CupDAQManager::RC_TCB()
   std::thread th0(&CupDAQManager::TF_MsgServer, this);
   std::thread th1;
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     bool socketerror = false;
 
     for (int i = 0; i < daq->GetN(); i++) {
@@ -110,7 +108,7 @@ void CupDAQManager::RC_TCB()
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kBOOTED);
     INFO("all DAQs were booted");
 
-    int state = WaitCommand(fDoConfigRunTCB, fDoExitTCB);
+    int state = WaitCommand(fDoConfigRunTCB, fDoExitTCB, fRunStatusTCB);
     if (state != 0) {
       if (state == 1) { INFO("run=%d exited by Run Control", fRunNumber); }
       else {
@@ -194,13 +192,13 @@ void CupDAQManager::RC_TCB()
 
     th1 = std::thread(&CupDAQManager::TF_SplitOutput, this, true);
 
-    state = WaitCommand(fDoStartRunTCB, fDoExitTCB);
+    state = WaitCommand(fDoStartRunTCB, fDoExitTCB, fRunStatusTCB);
     if (state != 0) {
       if (state == 1) { INFO("run=%d exited by Run Control", fRunNumber); }
       else {
         RUNSTATE::SetError(fRunStatusTCB);
       }
-      fDoEndRunTCB.store(true); // TF_SplitOutput 종료 보장
+      fDoEndRunTCB.store(true);
       return;
     }
 
@@ -210,7 +208,7 @@ void CupDAQManager::RC_TCB()
 
     if (!WaitDAQStatus(RUNSTATE::kRUNNING)) {
       RUNSTATE::SetError(fRunStatusTCB);
-      fDoEndRunTCB.store(true); // TF_SplitOutput 종료 보장
+      fDoEndRunTCB.store(true);
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kRUNNING);
@@ -218,7 +216,7 @@ void CupDAQManager::RC_TCB()
 
     while (true) {
       if (fDoEndRunTCB.load() || IsForcedEndRunFile()) { break; }
-      if (!IsDAQRunning()) { break; }
+      if (!CheckDAQStatus(RUNSTATE::kRUNNING)) { break; }
       if (fDoSplitOutputFile.load()) {
         SendCommandToDAQs("kSPLITOUTPUTFILE");
         fDoSplitOutputFile.store(false);
@@ -247,7 +245,7 @@ void CupDAQManager::RC_TCB()
 
   execute_run();
 
-  WaitCommand(fDoExitTCB);
+  WaitCommand(fDoExitTCB, fDoExitTCB, fRunStatusTCB);
 
   if (th1.joinable()) { th1.join(); }
 
@@ -273,7 +271,6 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   fDAQPort = daq->GetPort(fDAQID);
 
   th0 = std::thread(&CupDAQManager::TF_MsgServer, this);
-  RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
 
   if (fDoSendEvent) {
     std::string target_name = GetADCName(fADCType);
@@ -289,9 +286,15 @@ void CupDAQManager::RC_TCBCTRLDAQ()
     }
   }
 
-  if (WaitCommand(fDoConfigRun, fDoExit) != 0) {
+  RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
+
+  int state = WaitCommand(fDoConfigRun, fDoExit, fRunStatus);
+  if (state != 0) {
+    if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+    else {
+      ERROR("run=%d exit caused error", fRunNumber);
+    }
     if (th0.joinable()) { th0.join(); }
-    WARNING("run=%d exited by TCB", fRunNumber);
     return;
   }
 
@@ -333,7 +336,8 @@ void CupDAQManager::RC_TCBCTRLDAQ()
   delete configSock;
   INFO("Successfully received updated fConfigList from TCB");
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     if (!AddADC(fConfigList)) {
       RUNSTATE::SetError(fRunStatus);
       return;
@@ -363,17 +367,37 @@ void CupDAQManager::RC_TCBCTRLDAQ()
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
-    if (WaitCommand(fDoStartRun, fDoExit) != 0) {
-      WARNING("run=%d exited by TCB", fRunNumber);
-      RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED); // 스레드 종료 조건 보장
+    int state = WaitCommand(fDoStartRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
       return;
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
     time(&fStartDatime);
 
-    if (WaitCommand(fDoEndRun, fRunStatus) != 0) {
-      WARNING("run=%d ended by error state", fRunNumber);
+    state = WaitCommand(fDoEndRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
+      return;
+    }
+
+    RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDING);
+
+    while (true) {
+      bool allEnded = fReadStatus.load() == ENDED && fSortStatus.load() == ENDED &&
+                      fBuildStatus.load() == ENDED &&
+                      (fDoSendEvent ? fSendStatus.load() : fWriteStatus.load()) == ENDED;
+
+      if (allEnded) break;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
@@ -395,7 +419,7 @@ void CupDAQManager::RC_TCBCTRLDAQ()
 
   if (th1.joinable()) { th1.join(); }
 
-  WaitCommand(fDoExit);
+  WaitCommand(fDoExit, fDoExit, fRunStatus);
 
   if (th0.joinable()) { th0.join(); }
   CloseDAQ();
@@ -447,13 +471,14 @@ void CupDAQManager::RC_MERGER()
   th0 = std::thread(&CupDAQManager::TF_MsgServer, this);
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
 
-  if (WaitCommand(fDoConfigRun, fDoExit) != 0) {
+  if (WaitCommand(fDoConfigRun, fDoExit, fRunStatus) != 0) {
     if (th0.joinable()) { th0.join(); }
     WARNING("run=%d exited by TCB", fRunNumber);
     return;
   }
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
     th2 = std::thread(&CupDAQManager::TF_BuildEvent, this);
     th3 = std::thread(&CupDAQManager::TF_WriteEvent, this);
@@ -464,16 +489,16 @@ void CupDAQManager::RC_MERGER()
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
-    if (WaitCommand(fDoStartRun, fDoExit) != 0) {
+    if (WaitCommand(fDoStartRun, fDoExit, fRunStatus) != 0) {
       WARNING("run=%d exited by TCB", fRunNumber);
-      RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED); // 스레드 종료 조건 보장
+      RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
       return;
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
     time(&fStartDatime);
 
-    if (WaitCommand(fDoEndRun, fRunStatus) != 0) {
+    if (WaitCommand(fDoEndRun, fDoExit, fRunStatus) != 0) {
       WARNING("run=%d ended by error state", fRunNumber);
     }
 
@@ -497,7 +522,7 @@ void CupDAQManager::RC_MERGER()
 
   if (th1.joinable()) { th1.join(); }
 
-  WaitCommand(fDoExit);
+  WaitCommand(fDoExit, fDoExit, fRunStatus);
 
   if (th0.joinable()) { th0.join(); }
 
@@ -513,7 +538,8 @@ void CupDAQManager::RC_STDDAQ()
 
   std::thread th1, th2, th3, th4, th5, th6, th7, th8, th9;
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     if (!ConfigureDAQ()) { return; }
     if (!PrepareDAQ()) { return; }
     if (!InitializeDAQ()) { return; }
@@ -566,7 +592,8 @@ void CupDAQManager::RC_TCBDAQ()
     return;
   }
 
-  auto execute_run = [&]() {
+  auto execute_run = [&]()
+  {
     if (!fTCB->Config()) { return; }
     if (!AddADC(fConfigList)) { return; }
     if (!PrepareDAQ()) { return; }
