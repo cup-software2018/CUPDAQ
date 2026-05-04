@@ -98,11 +98,13 @@ void CupDAQManager::RC_TCB()
 
     if (socketerror) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
     if (!WaitDAQStatus(RUNSTATE::kBOOTED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kBOOTED);
@@ -113,6 +115,7 @@ void CupDAQManager::RC_TCB()
       if (state == 1) { INFO("run=%d exited by Run Control", fRunNumber); }
       else {
         RUNSTATE::SetError(fRunStatusTCB);
+        SendCommandToDAQs("kSETERROR");
       }
       return;
     }
@@ -121,11 +124,13 @@ void CupDAQManager::RC_TCB()
     fTCB->SetConfig(fConfigList);
     if (fTCB->Open() != 0) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
     if (!fTCB->Config()) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
@@ -134,6 +139,7 @@ void CupDAQManager::RC_TCB()
     if (!configServer->IsValid()) {
       ERROR("Failed to start TServerSocket on port %d", config_port);
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
@@ -178,6 +184,7 @@ void CupDAQManager::RC_TCB()
             expected_clients);
       delete configServer;
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
 
@@ -185,6 +192,7 @@ void CupDAQManager::RC_TCB()
 
     if (!WaitDAQStatus(RUNSTATE::kCONFIGURED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kCONFIGURED);
@@ -208,7 +216,7 @@ void CupDAQManager::RC_TCB()
 
     if (!WaitDAQStatus(RUNSTATE::kRUNNING)) {
       RUNSTATE::SetError(fRunStatusTCB);
-      fDoEndRunTCB.store(true);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kRUNNING);
@@ -216,7 +224,11 @@ void CupDAQManager::RC_TCB()
 
     while (true) {
       if (fDoEndRunTCB.load() || IsForcedEndRunFile()) { break; }
-      if (!CheckDAQStatus(RUNSTATE::kRUNNING)) { break; }
+      if (!CheckDAQStatus(RUNSTATE::kRUNNING)) {
+        RUNSTATE::SetError(fRunStatusTCB);
+        SendCommandToDAQs("kSETERROR");
+        return;
+      }
       if (fDoSplitOutputFile.load()) {
         SendCommandToDAQs("kSPLITOUTPUTFILE");
         fDoSplitOutputFile.store(false);
@@ -230,6 +242,7 @@ void CupDAQManager::RC_TCB()
 
     if (!WaitDAQStatus(RUNSTATE::kRUNENDED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kRUNENDED);
@@ -237,6 +250,7 @@ void CupDAQManager::RC_TCB()
 
     if (!WaitDAQStatus(RUNSTATE::kPROCENDED)) {
       RUNSTATE::SetError(fRunStatusTCB);
+      SendCommandToDAQs("kSETERROR");
       return;
     }
     RUNSTATE::SetState(fRunStatusTCB, RUNSTATE::kPROCENDED);
