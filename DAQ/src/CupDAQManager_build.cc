@@ -199,6 +199,7 @@ void CupDAQManager::MergeEvent()
 {
   double perror = 0;
   double integral = 0;
+  
   bool recvEnded = false;
   std::size_t ndaq = fRecvEventBuffers.size();
 

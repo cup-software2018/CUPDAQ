@@ -511,9 +511,13 @@ void CupDAQManager::RC_MERGER()
   th0 = std::thread(&CupDAQManager::TF_MsgServer, this);
   RUNSTATE::SetState(fRunStatus, RUNSTATE::kBOOTED);
 
-  if (WaitCommand(fDoConfigRun, fDoExit, fRunStatus) != 0) {
+  int state = WaitCommand(fDoConfigRun, fDoExit, fRunStatus);
+  if (state != 0) {
+    if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+    else {
+      ERROR("run=%d exit caused error", fRunNumber);
+    }
     if (th0.joinable()) { th0.join(); }
-    WARNING("run=%d exited by TCB", fRunNumber);
     return;
   }
 
@@ -529,17 +533,37 @@ void CupDAQManager::RC_MERGER()
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kCONFIGURED);
 
-    if (WaitCommand(fDoStartRun, fDoExit, fRunStatus) != 0) {
-      WARNING("run=%d exited by TCB", fRunNumber);
-      RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);
+    state = WaitCommand(fDoStartRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
       return;
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNNING);
     time(&fStartDatime);
 
-    if (WaitCommand(fDoEndRun, fDoExit, fRunStatus) != 0) {
-      WARNING("run=%d ended by error state", fRunNumber);
+    state = WaitCommand(fDoEndRun, fDoExit, fRunStatus);
+    if (state != 0) {
+      if (state > 0) { WARNING("run=%d exited by TCB", fRunNumber); }
+      else {
+        ERROR("run=%d exit caused error", fRunNumber);
+      }
+      return;
+    }
+
+    RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDING);
+    INFO("changed run state to RUNENDING");
+
+    while (true) {
+      bool allEnded = fRecvStatus.load() == ENDED && fBuildStatus.load() == ENDED &&
+                      fWriteStatus.load() == ENDED;
+
+      if (allEnded) break;
+
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     RUNSTATE::SetState(fRunStatus, RUNSTATE::kRUNENDED);

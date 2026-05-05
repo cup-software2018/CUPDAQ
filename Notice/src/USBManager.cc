@@ -119,7 +119,6 @@ int USBManager::HandleInterface(uint16_t vendor_id, uint16_t product_id, int sid
   // Mutex lock is already held by the caller (ClaimInterface/ReleaseInterface)
 
   for (const auto & entry : _devices) {
-    // 하드웨어 쿼리 대신 캐시된 정보(entry) 사용 -> 속도 향상 및 통신 에러 방지
     if (entry.vendor_id == vendor_id && entry.product_id == product_id) {
       if (sid == NK_SID_ANY || entry.serial_id == sid) {
         if (claim) {
@@ -198,15 +197,12 @@ int USBManager::OpenDevice(uint16_t vendor_id, uint16_t product_id, int sid)
       nopen_devices++;
 
       int speed = libusb_get_device_speed(dev);
-      switch (speed) {
-        case LIBUSB_SPEED_SUPER: INFO("super speed device opened"); break;
-        case LIBUSB_SPEED_HIGH: INFO("high speed device opened"); break;
-        case LIBUSB_SPEED_FULL: INFO("full speed device opened"); break;
-        case LIBUSB_SPEED_LOW: INFO("low speed device opened"); break;
-        default: WARNING("unknown speed device opened"); break;
-      }
-
-      INFO("bus = %d, address = %3d, serial id = %2u", libusb_get_bus_number(dev),
+      const char * speed_str = (speed == LIBUSB_SPEED_SUPER) ? "super" :
+                               (speed == LIBUSB_SPEED_HIGH)  ? "high"  :
+                               (speed == LIBUSB_SPEED_FULL)  ? "full"  :
+                               (speed == LIBUSB_SPEED_LOW)   ? "low"   : "unknown";
+      INFO("%s speed device opened: bus = %d, address = %3d, serial id = %2u",
+           speed_str, libusb_get_bus_number(dev),
            libusb_get_device_address(dev), static_cast<unsigned>(sid_tmp));
 
       libusb_release_interface(handle, interface);

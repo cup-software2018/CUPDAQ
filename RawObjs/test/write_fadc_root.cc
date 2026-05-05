@@ -69,7 +69,6 @@ int main(int argc, char ** argv)
     DT += dt;
   }
 
-  // 쓰기 및 파일 닫기
   tree.Write();
   file->Close();
   delete file;
