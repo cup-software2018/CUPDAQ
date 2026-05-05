@@ -1,5 +1,7 @@
 #include "DAQConfig/AbsConfList.hh"
 
+#include "yaml-cpp/yaml.h"
+
 ClassImp(AbsConfList)
 
 AbsConfList::AbsConfList()
@@ -94,6 +96,23 @@ AbsConf * AbsConfList::GetDAQConfig() const
     if (conf && strcmp("DAQ", conf->GetName()) == 0) return conf;
   }
   return nullptr;
+}
+
+void AbsConfList::SetYAMLString(const TString & yaml) { fYAMLString = yaml; }
+
+const TString & AbsConfList::GetYAMLString() const { return fYAMLString; }
+
+YAML::Node AbsConfList::GetYAMLNode() const
+{
+  if (fYAMLString.IsNull() || fYAMLString.IsWhitespace()) return YAML::Node();
+  return YAML::Load(fYAMLString.Data());
+}
+
+YAML::Node AbsConfList::GetYAMLNode(const char * key) const
+{
+  YAML::Node root = GetYAMLNode();
+  if (!root || !root[key]) return YAML::Node();
+  return root[key];
 }
 
 void AbsConfList::Dump() const

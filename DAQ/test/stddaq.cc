@@ -17,8 +17,7 @@ int main(int argc, char ** argv)
   optparse(option, argc, argv);
 
   // for standalone ADC
-  ADC::TYPE adctype =
-      static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 20);
+  ADC::TYPE adctype = static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 20);
 
   auto * DAQ = new CupDAQManager();
   DAQ->SetDAQType(DAQ::STDDAQ);
@@ -40,6 +39,7 @@ int main(int argc, char ** argv)
   //   DoTrigger(BuiltEvent *)  -- return true to accept, false to reject
   // Then register it here:
   //   auto * swtrigger = new YourTrigger();
+  //   swtrigger->SetVerboseLevel(option.vlevel);
   //   DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();

@@ -36,6 +36,8 @@ int main(int argc, char ** argv)
   //   DoTrigger(BuiltEvent *)  -- return true to accept, false to reject
   // Then register it here:
   //   auto * swtrigger = new YourTrigger();
+  //   swtrigger->SetDAQID(option.daqid);
+  //   swtrigger->SetVerboseLevel(option.vlevel);
   //   DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();

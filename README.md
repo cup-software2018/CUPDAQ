@@ -98,10 +98,99 @@ The CUPDAQ system is organized into several modular components to maintain clean
 * **Notice**: Hardware communication library handling USB interfacing with Notice Korea boards.
 * **DAQSystem**: Core system-level classes and logic for managing hardware components and states.
 * **OnlObjs / RawObjs**: Object definitions (ROOT objects and standalone) for raw data packaging and online data management.
-* **DAQTrigger**: Handles the trigger configurations, logic, and synchronizations.
+* **DAQTrigger**: Provides the software trigger interface (`AbsSoftTrigger`). Users can add custom trigger logic by subclassing `AbsSoftTrigger`.
 * **OnlHistogramer**: Provides real-time event monitoring and histogramming capabilities.
 * **HDF5Utils**: (Optional) Integrated tools for high-performance data writing in the HDF5 format.
 * **DAQ**: The primary module containing the central management logic (`CupDAQManager`), executable scripts, and tools.
+
+---
+
+## Software Trigger
+
+CUPDAQ supports user-defined software triggers applied per event during data acquisition. The trigger decision runs inside the build thread and can reject events before they are written to disk.
+
+### Interface
+
+All software triggers inherit from `AbsSoftTrigger` (`DAQTrigger/AbsSoftTrigger.hh`) and must implement three methods:
+
+| Method | Description |
+|--------|-------------|
+| `DoConfig(AbsConfList *)` | Called before the run. Read trigger parameters from the config list. Call `SetEnable()` here to activate the trigger. |
+| `InitTrigger()` | Called once just before data taking starts. Initialize internal state. |
+| `DoTrigger(BuiltEvent *)` | Called per event. Return `true` to accept, `false` to reject. |
+
+### Writing a Custom Trigger
+
+1. Subclass `AbsSoftTrigger` and implement the three methods:
+
+```cpp
+// MyTrigger.hh
+#include "DAQTrigger/AbsSoftTrigger.hh"
+
+class MyTrigger : public AbsSoftTrigger {
+public:
+  MyTrigger() : AbsSoftTrigger("MyTrigger") {}
+
+  void DoConfig(AbsConfList * configs) override;
+  void InitTrigger() override;
+  bool DoTrigger(BuiltEvent * event) override;
+
+private:
+  double fThreshold{0.0};
+};
+```
+
+```cpp
+// MyTrigger.cc
+#include <yaml-cpp/yaml.h>
+#include "MyTrigger.hh"
+
+void MyTrigger::DoConfig(AbsConfList * configs)
+{
+  YAML::Node node = configs->GetYAMLNode("MyTrigger");
+  if (!node) return;
+  fThreshold = node["Threshold"].as<double>();
+  if (node["Enabled"].as<int>()) 
+      SetEnable();
+}
+
+void MyTrigger::InitTrigger() {}
+
+bool MyTrigger::DoTrigger(BuiltEvent * event)
+{
+  fTotalInputEvent++;
+  // ... trigger logic using fThreshold ...
+  fNTriggeredEvent++;
+  return true;
+}
+```
+
+2. Add the trigger parameters to your YAML config file:
+
+```yaml
+MyTrigger:
+  Enabled: 1
+  Threshold: 100.0
+```
+
+3. Register it in the DAQ executable (e.g. `daq.cc`) before `DAQ->Run()`:
+
+```cpp
+auto * swtrigger = new MyTrigger();
+DAQ->SetSoftTrigger(swtrigger);
+```
+
+### Trigger Report
+
+At the end of each run, `PrintReport()` is called automatically and prints a summary:
+
+```
+========= SoftTrigger Report [MyTrigger] =========
+              total input: 10000
+                triggered: 4231
+               efficiency: 42.31%
+=====================================================
+```
 
 ---
 

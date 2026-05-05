@@ -1,6 +1,9 @@
 #pragma once
 
+#include <yaml-cpp/yaml.h>
+
 #include "TObjArray.h"
+#include "TString.h"
 
 #include "DAQConfig/AbsConf.hh"
 #include "OnlConsts/adcconsts.hh"
@@ -21,7 +24,15 @@ public:
   AbsConf * GetSTRGConfig(ADC::TYPE type) const;
   AbsConf * GetDAQConfig() const;
 
+  void SetYAMLString(const TString & yaml);
+  const TString & GetYAMLString() const;
+  YAML::Node GetYAMLNode() const;
+  YAML::Node GetYAMLNode(const char * key) const;
+
   void Dump() const;
 
-  ClassDef(AbsConfList, 1)
+private:
+  TString fYAMLString;
+
+  ClassDef(AbsConfList, 2)
 };
