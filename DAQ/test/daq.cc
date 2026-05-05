@@ -2,7 +2,6 @@
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQ/daqopt.hh"
-#include "DAQTrigger/CupSoftTrigger.hh"
 
 int main(int argc, char ** argv)
 {
@@ -33,13 +32,16 @@ int main(int argc, char ** argv)
   if (option.dosend) DAQ->UseEventMerger();
   if (option.dohist) DAQ->EnableHistograming();
 
-  auto * swtrigger = new CupSoftTrigger();
-  swtrigger->SetVerboseLevel(option.vlevel);
-  DAQ->SetSoftTrigger(swtrigger);
+  // To apply a software trigger, subclass AbsSoftTrigger and implement:
+  //   DoConfig(AbsConfList *)  -- read parameters from the config list
+  //   InitTrigger()            -- called once before the run starts
+  //   DoTrigger(BuiltEvent *)  -- return true to accept, false to reject
+  // Then register it here:
+  //   auto * swtrigger = new YourTrigger();
+  //   DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();
 
-  delete swtrigger;
   delete DAQ;
 
   return 0;

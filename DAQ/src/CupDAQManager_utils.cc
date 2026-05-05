@@ -2,7 +2,6 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
-#include <iostream>
 #include <thread>
 
 #include "DAQ/CupDAQManager.hh"
@@ -10,26 +9,31 @@
 
 void CupDAQManager::PrintDAQSummary()
 {
-  const char * pname[4] = {"ReadData", "SortEvent", "BuildEvent", "WriteEvent"};
+  char buf[128];
+  std::string report = "\n";
 
-  std::cout << std::endl;
-  std::cout << "====================================================" << std::endl;
-  std::cout << Form("%12s %16s %16s", "process", "cpu time[s]", "real time[s]") << std::endl;
-  std::cout << "----------------------------------------------------" << std::endl;
-  double rt = 0.0;
-  double ct = 0.0;
+  // --- benchmark table ---
+  report += "====================================================\n";
+  snprintf(buf, sizeof(buf), "%12s %16s %16s\n", "process", "cpu time[s]", "real time[s]");
+  report += buf;
+  report += "----------------------------------------------------\n";
+
+  const char * pname[4] = {"ReadData", "SortEvent", "BuildEvent", "WriteEvent"};
+  double ct = 0.0, rt = 0.0;
   for (int i = 0; i < 4; ++i) {
-    double cputime = fBenchmark->GetCpuTime(pname[i]);
+    double cputime  = fBenchmark->GetCpuTime(pname[i]);
     double realtime = fBenchmark->GetRealTime(pname[i]);
-    std::cout << Form("%12s %16.1f %16.1f", pname[i], cputime, realtime) << std::endl;
+    snprintf(buf, sizeof(buf), "%12s %16.1f %16.1f\n", pname[i], cputime, realtime);
+    report += buf;
     ct += cputime;
     rt += realtime;
   }
-  std::cout << "----------------------------------------------------" << std::endl;
-  std::cout << Form("%12s %16.1f %16.1f", "total", ct, rt) << std::endl;
-  std::cout << "====================================================" << std::endl;
-  std::cout << std::endl;
+  report += "----------------------------------------------------\n";
+  snprintf(buf, sizeof(buf), "%12s %16.1f %16.1f\n", "total", ct, rt);
+  report += buf;
+  report += "====================================================\n";
 
+  // --- DAQ summary ---
   unsigned long totalReadDataSize;
   double liveTime;
 
@@ -44,33 +48,40 @@ void CupDAQManager::PrintDAQSummary()
     liveTime = std::difftime(fEndDatime, fStartDatime);
   }
 
-  double recvDataSize = totalReadDataSize / kDGIGABYTES;
+  double recvDataSize   = totalReadDataSize / kDGIGABYTES;
   double outputDataSize = fTotalWrittenDataSize / kDGIGABYTES;
-
   double trate = liveTime > 0.0 ? fTriggerNumber / liveTime : 0.0;
-  double drate = liveTime > 0.0 ? recvDataSize * 1024.0 / liveTime : 0.0;
+  double drate = liveTime > 0.0 ? recvDataSize   * 1024.0 / liveTime : 0.0;
   double orate = liveTime > 0.0 ? outputDataSize * 1024.0 / liveTime : 0.0;
 
-  std::cout << std::endl;
-  std::cout << "************************* DAQ Summary *************************" << std::endl;
-  std::cout << Form("%32s", "Run number : ") << fRunNumber << std::endl;
-  std::cout << Form("%32s", "Start Time : ") << TDatime(fStartDatime).AsSQLString() << std::endl;
-  std::cout << Form("%32s", "End Time : ") << TDatime(fEndDatime).AsSQLString() << std::endl;
-  std::cout << std::endl;
-  std::cout << Form("%32s", "Live time : ") << Form("%.1f", liveTime) << " [s]" << std::endl;
-  std::cout << Form("%32s", "Total number of trigger : ") << Form("%d", fTriggerNumber)
-            << std::endl;
-  std::cout << Form("%32s", "Trigger rate : ") << Form("%.2f", trate) << " [Hz]" << std::endl;
-  std::cout << Form("%32s", "Total number of event : ") << Form("%d", fNBuiltEvent) << std::endl;
-  std::cout << Form("%32s", "Software Trigger efficiency : ")
-            << Form("%5.2f [%%]", fSoftTrigger->GetEfficiency()) << std::endl;
-  std::cout << std::endl;
-  std::cout << Form("%32s", "Received data size : ")
-            << Form("%.3f GBytes (%.3f MB/sec)", recvDataSize, drate) << std::endl;
-  std::cout << Form("%32s", "Written data size : ")
-            << Form("%.3f GBytes (%.3f MB/sec)", outputDataSize, orate) << std::endl;
-  std::cout << "***************************************************************" << std::endl;
-  std::cout << std::endl;
+  report += "\n************************* DAQ Summary *************************\n";
+  snprintf(buf, sizeof(buf), "%32s%d\n",      "Run number : ",             fRunNumber);
+  report += buf;
+  snprintf(buf, sizeof(buf), "%32s%s\n",      "Start Time : ",             TDatime(fStartDatime).AsSQLString());
+  report += buf;
+  snprintf(buf, sizeof(buf), "%32s%s\n",      "End Time : ",               TDatime(fEndDatime).AsSQLString());
+  report += buf;
+  report += "\n";
+  snprintf(buf, sizeof(buf), "%32s%.1f [s]\n",  "Live time : ",            liveTime);
+  report += buf;
+  snprintf(buf, sizeof(buf), "%32s%d\n",       "Total number of trigger : ", fTriggerNumber);
+  report += buf;
+  snprintf(buf, sizeof(buf), "%32s%.2f [Hz]\n", "Trigger rate : ",         trate);
+  report += buf;
+  snprintf(buf, sizeof(buf), "%32s%d\n",       "Total number of event : ", fNBuiltEvent);
+  report += buf;
+  report += "\n";
+  snprintf(buf, sizeof(buf), "%32s%.3f GBytes (%.3f MB/sec)\n", "Received data size : ",
+           recvDataSize, drate);
+  report += buf;
+  snprintf(buf, sizeof(buf), "%32s%.3f GBytes (%.3f MB/sec)\n", "Written data size : ",
+           outputDataSize, orate);
+  report += buf;
+  report += "***************************************************************\n";
+
+  INFO("%s", report.c_str());
+
+  if (fSoftTrigger) { fSoftTrigger->PrintReport(); }
 }
 
 //
@@ -201,7 +212,6 @@ bool CupDAQManager::CheckDAQStatus()
   return retval;
 }
 
-
 bool CupDAQManager::CheckDAQStatus(RUNSTATE::STATE state)
 {
   bool retval = true;
@@ -248,7 +258,7 @@ int CupDAQManager::WaitCommand(std::atomic<bool> & command, std::atomic<bool> & 
 {
   while (true) {
     if (exit.load()) { return 1; }
-    if (!CheckDAQStatus()) { return -1; } // for tcb, daq will return true
+    if (!CheckDAQStatus()) { return -1; }           // for tcb, daq will return true
     if (RUNSTATE::CheckError(state)) { return -1; } // for daq
     if (command.load()) { break; }
 

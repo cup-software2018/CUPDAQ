@@ -2,7 +2,6 @@
 
 #include "DAQ/CupDAQManager.hh"
 #include "DAQ/daqopt.hh"
-#include "DAQTrigger/CupSoftTrigger.hh"
 
 int main(int argc, char ** argv)
 {
@@ -19,11 +18,11 @@ int main(int argc, char ** argv)
 
   // for standalone ADC
   ADC::TYPE adctype =
-      static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 20);  
+      static_cast<ADC::TYPE>(static_cast<int>(option.adctype[0]) + 20);
 
   auto * DAQ = new CupDAQManager();
   DAQ->SetDAQType(DAQ::STDDAQ);
-  DAQ->SetRunNumber(option.runnum);  
+  DAQ->SetRunNumber(option.runnum);
   DAQ->SetADCType(adctype);
   DAQ->SetTriggerMode(TRIGGER::GLOBAL);
   DAQ->SetConfigFilename(option.config);
@@ -35,13 +34,16 @@ int main(int argc, char ** argv)
   DAQ->SetVerboseLevel(option.vlevel);
   if (option.dohist) DAQ->EnableHistograming();
 
-  auto * swtrigger = new CupSoftTrigger();
-  swtrigger->SetVerboseLevel(option.vlevel);
-  DAQ->SetSoftTrigger(swtrigger);
+  // To apply a software trigger, subclass AbsSoftTrigger and implement:
+  //   DoConfig(AbsConfList *)  -- read parameters from the config list
+  //   InitTrigger()            -- called once before the run starts
+  //   DoTrigger(BuiltEvent *)  -- return true to accept, false to reject
+  // Then register it here:
+  //   auto * swtrigger = new YourTrigger();
+  //   DAQ->SetSoftTrigger(swtrigger);
 
   DAQ->Run();
 
-  delete swtrigger;
   delete DAQ;
 
   return 0;

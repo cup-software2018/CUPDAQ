@@ -15,16 +15,7 @@ void CupDAQManager::TF_BuildEvent()
     return;
   }
 
-  auto adctype = static_cast<ADC::TYPE>(fADCType % 10);
-  auto * conf = (fConfigList != nullptr) ? fConfigList->GetSTRGConfig(adctype) : nullptr;
-
-  if (fSoftTrigger != nullptr) {
-    if (conf != nullptr) { fSoftTrigger->SetConfig(conf); }
-    if (fSoftTrigger->IsEnabled()) {
-      fSoftTrigger->SetMode(fADCMode);
-      fSoftTrigger->InitTrigger();
-    }
-  }
+  if (fSoftTrigger) { fSoftTrigger->InitTrigger(); }
 
   INFO("started");
 
@@ -171,11 +162,8 @@ void CupDAQManager::BuildEvent_GLT()
         break;
       }
 
-      bool istriggered = true;
-      if (!fDoSendEvent && fSoftTrigger != nullptr && fSoftTrigger->IsEnabled() &&
-          !fSoftTrigger->DoTrigger(builtevent.get())) {
-        istriggered = false;
-      }
+      bool istriggered = fDoSendEvent || !fSoftTrigger || !fSoftTrigger->IsEnabled() ||
+                         fSoftTrigger->DoTrigger(builtevent.get());
 
       if (istriggered) {
         mlock.lock();
@@ -199,7 +187,7 @@ void CupDAQManager::MergeEvent()
 {
   double perror = 0;
   double integral = 0;
-  
+
   bool recvEnded = false;
   std::size_t ndaq = fRecvEventBuffers.size();
 
@@ -254,9 +242,9 @@ void CupDAQManager::MergeEvent()
     }
 
     if (!recvEnded && fRecvStatus.load() == ENDED) { recvEnded = true; }
-    if (recvEnded && nready < ndaq) { 
+    if (recvEnded && nready < ndaq) {
       INFO("all Received event buffers are empty, exit");
-      break; 
+      break;
     }
 
     StartBenchmark("BuildEvent");

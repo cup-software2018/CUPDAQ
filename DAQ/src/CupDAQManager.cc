@@ -292,16 +292,25 @@ bool CupDAQManager::PrepareDAQ()
 
   Sort();
 
+  char buf[128];
   std::string report = "\n\n";
   report += "============ CupDAQManager Preparation Report ==============\n";
-  report += Form("                            type: %s\n", GetADCName(fADCType));
-  report += Form("                   number of ADC: %d\n", nadc);
-  report += Form("           minimum buffer count : %d\n", fMinimumBCount);
-  report += Form("                  record length : %d\n", fRecordLength);
-  report += Form("           number of data point : %d\n", GetNDP());
-  report += Form("  minimum data size for reading : %d\n", GetADCEventDataSize());
-  report += Form("         preset number of event : %d\n", fSetNEvent);
-  report += Form("            preset daq time [s] : %d\n", fSetDAQTime);
+  snprintf(buf, sizeof(buf), "                            type: %s\n", GetADCName(fADCType));
+  report += buf;
+  snprintf(buf, sizeof(buf), "                   number of ADC: %d\n", nadc);
+  report += buf;
+  snprintf(buf, sizeof(buf), "           minimum buffer count : %d\n", fMinimumBCount);
+  report += buf;
+  snprintf(buf, sizeof(buf), "                  record length : %d\n", fRecordLength);
+  report += buf;
+  snprintf(buf, sizeof(buf), "           number of data point : %d\n", GetNDP());
+  report += buf;
+  snprintf(buf, sizeof(buf), "  minimum data size for reading : %d\n", GetADCEventDataSize());
+  report += buf;
+  snprintf(buf, sizeof(buf), "         preset number of event : %d\n", fSetNEvent);
+  report += buf;
+  snprintf(buf, sizeof(buf), "            preset daq time [s] : %d\n", fSetDAQTime);
+  report += buf;
   report += "============================================================\n";
 
   INFO("%s", report.c_str());

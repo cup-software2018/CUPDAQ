@@ -390,6 +390,8 @@ void CupDAQManager::RC_TCBCTRLDAQ()
       return;
     }
 
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
+
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
     th2 = std::thread(&CupDAQManager::TF_ReadData, this);
     th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
@@ -523,6 +525,8 @@ void CupDAQManager::RC_MERGER()
 
   auto execute_run = [&]()
   {
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
+
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
     th2 = std::thread(&CupDAQManager::TF_BuildEvent, this);
     th3 = std::thread(&CupDAQManager::TF_WriteEvent, this);
@@ -608,6 +612,8 @@ void CupDAQManager::RC_STDDAQ()
     if (!PrepareDAQ()) { return; }
     if (!InitializeDAQ()) { return; }
 
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
+
     th1 = std::thread(&CupDAQManager::TF_RunManager, this);
     th2 = std::thread(&CupDAQManager::TF_ReadData, this);
     th3 = std::thread(&CupDAQManager::TF_SortEvent, this);
@@ -662,6 +668,8 @@ void CupDAQManager::RC_TCBDAQ()
     if (!AddADC(fConfigList)) { return; }
     if (!PrepareDAQ()) { return; }
     if (!OpenDAQ()) { return; }
+
+    if (fSoftTrigger) { fSoftTrigger->DoConfig(fConfigList); }
 
     std::thread th1 = std::thread(&CupDAQManager::TF_RunManager, this);
     std::thread th2 = std::thread(&CupDAQManager::TF_ReadData, this);

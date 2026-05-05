@@ -1,24 +1,28 @@
 #include "DAQTrigger/AbsSoftTrigger.hh"
 
-AbsSoftTrigger::AbsSoftTrigger()
-  : fIsEnabled(false),
-    fVerboseLevel(0),
-    fMode(),
-    fADCType(ADC::NONE),
-    fConfig(nullptr),
-    fTotalInputEvent(0),
-    fNTriggeredEvent(0)
+#include "DAQUtils/ELog.hh"
+
+AbsSoftTrigger::AbsSoftTrigger(const char * name)
+  : fName(name)
 {
 }
 
-AbsSoftTrigger::AbsSoftTrigger(AbsConf * config)
-  : fIsEnabled(config->IsEnabled()),
-    fVerboseLevel(0),
-    fMode(),
-    fADCType(config->GetADCType()),
-    fConfig(config),
-    fTotalInputEvent(0),
-    fNTriggeredEvent(0)
+void AbsSoftTrigger::PrintReport() const
 {
-}
+  double eff = (fTotalInputEvent > 0)
+               ? 100.0 * fNTriggeredEvent / fTotalInputEvent
+               : 0.0;
 
+  char buf[128];
+  std::string report = "\n";
+  report += "========= SoftTrigger Report [" + fName + "] =========\n";
+  snprintf(buf, sizeof(buf), "  %25s: %d\n",      "total input",  fTotalInputEvent);
+  report += buf;
+  snprintf(buf, sizeof(buf), "  %25s: %d\n",      "triggered",    fNTriggeredEvent);
+  report += buf;
+  snprintf(buf, sizeof(buf), "  %25s: %.2f%%\n",  "efficiency",   eff);
+  report += buf;
+  report += "=====================================================\n";
+
+  INFO("%s", report.c_str());
+}
