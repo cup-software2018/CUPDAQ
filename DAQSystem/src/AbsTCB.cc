@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void AbsTCB::WriteRegisterTCB(TCBConf * conf)
+bool AbsTCB::WriteRegisterTCB(TCBConf * conf)
 {
   WriteTRIGENABLE(0, conf->TM());
   WriteCW(0, 1, conf->CW());
@@ -53,7 +53,16 @@ void AbsTCB::WriteRegisterTCB(TCBConf * conf)
     sl = (uint32_t)TESTBIT(sw, 2);
     i = (uint32_t)TESTBIT(sw, 3);
     WriteTRGSWIADC(f, sm, sl, i);
+
+    for (int idx = 0; idx < conf->NSWCH(); ++idx) {
+      auto [ch, swval] = conf->SWCH(idx);
+      bool ok = WriteTRGSWCH((uint32_t)ch, (uint32_t)TESTBIT(swval, 0), (uint32_t)TESTBIT(swval, 1),
+                             (uint32_t)TESTBIT(swval, 2), (uint32_t)TESTBIT(swval, 3));
+      if (!ok) return false;
+    }
   }
+
+  return true;
 }
 
 void AbsTCB::WriteRegisterFADC(FADCTConf * conf)
@@ -181,6 +190,16 @@ void AbsTCB::PrintRegisterTCB(TCBConf * conf)
                  ReadDT(0, 1), swsm, ReadMTHRSADCLS(), ReadPSCALESADCLS(), ReadDT(0, 2), swsl,
                  ReadMTHRIADC(), ReadPSCALEIADC(), ReadDT(0, 3), swi)
          << endl;
+
+    for (int idx = 0; idx < conf->NSWCH(); ++idx) {
+      auto [ch, swval] = conf->SWCH(idx);
+      uint32_t rsw = ReadTRGSWCH((uint32_t)ch);
+      int rf = (int)TESTBIT(rsw, 0);
+      int rsm = (int)TESTBIT(rsw, 1);
+      int rsl = (int)TESTBIT(rsw, 2);
+      int ri = (int)TESTBIT(rsw, 3);
+      cout << Form("                  SWCH[ch=%2d]: %d %d %d %d", ch, rf, rsm, rsl, ri) << endl;
+    }
   }
   else {
     cout << Form(" ++ TCB register: SID(0) TRGON(%u) CW(%u) DLY(%u) "

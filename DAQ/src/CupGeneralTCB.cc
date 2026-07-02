@@ -264,7 +264,12 @@ bool CupGeneralTCB::ConfigIADC(IADCTConf * conf)
 bool CupGeneralTCB::ConfigTCB(TCBConf * conf)
 {
   conf->PrintConf();
-  fTCB->WriteRegisterTCB(conf);
+
+  if (!fTCB->WriteRegisterTCB(conf)) {
+    ERROR("TCB[sid=%d] register write failed", conf->SID());
+    return false;
+  }
+
   fTCB->PrintRegisterTCB(conf);
 
   INFO("TCB[sid=%d] was configured", conf->SID());

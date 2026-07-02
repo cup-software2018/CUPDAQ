@@ -933,4 +933,26 @@ void NKTCB::WriteTrigSwitchIADC64(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc
 }
 uint32_t NKTCB::ReadSwitchIADC64() const { return _usb.ReadReg(0, 0x20000046u); }
 
+bool NKTCB::WriteTrigSwitch_ch(uint32_t ch, uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
+                               uint32_t iadc) const
+{
+  if (ch < 1 || ch > 40) {
+    ERROR("WriteTrigSwitch_ch invalid channel %u (valid range: 1-40)", ch);
+    return false;
+  }
+  uint32_t addr = 0x20000047u + (ch - 1);
+  uint32_t data = (fadc ? 1 : 0) | (sadc_mu ? 2 : 0) | (sadc_ls ? 4 : 0) | (iadc ? 8 : 0);
+  _usb.Write(0, addr, data);
+  return true;
+}
+
+uint32_t NKTCB::ReadSwitch_ch(uint32_t ch) const
+{
+  if (ch < 1 || ch > 40) {
+    ERROR("ReadSwitch_ch invalid channel %u (valid range: 1-40)", ch);
+    return 0;
+  }
+  return _usb.ReadReg(0, 0x20000047u + (ch - 1));
+}
+
 uint32_t NKTCB::ReadDBG() const { return _usb.ReadReg(0, 0x20000050u); }

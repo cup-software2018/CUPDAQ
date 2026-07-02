@@ -258,6 +258,18 @@ void RunConfig::ConfigTCB(YAML::Node ymlnode)
   if (tcb["DTI"]) conf->SetDTI(tcb["DTI"].as<int>());
   setSafeSW(tcb["SWI"], [&](int a, int b, int c, int d) { conf->SetSWI(a, b, c, d); });
 
+  if (tcb["SWCH"] && tcb["SWCH"].IsSequence()) {
+    for (const auto & entry : tcb["SWCH"]) {
+      if (!entry.IsSequence() || entry.size() < 5) continue;
+      int ch = entry[0].as<int>();
+      int f  = entry[1].as<int>();
+      int sm = entry[2].as<int>();
+      int sl = entry[3].as<int>();
+      int i  = entry[4].as<int>();
+      conf->SetSWCH(ch, f, sm, sl, i);
+    }
+  }
+
   fConfigs->Add(conf);
 }
 

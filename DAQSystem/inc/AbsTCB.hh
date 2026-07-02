@@ -111,13 +111,16 @@ public:
   virtual void WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) = 0;
   virtual void WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) = 0;
   virtual void WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) = 0;
+  virtual bool WriteTRGSWCH(uint32_t ch, uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                             uint32_t iadc) { return true; }
   virtual uint32_t ReadTRGSWFADC() = 0;
   virtual uint32_t ReadTRGSWSADCMU() = 0;
   virtual uint32_t ReadTRGSWSADCLS() = 0;
   virtual uint32_t ReadTRGSWIADC() = 0;
+  virtual uint32_t ReadTRGSWCH(uint32_t ch) { return 0; }
 
   // write register
-  virtual void WriteRegisterTCB(TCBConf * conf);
+  virtual bool WriteRegisterTCB(TCBConf * conf);
   virtual void WriteRegisterFADC(FADCTConf * conf);
   virtual void WriteRegisterSADC(SADCTConf * conf);
   virtual void WriteRegisterIADC(IADCTConf * conf);

@@ -240,6 +240,10 @@ public:
                              uint32_t iadc) const;
   uint32_t ReadSwitchIADC64() const;
 
+  bool WriteTrigSwitch_ch(uint32_t ch, uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
+                          uint32_t iadc) const;
+  uint32_t ReadSwitch_ch(uint32_t ch) const;
+
   uint32_t ReadDBG() const;
 
   void WriteDT(uint32_t mid, uint32_t ch, uint32_t data) const;
