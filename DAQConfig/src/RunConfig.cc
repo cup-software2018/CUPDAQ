@@ -370,6 +370,7 @@ void RunConfig::ConfigIADCT(YAML::Node ymlnode)
     if (node["CW"]) conf->SetCW(node["CW"].as<int>());
     if (node["GW"]) conf->SetGW(node["GW"].as<int>());
     if (node["PSW"]) conf->SetPSW(node["PSW"].as<int>());
+    if (node["ZSU"]) conf->SetZSU(node["ZSU"].as<bool>());
 
     if (node["TLT"]) {
       if (node["TLT"].IsSequence()) {

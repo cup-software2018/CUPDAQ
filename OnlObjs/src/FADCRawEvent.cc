@@ -1,3 +1,5 @@
+#include <cstdlib>
+
 #include "FADCTConf.hh"
 #include "IADCTConf.hh"
 #include "MADCSConf.hh"
@@ -565,6 +567,28 @@ void FADCRawEvent::Unpack_IADC(AbsConf * config, int verbose)
       fChannel[2 * k]->SetADC(j, adc0);
       fChannel[2 * k + 1]->SetADC(j, adc1);
     }
+  }
+
+  ApplyZeroSuppression(conf, kNCHIADC);
+}
+
+void FADCRawEvent::ApplyZeroSuppression(AbsConf * conf, int nch)
+{
+  if (!conf->ZSU()) return;
+
+  for (int i = 0; i < nch; i++) {
+    if (fHeader->GetZero(i)) continue;
+
+    int ped = static_cast<int>(fHeader->GetPedestal(i));
+    unsigned short * adc = fChannel[i]->GetADC();
+
+    int peak = 0;
+    for (int j = 0; j < fNDP; j++) {
+      int dev = std::abs(static_cast<int>(adc[j]) - ped);
+      if (dev > peak) peak = dev;
+    }
+
+    if (peak < conf->THR(i)) fHeader->SetSuppressed(i);
   }
 }
 

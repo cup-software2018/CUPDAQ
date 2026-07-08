@@ -10,6 +10,7 @@ ADCHeader::ADCHeader()
     kNMAXADCCH(40),
     error(false),
     zero(new bool[kNMAXADCCH]),
+    suppressed(new bool[kNMAXADCCH]),
     tbit(new bool[kNMAXADCCH]),
     mid(0),
     cid(0),
@@ -24,6 +25,7 @@ ADCHeader::ADCHeader()
     fCalConsts(nullptr)
 {
   std::memset(zero, 0, static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
+  std::memset(suppressed, 0, static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
   std::memset(tbit, 0, static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
   std::memset(ped, 0, static_cast<std::size_t>(kNMAXADCCH) * sizeof(unsigned int));
 }
@@ -33,6 +35,7 @@ ADCHeader::ADCHeader(const ADCHeader & header)
     kNMAXADCCH(40),
     error(header.GetError()),
     zero(new bool[kNMAXADCCH]),
+    suppressed(new bool[kNMAXADCCH]),
     tbit(new bool[kNMAXADCCH]),
     mid(header.GetMID()),
     cid(header.GetCID()),
@@ -47,6 +50,7 @@ ADCHeader::ADCHeader(const ADCHeader & header)
     fCalConsts(header.GetTimeCalConsts())
 {
   std::memcpy(zero, header.GetZero(), static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
+  std::memcpy(suppressed, header.GetSuppressed(), static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
   std::memcpy(tbit, header.GetTriggerBit(), static_cast<std::size_t>(kNMAXADCCH) * sizeof(bool));
   std::memcpy(ped, header.GetPedestal(),
               static_cast<std::size_t>(kNMAXADCCH) * sizeof(unsigned int));
@@ -55,6 +59,7 @@ ADCHeader::ADCHeader(const ADCHeader & header)
 ADCHeader::~ADCHeader()
 {
   delete[] zero;
+  delete[] suppressed;
   delete[] tbit;
   delete[] ped;
 }

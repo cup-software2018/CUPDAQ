@@ -14,6 +14,7 @@ public:
   void SetCID(int n);
   void SetError();
   void SetZero(int n);
+  void SetSuppressed(int n);
   void SetTriggerBit(int n);
   void SetPedestal(int n, int p);
   void SetDataLength(unsigned int n);
@@ -30,6 +31,8 @@ public:
   bool GetError() const;
   bool GetZero(int n) const;
   bool * GetZero() const;
+  bool GetSuppressed(int n) const;
+  bool * GetSuppressed() const;
   bool GetTriggerBit(int n) const;
   bool * GetTriggerBit() const;
   unsigned int GetPedestal(int n) const;
@@ -51,6 +54,7 @@ private:
 
   bool error;
   bool * zero; // [kNMAXADCCH]
+  bool * suppressed; // [kNMAXADCCH]
   bool * tbit; // [kNMAXADCCH]
 
   int mid;
@@ -77,6 +81,8 @@ inline void ADCHeader::SetCID(int n) { cid = n; }
 inline void ADCHeader::SetError() { error = true; }
 
 inline void ADCHeader::SetZero(int n) { zero[n] = true; }
+
+inline void ADCHeader::SetSuppressed(int n) { suppressed[n] = true; }
 
 inline void ADCHeader::SetTriggerBit(int n) { tbit[n] = true; }
 
@@ -112,6 +118,10 @@ inline bool ADCHeader::GetZero(int n) const { return zero[n]; }
 
 inline bool * ADCHeader::GetZero() const { return zero; }
 
+inline bool ADCHeader::GetSuppressed(int n) const { return suppressed[n]; }
+
+inline bool * ADCHeader::GetSuppressed() const { return suppressed; }
+
 inline bool ADCHeader::GetTriggerBit(int n) const { return tbit[n]; }
 
 inline bool * ADCHeader::GetTriggerBit() const { return tbit; }
@@ -136,7 +146,7 @@ inline unsigned long ADCHeader::GetLocalTriggerTime() const { return locttime; }
 
 inline int ADCHeader::GetSize() const
 {
-  return sizeof(ADCHeader) + kNMAXADCCH * (sizeof(bool) * 2 + sizeof(unsigned int));
+  return sizeof(ADCHeader) + kNMAXADCCH * (sizeof(bool) * 3 + sizeof(unsigned int));
 }
 
 inline TimeCalConsts * ADCHeader::GetTimeCalConsts() const { return fCalConsts; }

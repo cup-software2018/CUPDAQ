@@ -41,7 +41,7 @@ public:
   int DT(int ch) const;
   int CW(int ch) const;
   int TM(int ch) const;
-  int THR(int ch) const;
+  int THR(int ch) const override;
   int PCT(int ch) const;
   int PCI(int ch) const;
   int PWT(int ch) const;

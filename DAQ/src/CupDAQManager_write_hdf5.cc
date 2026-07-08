@@ -99,7 +99,7 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
         }
 
         for (int i = 0; i < nadcch; ++i) {
-          if (header->GetZero(i)) { continue; }
+          if (header->GetZero(i) || header->GetSuppressed(i)) { continue; }
 
           FChannel_t channel{};
           channel.id = conf->PID(i);
