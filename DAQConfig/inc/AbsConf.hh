@@ -28,6 +28,13 @@ public:
   virtual int CID(int ch) const = 0;
   virtual int PID(int ch) const = 0;
 
+  void SetZSU(bool val);
+  bool ZSU() const;
+
+  // Per-channel zero suppression threshold. Not every ADC type supports it
+  // yet, so the default is a no-op override rather than a pure virtual.
+  virtual int THR(int ch) const;
+
   void SetADCType(ADC::TYPE type);
   ADC::TYPE GetADCType() const;
 
@@ -43,6 +50,7 @@ public:
 protected:
   bool fIsEnabled{false};
   bool fIsLinked{false};
+  bool fZSU{false};
 
   int fSID{0};
   int fMID{0};
@@ -57,6 +65,11 @@ inline void AbsConf::SetEnable() { fIsEnabled = true; }
 inline bool AbsConf::IsEnabled() const { return fIsEnabled; }
 inline void AbsConf::SetLink() { fIsLinked = true; }
 inline bool AbsConf::IsLinked() const { return fIsLinked; }
+
+inline void AbsConf::SetZSU(bool val) { fZSU = val; }
+inline bool AbsConf::ZSU() const { return fZSU; }
+
+inline int AbsConf::THR(int /*ch*/) const { return 0; }
 
 inline void AbsConf::SetSID(int id) { fSID = id; }
 inline void AbsConf::SetMID(int id) { fMID = id; }

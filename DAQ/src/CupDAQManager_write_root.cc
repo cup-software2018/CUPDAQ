@@ -90,7 +90,7 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
         }
 
         for (int i = 0; i < nadcch; i++) {
-          if (header->GetZero(i)) { continue; }
+          if (header->GetZero(i) || header->GetSuppressed(i)) { continue; }
           FChannel * channel = chdata->Add(conf->PID(i), adcraw->GetNDP());
           channel->SetPedestal(header->GetPedestal(i));
           auto * rawchannel = adcraw->GetChannel(i);

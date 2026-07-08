@@ -33,6 +33,10 @@ private:
   void UnpackHeader_GADC(ADCHeader * header);
   void UnpackHeader_IADC(ADCHeader * header);
 
+  // Marks channels whose waveform never deviates from pedestal by at least
+  // conf->THR(ch) as suppressed. No-op if conf->ZSU() is off.
+  void ApplyZeroSuppression(AbsConf * conf, int nch);
+
   ClassDef(FADCRawEvent, 1)
 };
 

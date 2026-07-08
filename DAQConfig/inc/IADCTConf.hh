@@ -32,7 +32,7 @@ public:
 
   int CID(int ch) const override;
   int PID(int ch) const override;
-  int THR(int ch) const;
+  int THR(int ch) const override;
   int DLY(int ch) const;
   int TLT(int group) const;
   float HV(int group) const;
