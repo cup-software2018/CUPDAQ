@@ -112,10 +112,13 @@ public:
   void WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) override {}
   void WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) override {}
   void WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) override {}
+  bool WriteTRGSWCH(uint32_t ch, uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                    uint32_t iadc) override { return true; }
   uint32_t ReadTRGSWFADC() override { return 0; }
   uint32_t ReadTRGSWSADCMU() override { return 0; }
   uint32_t ReadTRGSWSADCLS() override { return 0; }
   uint32_t ReadTRGSWIADC() override { return 0; }
+  uint32_t ReadTRGSWCH(uint32_t ch) override { return 0; }
 
 protected:
   std::string fIPAddress{};

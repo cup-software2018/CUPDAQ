@@ -48,8 +48,16 @@ void TCBConf::PrintConf() const
                  "                  MTHRI(%d)  PSCI(%d)  DTI(%d)  TSWI(%s)",
                  fSID, fTM, fCW, fDLY, fPTRG, fMTHRF, fPSCF, fDTF, swf, fMTHRSM, fPSCSM, fDTSM,
                  swsm, fMTHRSL, fPSCSL, fDTSL, swsl, fMTHRI, fPSCI, fDTI, swi)
-         << endl
          << endl;
+
+    for (const auto & [ch, sw] : fSWCH) {
+      f = static_cast<int>(TESTBIT(sw, 0));
+      sm = static_cast<int>(TESTBIT(sw, 1));
+      sl = static_cast<int>(TESTBIT(sw, 2));
+      i = static_cast<int>(TESTBIT(sw, 3));
+      cout << Form("                  TSWCH%d(%d %d %d %d)", ch, f, sm, sl, i) << endl;
+    }
+    cout << endl;
   }
   else {
     cout << Form(" ++   TCB config: SID(%d) TRGON(%d) CW(%d) DLY(%d) PTRIG(%d) \n"

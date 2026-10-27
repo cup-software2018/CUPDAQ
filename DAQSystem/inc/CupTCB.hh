@@ -177,11 +177,14 @@ public:
                         uint32_t iadc) override;
   void WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
                       uint32_t iadc) override;
+  bool WriteTRGSWCH(uint32_t ch, uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                    uint32_t iadc) override;
 
   uint32_t ReadTRGSWFADC() override;
   uint32_t ReadTRGSWSADCMU() override;
   uint32_t ReadTRGSWSADCLS() override;
   uint32_t ReadTRGSWIADC() override;
+  uint32_t ReadTRGSWCH(uint32_t ch) override;
 
 private:
   // Private Constructor for Singleton

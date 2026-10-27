@@ -23,7 +23,7 @@ public:
   void Close();
 
   // Load Lookup Table (Bulk Write)
-  void WriteLT(uint32_t mid, const char * data, int len);
+  void WriteLT(uint32_t mid, const char *data, int len);
 
   // -----------------------------------------------------------------------
   // Control & Status Registers
@@ -148,7 +148,7 @@ public:
   float ReadTEMP(uint32_t mid, uint32_t ch) const;
 
   void WriteADCMUX(uint32_t mid, uint32_t ch, uint32_t data) const;
-  void ReadFADCBUF(uint32_t mid, uint32_t * data) const;
+  void ReadFADCBUF(uint32_t mid, uint32_t *data) const;
 
   // Calibration & Alignment (Complex Logic)
   void AlignFADC500(uint32_t mid) const;
@@ -166,8 +166,8 @@ public:
 
   void SendTRIG() const;
 
-  void ReadLNSTAT(uint32_t * data) const;
-  void ReadMIDS(uint32_t * data) const;
+  void ReadLNSTAT(uint32_t *data) const;
+  void ReadMIDS(uint32_t *data) const;
 
   void WritePTRIG(uint32_t data) const;
   uint32_t ReadPTRIG() const;
@@ -186,7 +186,7 @@ public:
 
   // Data Readout
   uint32_t ReadBCount(uint32_t mid) const;
-  int ReadData(uint32_t mid, uint32_t bcount, unsigned char * data) const;
+  int ReadData(uint32_t mid, uint32_t bcount, unsigned char *data) const;
 
   void WriteGAIN(uint32_t mid, uint32_t ch, uint32_t data) const;
   uint32_t ReadGAIN(uint32_t mid, uint32_t ch) const;
@@ -228,17 +228,21 @@ public:
                               uint32_t iadc) const;
   uint32_t ReadSwitchFADC500() const;
 
-  void WriteTrigSwitchSADC64MU(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
-                               uint32_t iadc) const;
+  void WriteTrigSwitchSADC64MU(uint32_t fadc, uint32_t sadc_mu,
+                               uint32_t sadc_ls, uint32_t iadc) const;
   uint32_t ReadSwitchSADC64MU() const;
 
-  void WriteTrigSwitchSADC64LS(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
-                               uint32_t iadc) const;
+  void WriteTrigSwitchSADC64LS(uint32_t fadc, uint32_t sadc_mu,
+                               uint32_t sadc_ls, uint32_t iadc) const;
   uint32_t ReadSwitchSADC64LS() const;
 
   void WriteTrigSwitchIADC64(uint32_t fadc, uint32_t sadc_mu, uint32_t sadc_ls,
                              uint32_t iadc) const;
   uint32_t ReadSwitchIADC64() const;
+
+  bool WriteTrigSwitch_ch(uint32_t ch, uint32_t fadc, uint32_t sadc_mu,
+                          uint32_t sadc_ls, uint32_t iadc) const;
+  uint32_t ReadSwitch_ch(uint32_t ch) const;
 
   uint32_t ReadDBG() const;
 

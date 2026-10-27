@@ -304,7 +304,14 @@ void CupTCB::WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
   fNKTCB.WriteTrigSwitchIADC64(fadc, sadcmu, sadcls, iadc);
 }
 
+bool CupTCB::WriteTRGSWCH(uint32_t ch, uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
+                          uint32_t iadc)
+{
+  return fNKTCB.WriteTrigSwitch_ch(ch, fadc, sadcmu, sadcls, iadc);
+}
+
 uint32_t CupTCB::ReadTRGSWFADC() { return fNKTCB.ReadSwitchFADC500(); }
 uint32_t CupTCB::ReadTRGSWSADCMU() { return fNKTCB.ReadSwitchSADC64MU(); }
 uint32_t CupTCB::ReadTRGSWSADCLS() { return fNKTCB.ReadSwitchSADC64LS(); }
 uint32_t CupTCB::ReadTRGSWIADC() { return fNKTCB.ReadSwitchIADC64(); }
+uint32_t CupTCB::ReadTRGSWCH(uint32_t ch) { return fNKTCB.ReadSwitch_ch(ch); }

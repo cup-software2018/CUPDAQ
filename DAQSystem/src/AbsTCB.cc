@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void AbsTCB::WriteRegisterTCB(TCBConf * conf)
+bool AbsTCB::WriteRegisterTCB(TCBConf * conf)
 {
   WriteTRIGENABLE(0, conf->TM());
   WriteCW(0, 1, conf->CW());
@@ -53,7 +53,18 @@ void AbsTCB::WriteRegisterTCB(TCBConf * conf)
     sl = (uint32_t)TESTBIT(sw, 2);
     i = (uint32_t)TESTBIT(sw, 3);
     WriteTRGSWIADC(f, sm, sl, i);
+
+    for (int idx = 0; idx < conf->NSWCH(); idx++) {
+      auto [ch, swch] = conf->SWCH(idx);
+      f = (uint32_t)TESTBIT(swch, 0);
+      sm = (uint32_t)TESTBIT(swch, 1);
+      sl = (uint32_t)TESTBIT(swch, 2);
+      i = (uint32_t)TESTBIT(swch, 3);
+      if (!WriteTRGSWCH((uint32_t)ch, f, sm, sl, i)) return false;
+    }
   }
+
+  return true;
 }
 
 void AbsTCB::WriteRegisterFADC(FADCTConf * conf)
@@ -168,26 +179,34 @@ void AbsTCB::PrintRegisterTCB(TCBConf * conf)
     i = (int)TESTBIT(sw, 3);
     const char * swi = Form("%d %d %d %d", f, sm, sl, i);
 
-    cout << Form(" ++ TCB register: SID(0) TRGON(%u) CW(%u) DLY(%u) "
-                 "PTRIG(%u) \n"
+    cout << Form(" ++ TCB register: SID(%d) TRGON(%u) CW(%u) DLY(%u) PTRIG(%u) \n"
                  "                  MTHRF(%u)  PSCF(%u)  DTF(%u)  TSWF(%s) \n"
-                 "                  MTHRSM(%u) PSCSM(%u) DTSM(%u) TSWSM(%s) "
-                 "\n"
-                 "                  MTHRSL(%u) PSCSL(%u) DTSL(%u) TSWSL(%s) "
-                 "\n"
-                 "                  MTHRI(%u)  PSCI(%u)  DTI(%u)  TSWI(%s) ",
-                 ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(),
-                 ReadPSCALEFADC(), ReadDT(0, 0), swf, ReadMTHRSADCMU(), ReadPSCALESADCMU(),
-                 ReadDT(0, 1), swsm, ReadMTHRSADCLS(), ReadPSCALESADCLS(), ReadDT(0, 2), swsl,
-                 ReadMTHRIADC(), ReadPSCALEIADC(), ReadDT(0, 3), swi)
+                 "                  MTHRSM(%u) PSCSM(%u) DTSM(%u) TSWSM(%s) \n"
+                 "                  MTHRSL(%u) PSCSL(%u) DTSL(%u) TSWSL(%s) \n"
+                 "                  MTHRI(%u)  PSCI(%u)  DTI(%u)  TSWI(%s)",
+                 conf->SID(), ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
+                 ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0), swf, ReadMTHRSADCMU(),
+                 ReadPSCALESADCMU(), ReadDT(0, 1), swsm, ReadMTHRSADCLS(), ReadPSCALESADCLS(),
+                 ReadDT(0, 2), swsl, ReadMTHRIADC(), ReadPSCALEIADC(), ReadDT(0, 3), swi)
          << endl;
+
+    for (int idx = 0; idx < conf->NSWCH(); idx++) {
+      int ch = conf->SWCH(idx).first;
+      sw = ReadTRGSWCH((uint32_t)ch);
+      f = (int)TESTBIT(sw, 0);
+      sm = (int)TESTBIT(sw, 1);
+      sl = (int)TESTBIT(sw, 2);
+      i = (int)TESTBIT(sw, 3);
+      cout << Form("                  TSWCH%d(%d %d %d %d)", ch, f, sm, sl, i) << endl;
+    }
+    cout << endl;
   }
   else {
-    cout << Form(" ++ TCB register: SID(0) TRGON(%u) CW(%u) DLY(%u) "
-                 "PTRIG(%u) \n"
+    cout << Form(" ++ TCB register: SID(%d) TRGON(%u) CW(%u) DLY(%u) PTRIG(%u) \n"
                  "                  MTHR(%u) PSC(%u) DT(%u)",
-                 ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(), ReadMTHRFADC(),
-                 ReadPSCALEFADC(), ReadDT(0, 0))
+                 conf->SID(), ReadTRIGENABLE(0), ReadCW(0, 1), ReadGATEDLY(), ReadPTRIG(),
+                 ReadMTHRFADC(), ReadPSCALEFADC(), ReadDT(0, 0))
+         << endl
          << endl;
   }
 }

@@ -30,9 +30,23 @@ TCB:
   DTI: 0
   SWI: [0, 0, 0, 1]
 
+  # --- Per-channel Trigger Switch (optional) ---
+  # [ch, F, SM, SL, I], ch = TCB channel (1-40)
+  # SWCH:
+  #   - [1, 0, 1, 0, 0]
+  #   - [2, 1, 1, 0, 0]
+
 #  Trigger Switch Usage Guide:
 #  [ FADC, Muon(SM), LS(SL), SiPM(I) ]
 # SWF:  [1, 0, 0, 0]  # TRGF path: Only FADC fires
 # SWSM: [0, 1, 0, 0]  # TRGSM path: Only Muon fires
 # SWSL: [1, 1, 0, 0]  # TRGSL path: LS fires when F or SM fires (Coincidence)
 # SWI:  [0, 0, 0, 0]  # TRGI path: Disabled
+#
+#  Per-channel Trigger Switch (SWCH):
+#  Same [F, SM, SL, I] bits as above, set per TCB channel.
+#  Only listed channels are written; others keep their register value.
+# SWCH:
+#   - [1, 0, 1, 0, 0]  # ch1: Only Muon fires
+#   - [2, 1, 1, 0, 0]  # ch2: fires when F or SM fires
+#  An out-of-range ch (not 1-40) aborts TCB configuration.

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <vector>
+
 #include "AbsConf.hh"
 
 class TCBConf : public AbsConf {
@@ -33,6 +36,8 @@ public:
   void SetDTI(int val);
   void SetSWI(int f, int sm, int sl, int i);
 
+  void SetSWCH(int ch, int f, int sm, int sl, int i);
+
   void SetTCBTYPE(TCB::TYPE val);
 
   int TM() const;
@@ -55,6 +60,10 @@ public:
   int PSCI() const;
   int DTI() const;
   int SWI() const;
+
+  int NSWCH() const;
+  std::pair<int, int> SWCH(int idx) const;
+
   TCB::TYPE TCBTYPE() const;
 
   void SetCID(int, int) override {}
@@ -85,6 +94,7 @@ private:
   int fPSCI{0};
   int fDTI{0};
   int fSWI{0};
+  std::vector<std::pair<int, int>> fSWCH{};
   TCB::TYPE fTCBTYPE{TCB::V1};
 
   ClassDef(TCBConf, 1)
@@ -99,8 +109,7 @@ inline void TCBConf::SetMTHRF(int val) { fMTHRF = val; }
 inline void TCBConf::SetPSCF(int val) { fPSCF = val; }
 inline void TCBConf::SetDTF(int val) { fDTF = val; }
 
-inline void TCBConf::SetSWF(int f, int sm, int sl, int i)
-{
+inline void TCBConf::SetSWF(int f, int sm, int sl, int i) {
   fSWF = f * 1 + sm * 2 + sl * 4 + i * 8;
 }
 
@@ -108,8 +117,7 @@ inline void TCBConf::SetMTHRSM(int val) { fMTHRSM = val; }
 inline void TCBConf::SetPSCSM(int val) { fPSCSM = val; }
 inline void TCBConf::SetDTSM(int val) { fDTSM = val; }
 
-inline void TCBConf::SetSWSM(int f, int sm, int sl, int i)
-{
+inline void TCBConf::SetSWSM(int f, int sm, int sl, int i) {
   fSWSM = f * 1 + sm * 2 + sl * 4 + i * 8;
 }
 
@@ -117,8 +125,7 @@ inline void TCBConf::SetMTHRSL(int val) { fMTHRSL = val; }
 inline void TCBConf::SetPSCSL(int val) { fPSCSL = val; }
 inline void TCBConf::SetDTSL(int val) { fDTSL = val; }
 
-inline void TCBConf::SetSWSL(int f, int sm, int sl, int i)
-{
+inline void TCBConf::SetSWSL(int f, int sm, int sl, int i) {
   fSWSL = f * 1 + sm * 2 + sl * 4 + i * 8;
 }
 
@@ -126,9 +133,12 @@ inline void TCBConf::SetMTHRI(int val) { fMTHRI = val; }
 inline void TCBConf::SetPSCI(int val) { fPSCI = val; }
 inline void TCBConf::SetDTI(int val) { fDTI = val; }
 
-inline void TCBConf::SetSWI(int f, int sm, int sl, int i)
-{
+inline void TCBConf::SetSWI(int f, int sm, int sl, int i) {
   fSWI = f * 1 + sm * 2 + sl * 4 + i * 8;
+}
+
+inline void TCBConf::SetSWCH(int ch, int f, int sm, int sl, int i) {
+  fSWCH.emplace_back(ch, f * 1 + sm * 2 + sl * 4 + i * 8);
 }
 
 inline void TCBConf::SetTCBTYPE(TCB::TYPE val) { fTCBTYPE = val; }
@@ -153,4 +163,6 @@ inline int TCBConf::MTHRI() const { return fMTHRI; }
 inline int TCBConf::PSCI() const { return fPSCI; }
 inline int TCBConf::DTI() const { return fDTI; }
 inline int TCBConf::SWI() const { return fSWI; }
+inline int TCBConf::NSWCH() const { return static_cast<int>(fSWCH.size()); }
+inline std::pair<int, int> TCBConf::SWCH(int idx) const { return fSWCH[idx]; }
 inline TCB::TYPE TCBConf::TCBTYPE() const { return fTCBTYPE; }
