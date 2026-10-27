@@ -48,10 +48,7 @@ void CupTCB::TriggerStop()
 // -----------------------------------------------------------------------
 // Register Wrappers
 // -----------------------------------------------------------------------
-void CupTCB::WriteCW(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WriteCW(mid, ch, data);
-}
+void CupTCB::WriteCW(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WriteCW(mid, ch, data); }
 uint32_t CupTCB::ReadCW(uint32_t mid, uint32_t ch) { return fNKTCB.ReadCW(mid, ch); }
 
 void CupTCB::WriteGW(uint32_t mid, uint32_t data) { fNKTCB.WriteGW(mid, data); }
@@ -67,99 +64,42 @@ void CupTCB::WriteDACOFF(uint32_t mid, uint32_t ch, uint32_t data)
 {
   fNKTCB.WriteDACOFF(mid, ch, data);
 }
-uint32_t CupTCB::ReadDACOFF(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadDACOFF(mid, ch);
-}
+uint32_t CupTCB::ReadDACOFF(uint32_t mid, uint32_t ch) { return fNKTCB.ReadDACOFF(mid, ch); }
 
 void CupTCB::MeasurePED(uint32_t mid, uint32_t ch) { fNKTCB.MeasurePED(mid, ch); }
-uint32_t CupTCB::ReadPED(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadPED(mid, ch);
-}
+uint32_t CupTCB::ReadPED(uint32_t mid, uint32_t ch) { return fNKTCB.ReadPED(mid, ch); }
 
-void CupTCB::WriteDLY(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WriteDLY(mid, ch, data);
-}
-uint32_t CupTCB::ReadDLY(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadDLY(mid, ch);
-}
+void CupTCB::WriteDLY(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WriteDLY(mid, ch, data); }
+uint32_t CupTCB::ReadDLY(uint32_t mid, uint32_t ch) { return fNKTCB.ReadDLY(mid, ch); }
 
-void CupTCB::WriteTHR(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WriteTHR(mid, ch, data);
-}
-uint32_t CupTCB::ReadTHR(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadTHR(mid, ch);
-}
+void CupTCB::WriteTHR(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WriteTHR(mid, ch, data); }
+uint32_t CupTCB::ReadTHR(uint32_t mid, uint32_t ch) { return fNKTCB.ReadTHR(mid, ch); }
 
-void CupTCB::WritePOL(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WritePOL(mid, ch, data);
-}
-uint32_t CupTCB::ReadPOL(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadPOL(mid, ch);
-}
+void CupTCB::WritePOL(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WritePOL(mid, ch, data); }
+uint32_t CupTCB::ReadPOL(uint32_t mid, uint32_t ch) { return fNKTCB.ReadPOL(mid, ch); }
 
-void CupTCB::WritePSW(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WritePSW(mid, ch, data);
-}
-uint32_t CupTCB::ReadPSW(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadPSW(mid, ch);
-}
+void CupTCB::WritePSW(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WritePSW(mid, ch, data); }
+uint32_t CupTCB::ReadPSW(uint32_t mid, uint32_t ch) { return fNKTCB.ReadPSW(mid, ch); }
 
 void CupTCB::WriteAMODE(uint32_t mid, uint32_t ch, uint32_t data)
 {
   fNKTCB.WriteAMODE(mid, ch, data);
 }
-uint32_t CupTCB::ReadAMODE(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadAMODE(mid, ch);
-}
+uint32_t CupTCB::ReadAMODE(uint32_t mid, uint32_t ch) { return fNKTCB.ReadAMODE(mid, ch); }
 
-void CupTCB::WritePCT(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WritePCT(mid, ch, data);
-}
-uint32_t CupTCB::ReadPCT(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadPCT(mid, ch);
-}
+void CupTCB::WritePCT(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WritePCT(mid, ch, data); }
+uint32_t CupTCB::ReadPCT(uint32_t mid, uint32_t ch) { return fNKTCB.ReadPCT(mid, ch); }
 
-void CupTCB::WritePCI(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WritePCI(mid, ch, data);
-}
-uint32_t CupTCB::ReadPCI(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadPCI(mid, ch);
-}
+void CupTCB::WritePCI(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WritePCI(mid, ch, data); }
+uint32_t CupTCB::ReadPCI(uint32_t mid, uint32_t ch) { return fNKTCB.ReadPCI(mid, ch); }
 
-void CupTCB::WritePWT(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WritePWT(mid, ch, data);
-}
-uint32_t CupTCB::ReadPWT(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadPWT(mid, ch);
-}
+void CupTCB::WritePWT(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WritePWT(mid, ch, data); }
+uint32_t CupTCB::ReadPWT(uint32_t mid, uint32_t ch) { return fNKTCB.ReadPWT(mid, ch); }
 
-void CupTCB::WriteDT(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WriteDT(mid, ch, data);
-}
+void CupTCB::WriteDT(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WriteDT(mid, ch, data); }
 uint32_t CupTCB::ReadDT(uint32_t mid, uint32_t ch) { return fNKTCB.ReadDT(mid, ch); }
 
-void CupTCB::WriteTM(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WriteTM(mid, ch, data);
-}
+void CupTCB::WriteTM(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WriteTM(mid, ch, data); }
 uint32_t CupTCB::ReadTM(uint32_t mid, uint32_t ch) { return fNKTCB.ReadTM(mid, ch); }
 
 void CupTCB::WriteTLT(uint32_t mid, uint32_t data) { fNKTCB.WriteTLT(mid, data); }
@@ -169,22 +109,13 @@ void CupTCB::WriteSTLT(uint32_t mid, uint32_t ch, uint32_t data)
 {
   fNKTCB.WriteSTLT(mid, ch, data);
 }
-uint32_t CupTCB::ReadSTLT(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadSTLT(mid, ch);
-}
+uint32_t CupTCB::ReadSTLT(uint32_t mid, uint32_t ch) { return fNKTCB.ReadSTLT(mid, ch); }
 
 void CupTCB::WriteDSR(uint32_t mid, uint32_t data) { fNKTCB.WriteDSR(mid, data); }
 uint32_t CupTCB::ReadDSR(uint32_t mid) { return fNKTCB.ReadDSR(mid); }
 
-void CupTCB::WritePSS(uint32_t mid, uint32_t ch, uint32_t data)
-{
-  fNKTCB.WritePSS(mid, ch, data);
-}
-uint32_t CupTCB::ReadPSS(uint32_t mid, uint32_t ch)
-{
-  return fNKTCB.ReadPSS(mid, ch);
-}
+void CupTCB::WritePSS(uint32_t mid, uint32_t ch, uint32_t data) { fNKTCB.WritePSS(mid, ch, data); }
+uint32_t CupTCB::ReadPSS(uint32_t mid, uint32_t ch) { return fNKTCB.ReadPSS(mid, ch); }
 
 // -----------------------------------------------------------------------
 // Alignment
@@ -201,10 +132,7 @@ void CupTCB::AlignDRAM(uint32_t mid) { fNKTCB.AlignDRAM(mid); }
 void CupTCB::WriteDAQMODE(uint32_t mid, uint32_t data) { fNKTCB.WriteDAQMODE(mid, data); }
 uint32_t CupTCB::ReadDAQMODE(uint32_t mid) { return fNKTCB.ReadDAQMODE(mid); }
 
-void CupTCB::WriteHV(uint32_t mid, uint32_t ch, float data)
-{
-  fNKTCB.WriteHV(mid, ch, data);
-}
+void CupTCB::WriteHV(uint32_t mid, uint32_t ch, float data) { fNKTCB.WriteHV(mid, ch, data); }
 float CupTCB::ReadHV(uint32_t mid, uint32_t ch) { return fNKTCB.ReadHV(mid, ch); }
 float CupTCB::ReadTEMP(uint32_t mid, uint32_t ch) { return fNKTCB.ReadTEMP(mid, ch); }
 
@@ -214,10 +142,7 @@ float CupTCB::ReadTEMP(uint32_t mid, uint32_t ch) { return fNKTCB.ReadTEMP(mid, 
 void CupTCB::WritePTRIG(uint32_t data) { fNKTCB.WritePTRIG(data); }
 uint32_t CupTCB::ReadPTRIG() { return fNKTCB.ReadPTRIG(); }
 
-void CupTCB::WriteTRIGENABLE(uint32_t mid, uint32_t data)
-{
-  fNKTCB.WriteTRIGENABLE(mid, data);
-}
+void CupTCB::WriteTRIGENABLE(uint32_t mid, uint32_t data) { fNKTCB.WriteTRIGENABLE(mid, data); }
 uint32_t CupTCB::ReadTRIGENABLE(uint32_t mid) { return fNKTCB.ReadTRIGENABLE(mid); }
 
 void CupTCB::WriteMTHRFADC(uint32_t data) { fNKTCB.WriteMTHRFADC500(data); }
@@ -279,27 +204,23 @@ int CupTCB::ReadData(uint32_t mid, uint32_t bcount, unsigned char * data)
 // -----------------------------------------------------------------------
 // Trigger Switches (Fixed Copy/Paste Bug)
 // -----------------------------------------------------------------------
-void CupTCB::WriteTRGSWFADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                            uint32_t iadc)
+void CupTCB::WriteTRGSWFADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc)
 {
   fNKTCB.WriteTrigSwitchFADC500(fadc, sadcmu, sadcls, iadc);
 }
 
-void CupTCB::WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                              uint32_t iadc)
+void CupTCB::WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc)
 {
   fNKTCB.WriteTrigSwitchSADC64MU(fadc, sadcmu, sadcls, iadc);
 }
 
-void CupTCB::WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                              uint32_t iadc)
+void CupTCB::WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc)
 {
   // BUG FIX: Was calling WriteTrigSwitchFADC500, now calls WriteTrigSwitchSADC64LS
   fNKTCB.WriteTrigSwitchSADC64LS(fadc, sadcmu, sadcls, iadc);
 }
 
-void CupTCB::WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                            uint32_t iadc)
+void CupTCB::WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc)
 {
   fNKTCB.WriteTrigSwitchIADC64(fadc, sadcmu, sadcls, iadc);
 }

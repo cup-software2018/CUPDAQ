@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include "FADCTConf.hh"
 #include "IADCTConf.hh"
 #include "SADCTConf.hh"

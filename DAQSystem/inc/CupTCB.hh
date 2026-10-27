@@ -169,14 +169,10 @@ public:
   // -----------------------------------------------------------------------
   // Trigger Switches
   // -----------------------------------------------------------------------
-  void WriteTRGSWFADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                      uint32_t iadc) override;
-  void WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                        uint32_t iadc) override;
-  void WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                        uint32_t iadc) override;
-  void WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
-                      uint32_t iadc) override;
+  void WriteTRGSWFADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) override;
+  void WriteTRGSWSADCMU(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) override;
+  void WriteTRGSWSADCLS(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) override;
+  void WriteTRGSWIADC(uint32_t fadc, uint32_t sadcmu, uint32_t sadcls, uint32_t iadc) override;
   bool WriteTRGSWCH(uint32_t ch, uint32_t fadc, uint32_t sadcmu, uint32_t sadcls,
                     uint32_t iadc) override;
 
