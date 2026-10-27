@@ -10,10 +10,13 @@ WCMDTrigger::WCMDTrigger()
 void WCMDTrigger::DoConfig(AbsConfList * configs)
 {
   YAML::Node node = configs->GetYAMLNode("WCMDTrigger");
+  if (!node) return;
 }
 
 void WCMDTrigger::InitTrigger()
 {
+  fTotalInputEvent = 0;
+  fNTriggeredEvent = 0;
 }
 
 bool WCMDTrigger::DoTrigger(BuiltEvent * event)

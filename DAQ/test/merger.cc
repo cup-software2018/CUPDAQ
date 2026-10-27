@@ -1,6 +1,7 @@
 #include "TROOT.h"
 
 #include "CupDAQManager.hh"
+#include "PSMDTrigger.hh"
 #include "daqopt.hh"
 
 int main(int argc, char ** argv)
@@ -40,9 +41,16 @@ int main(int argc, char ** argv)
   //   swtrigger->SetVerboseLevel(option.vlevel);
   //   DAQ->SetSoftTrigger(swtrigger);
 
+  // PSMD channel suppression; active only if PSMDTrigger.Enabled is set in config
+  auto * swtrigger = new PSMDTrigger();
+  swtrigger->SetDAQID(option.daqid);
+  swtrigger->SetVerboseLevel(option.vlevel);
+  DAQ->SetSoftTrigger(swtrigger);
+
   DAQ->Run();
 
   delete DAQ;
+  delete swtrigger;
 
   return 0;
 }
