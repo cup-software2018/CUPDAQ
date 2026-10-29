@@ -11,8 +11,9 @@ namespace
 {
 constexpr int kIADCSamplePeriod = 16; // ns per waveform sample, PSW is in ns
 
-// largest sum of (adc - ped) over w consecutive samples, sliding one sample at a time
-int MaxPeakSum(const unsigned short * adc, int ndp, int ped, int w)
+// true at the first sum of (adc - ped) over w consecutive samples above thr, sliding one sample
+// at a time
+bool IsPeakSumOver(const unsigned short * adc, int ndp, int ped, int w, int thr)
 {
   w = std::min(w, ndp);
 
@@ -20,13 +21,13 @@ int MaxPeakSum(const unsigned short * adc, int ndp, int ped, int w)
   for (int k = 0; k < w; k++) {
     sum += adc[k] - ped;
   }
+  if (sum > thr) return true;
 
-  int maxsum = sum;
   for (int k = w; k < ndp; k++) {
     sum += adc[k] - adc[k - w];
-    maxsum = std::max(maxsum, sum);
+    if (sum > thr) return true;
   }
-  return maxsum;
+  return false;
 }
 } // namespace
 
@@ -87,9 +88,9 @@ bool PSMDTrigger::DoTrigger(BuiltEvent * event)
       bool fired = header->GetTriggerBit(i);
       if (fired && conf) {
         auto * channel = adcraw->GetChannel(i);
-        int peaksum = MaxPeakSum(channel->GetADC(), channel->GetNDP(),
-                                 static_cast<int>(header->GetPedestal(i)), width);
-        fired = peaksum > fThrScale * conf->THR(i);
+        fired = IsPeakSumOver(channel->GetADC(), channel->GetNDP(),
+                              static_cast<int>(header->GetPedestal(i)), width,
+                              fThrScale * conf->THR(i));
       }
 
       if (fired) { nalive++; }
