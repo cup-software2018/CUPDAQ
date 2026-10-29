@@ -80,9 +80,15 @@ IADCT:
 
 
 # PSMD software trigger (applied in the merger)
-#   Rejects events that have no channel with trigger bit 1.
+#   Trigger bits are set per 4-channel group, so a tbit=1 channel may itself be below threshold.
+#   With PeakSum on, each tbit=1 channel is triggered again: the largest sliding sum of
+#   (ADC - pedestal) over PSW/16 samples (16 ns/sample) must exceed ThrScale x THR of its IADCT.
+#   A channel fires if it has tbit=1 (and passes the peak sum when PeakSum is on).
+#   Rejects events that have no channel that fired.
 #   Random-trigger events (trigger type 1) always pass with all channels.
-#   Trigger bits are set per 4-channel group, so channels are kept/dropped in groups of 4.
 PSMDTrigger:
   Enabled: 1   # 1: on, 0 or omitted: off
-  ZSUTBit: 1   # 1: zero-suppress channels with trigger bit 0, 0 or omitted: keep all channels
+  ZSUTBit: 1   # 1: zero-suppress channels that did not fire, 0 or omitted: keep all channels
+  PeakSum: 1   # 1: re-trigger tbit=1 channels with the peak sum, 0 or omitted: tbit only
+  ThrScale: 2  # peak sum threshold = ThrScale x THR; the hardware fires at 2 x THR of the
+               # 16-sample sum of recorded samples (runs 324, 327); omitted: 1
