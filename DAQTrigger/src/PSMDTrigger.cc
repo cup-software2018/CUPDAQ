@@ -91,12 +91,14 @@ bool PSMDTrigger::DoTrigger(BuiltEvent * event)
     auto * adcraw = static_cast<FADCRawEvent *>(event->At(k));
     auto * header = adcraw->GetADCHeader();
 
-    // without its config the board falls back to the trigger bits alone
+    // the header carries the hardware MID (SID + 192 for IADCT); without its config the board
+    // falls back to the trigger bits alone and has no dead channels
     IADCTConf * conf = nullptr;
-    if (fDoPeakSum && fConfigs) {
+    if (fConfigs) {
       conf = static_cast<IADCTConf *>(fConfigs->FindConfig(ADC::IADCT, header->GetMID()));
     }
-    int width = conf ? std::max(1, conf->PSW() / kIADCSamplePeriod) : 0;
+    bool dopeaksum = fDoPeakSum && conf;
+    int width = dopeaksum ? std::max(1, conf->PSW() / kIADCSamplePeriod) : 0;
 
     int nch = adcraw->GetNCH();
     uint64_t fmask = 0; // fired channels, bit i = channel i
@@ -104,7 +106,7 @@ bool PSMDTrigger::DoTrigger(BuiltEvent * event)
       if (header->GetZero(i)) continue;
 
       bool fired = header->GetTriggerBit(i);
-      if (fired && conf) {
+      if (fired && dopeaksum) {
         auto * channel = adcraw->GetChannel(i);
         fired = IsPeakSumOver(channel->GetADC(), channel->GetNDP(),
                               static_cast<int>(header->GetPedestal(i)), width,
@@ -121,7 +123,7 @@ bool PSMDTrigger::DoTrigger(BuiltEvent * event)
     }
 
     // a slab fires when all its live channels fired
-    auto it = fDeadMask.find(header->GetMID());
+    auto it = conf ? fDeadMask.find(conf->SID()) : fDeadMask.end();
     uint64_t dead = it == fDeadMask.end() ? 0 : it->second;
     for (int i = 0; i + kNCHPerSlab <= nch; i += kNCHPerSlab) {
       uint64_t live = (uint64_t{(1u << kNCHPerSlab) - 1} << i) & ~dead;
