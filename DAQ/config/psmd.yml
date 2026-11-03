@@ -84,7 +84,10 @@ IADCT:
 #   With PeakSum on, each tbit=1 channel is triggered again: the largest sliding sum of
 #   (ADC - pedestal) over PSW/16 samples (16 ns/sample) must exceed ThrScale x THR of its IADCT.
 #   A channel fires if it has tbit=1 (and passes the peak sum when PeakSum is on).
-#   Rejects events that have no channel that fired.
+#   A detector (4-channel group, DET 1-10 = TLT index) has two slabs of two PMTs (ch1-2, ch3-4).
+#   A slab fires when all its channels not listed in DeadCh fired.
+#   With MinSlab > 0, rejects events with fewer than MinSlab fired slabs in the whole event;
+#   otherwise rejects events that have no channel that fired.
 #   Random-trigger events (trigger type 1) always pass with all channels.
 PSMDTrigger:
   Enabled: 1   # 1: on, 0 or omitted: off
@@ -92,3 +95,6 @@ PSMDTrigger:
   PeakSum: 1   # 1: re-trigger tbit=1 channels with the peak sum, 0 or omitted: tbit only
   ThrScale: 2  # peak sum threshold = ThrScale x THR; the hardware fires at 2 x THR of the
                # 16-sample sum of recorded samples (runs 324, 327); omitted: 1
+  MinSlab: 2   # fired slabs needed per event; 0 or omitted: any fired channel
+  DeadCh:      # dead channels (CH 1-4 of detector DET), left out of their slab
+    - {SID: 8, DET: 8, CH: 3} # detector 73: hardware TLT 1x2+4
