@@ -201,18 +201,8 @@ long CupDAQManager::OpenNewROOTFile(const char * filename)
 {
   long retval = 0;
 
-  std::string filepath(filename);
-
-  std::size_t slash_pos = filepath.find_last_of("/\\");
-  std::string bname = (slash_pos == std::string::npos) ? filepath : filepath.substr(slash_pos + 1);
-
-  int subnum = 0;
-  std::size_t dot_pos = bname.find_last_of('.');
-  if (dot_pos != std::string::npos && dot_pos + 1 < bname.length()) {
-    subnum = std::atoi(bname.substr(dot_pos + 1).c_str());
-  }
-
-  if (subnum == 0) {
+  // first output file of the run
+  if (!fROOTFile) {
     fROOTFile = new TFile(filename, "recreate", "", fCompressionLevel);
     if (!fROOTFile->IsOpen()) {
       ERROR("can't open output file %s", filename);

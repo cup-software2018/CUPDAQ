@@ -91,7 +91,8 @@ void CupDAQManager::PrintDAQSummary()
 //
 
 nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
-                                               const std::string & cmd, std::string & daq_name)
+                                               const std::string & cmd, std::string & daq_name,
+                                               const nlohmann::json & args)
 {
   nlohmann::json err_json = {{"status", "error"}};
 
@@ -100,7 +101,7 @@ nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket
     return err_json;
   }
 
-  nlohmann::json req_json;
+  nlohmann::json req_json = args;
   req_json["command"] = cmd;
   std::string req_str = req_json.dump();
 
@@ -139,7 +140,7 @@ nlohmann::json CupDAQManager::SendCommandToDAQ(const std::unique_ptr<zmq::socket
   return rep_json;
 }
 
-void CupDAQManager::SendCommandToDAQs(const std::string & cmd)
+void CupDAQManager::SendCommandToDAQs(const std::string & cmd, const nlohmann::json & args)
 {
   INFO("Broadcasting command [%s] to all connected DAQs", cmd.c_str());
 
@@ -147,8 +148,17 @@ void CupDAQManager::SendCommandToDAQs(const std::string & cmd)
     if (!socket_ptr) continue;
 
     std::string daq_name;
-    SendCommandToDAQ(socket_ptr, cmd, daq_name);
+    nlohmann::json reply = SendCommandToDAQ(socket_ptr, cmd, daq_name, args);
     INFO("Sent command [%s] to DAQ [%s]", cmd.c_str(), daq_name.c_str());
+
+    // the DAQ echoes the subrun it accepted; a mismatch means it is out of step
+    if (args.contains("subrun") && reply.value("status", "error") == "ok") {
+      int sent = args["subrun"].get<int>();
+      int accepted = reply.value("subrun", -1);
+      if (accepted != sent) {
+        WARNING("DAQ [%s] subrun mismatch: sent %d, accepted %d", daq_name.c_str(), sent, accepted);
+      }
+    }
   }
 
   INFO("Finished broadcasting command [%s]", cmd.c_str());

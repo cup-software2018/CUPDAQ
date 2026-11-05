@@ -134,7 +134,8 @@ protected:
   virtual void WriteSADC_MOD_GZIP();
   virtual void WriteFADC_MOD_GZIP();
 
-  virtual bool OpenNewOutputFile();
+  virtual bool OpenNewOutputFile(int subrun);
+  virtual void RequestSplit(int subrun);
   virtual long OpenNewROOTFile(const char * fname);
   virtual long OpenNewHDF5File(const char * fname);
   virtual long OpenNewGZIPFile(const char * fname);
@@ -149,8 +150,10 @@ protected:
                            double ki = 0.01);
 
   virtual nlohmann::json SendCommandToDAQ(const std::unique_ptr<zmq::socket_t> & socket_ptr,
-                                          const std::string & cmd, std::string & daq_name);
-  virtual void SendCommandToDAQs(const std::string & cmd);
+                                          const std::string & cmd, std::string & daq_name,
+                                          const nlohmann::json & args = nlohmann::json::object());
+  virtual void SendCommandToDAQs(const std::string & cmd,
+                                 const nlohmann::json & args = nlohmann::json::object());
 
   virtual unsigned long QueryDAQStatus(const std::unique_ptr<zmq::socket_t> & socket_ptr,
                                        std::string & daq_name);
@@ -171,7 +174,9 @@ protected:
 
 protected:
   int fRunNumber;
-  std::atomic<int> fSubRunNumber;
+  std::atomic<int> fSubRunNumber;      // current subrun (= output file suffix), starts at 1
+  std::atomic<int> fSplitTargetSubrun; // requested subrun; split when > fSubRunNumber
+  std::atomic<bool> fOutputFileOpened; // first output file has been opened
 
   std::unique_ptr<CupGeneralTCB> fTCB;
   std::vector<std::unique_ptr<AbsADC>> fADCList;
@@ -205,7 +210,6 @@ protected:
   std::atomic<bool> fDoStartRun;
   std::atomic<bool> fDoEndRun;
   std::atomic<bool> fDoExit;
-  std::atomic<bool> fDoSplitOutputFile;
 
   std::atomic<unsigned long> fRunStatusTCB;
   std::atomic<unsigned long> fErrorCodeTCB;
@@ -213,7 +217,6 @@ protected:
   std::atomic<bool> fDoStartRunTCB;
   std::atomic<bool> fDoEndRunTCB;
   std::atomic<bool> fDoExitTCB;
-  std::atomic<bool> fDoSplitOutputFileTCB;
 
   std::atomic<PROCSTATE> fReadStatus;
   std::atomic<PROCSTATE> fSortStatus;

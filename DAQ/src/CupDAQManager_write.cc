@@ -19,7 +19,7 @@ void CupDAQManager::TF_WriteEvent()
   const char * adcmode = (fADCMode == ADC::SMODE) ? "SADC mode" : "FADC mode";
   INFO("started as %s", adcmode);
 
-  if (!OpenNewOutputFile()) {
+  if (!OpenNewOutputFile(fSubRunNumber.load())) {
     RUNSTATE::SetError(fRunStatus);
     return;
   }
@@ -68,11 +68,17 @@ void CupDAQManager::TF_WriteEvent()
   INFO("ended");
 }
 
-bool CupDAQManager::OpenNewOutputFile()
+// Request a split to the given subrun. Only moves forward: a request that is not
+// larger than the pending one (stale or duplicate) is ignored.
+void CupDAQManager::RequestSplit(int subrun)
 {
-  int nfile = fOutputFileList.size();
+  int prev = fSplitTargetSubrun.load();
+  while (subrun > prev && !fSplitTargetSubrun.compare_exchange_weak(prev, subrun)) {}
+}
 
-  if (nfile == 0) {
+bool CupDAQManager::OpenNewOutputFile(int subrun)
+{
+  if (fOutputFileList.empty()) {
     std::string fname;
 
     if (fOutputFilename.empty()) {
@@ -145,9 +151,9 @@ bool CupDAQManager::OpenNewOutputFile()
     }
   }
 
-  // Append sub-file number (e.g., .00000)
+  // Append sub-run number, starting from 1 (e.g., .00001)
   char filename_buf[512];
-  std::snprintf(filename_buf, sizeof(filename_buf), "%s.%05d", fOutputFilename.c_str(), nfile);
+  std::snprintf(filename_buf, sizeof(filename_buf), "%s.%05d", fOutputFilename.c_str(), subrun);
   std::string filename = filename_buf;
 
   long retval = 0;
@@ -166,6 +172,8 @@ bool CupDAQManager::OpenNewOutputFile()
 
   fTotalWrittenDataSize += retval;
   fOutputFileList.push_back(filename.c_str());
+  fSubRunNumber.store(subrun);
+  fOutputFileOpened.store(true);
 
   return true;
 }
