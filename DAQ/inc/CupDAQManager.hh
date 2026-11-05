@@ -21,6 +21,10 @@
 #include "AbsSoftTrigger.hh"
 #include "ConcurrentDeque.hh"
 #include "Json.hh"
+// Json.hh (nlohmann/json 3.11) shares its include guard with ROOT's bundled
+// <nlohmann/json.hpp> (3.10); including the latter first silently replaces it.
+static_assert(NLOHMANN_JSON_VERSION_MAJOR == 3 && NLOHMANN_JSON_VERSION_MINOR == 11,
+              "use Json.hh, not <nlohmann/json.hpp> (ROOT's copy)");
 #ifdef ENABLE_HDF5
 #include "AbsH5Event.hh"
 #include "H5DataWriter.hh"
