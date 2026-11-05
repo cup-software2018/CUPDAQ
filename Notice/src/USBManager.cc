@@ -183,35 +183,40 @@ int USBManager::OpenDevice(uint16_t vendor_id, uint16_t product_id, int sid)
       continue;
     }
 
-    int interface = 0;
-    r = libusb_claim_interface(handle, interface);
-    if (r < 0) {
-      WARNING("could not claim interface 0 on the device (%d)", r);
+    // Read the SID before claiming: the vendor control request needs no claimed
+    // interface, so boards owned by other DAQ processes are never touched while
+    // scanning (concurrent scans used to collide with LIBUSB_ERROR_BUSY).
+    int sid_tmp = static_cast<int>(GetSerialId(handle));
+    if (sid != NK_SID_ANY && sid != sid_tmp) {
       libusb_close(handle);
       continue;
     }
 
-    int sid_tmp = static_cast<int>(GetSerialId(handle));
-    if (sid == NK_SID_ANY || sid == sid_tmp) {
-      AddDevice(handle, vendor_id, product_id, sid_tmp);
-      nopen_devices++;
-
-      int speed = libusb_get_device_speed(dev);
-      const char * speed_str = (speed == LIBUSB_SPEED_SUPER) ? "super" :
-                               (speed == LIBUSB_SPEED_HIGH)  ? "high"  :
-                               (speed == LIBUSB_SPEED_FULL)  ? "full"  :
-                               (speed == LIBUSB_SPEED_LOW)   ? "low"   : "unknown";
-      INFO("%s speed device opened: bus = %d, address = %3d, serial id = %2u",
-           speed_str, libusb_get_bus_number(dev),
-           libusb_get_device_address(dev), static_cast<unsigned>(sid_tmp));
-
-      libusb_release_interface(handle, interface);
-      break;
-    }
-    else {
-      libusb_release_interface(handle, interface);
+    int interface = 0;
+    r = libusb_claim_interface(handle, interface);
+    if (r < 0) {
+      WARNING("could not claim interface 0 on device(SID: %d, bus = %d, address = %3d): %s",
+              sid_tmp, libusb_get_bus_number(dev), libusb_get_device_address(dev),
+              libusb_error_name(r));
       libusb_close(handle);
+      continue;
     }
+
+    AddDevice(handle, vendor_id, product_id, sid_tmp);
+    nopen_devices++;
+
+    int speed = libusb_get_device_speed(dev);
+    const char * speed_str = (speed == LIBUSB_SPEED_SUPER)  ? "super"
+                             : (speed == LIBUSB_SPEED_HIGH) ? "high"
+                             : (speed == LIBUSB_SPEED_FULL) ? "full"
+                             : (speed == LIBUSB_SPEED_LOW)  ? "low"
+                                                            : "unknown";
+    INFO("%s speed device opened: bus = %d, address = %3d, serial id = %2u", speed_str,
+         libusb_get_bus_number(dev), libusb_get_device_address(dev),
+         static_cast<unsigned>(sid_tmp));
+
+    libusb_release_interface(handle, interface);
+    break;
   }
 
   libusb_free_device_list(devs, 1);
