@@ -260,9 +260,10 @@ long CupDAQManager::OpenNewHDF5File(const char * filename)
     subnum = std::atoi(bname.substr(dot_pos + 1).c_str());
   }
 
-  if (subnum == 0) {
+  // first output file of the run
+  if (!fHDF5File) {
     fHDF5File = new H5DataWriter(filename, fCompressionLevel);
-    fHDF5File->SetSubrun(0);
+    fHDF5File->SetSubrun(subnum);
   }
   else {
     retval = fHDF5File->GetFileSize();

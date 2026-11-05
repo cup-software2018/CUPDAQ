@@ -254,9 +254,11 @@ void CupDAQManager::RC_TCB()
         return;
       }
       if (fDoExitTCB.load()) { return; }
-      if (fDoSplitOutputFile.load()) {
-        SendCommandToDAQs("kSPLITOUTPUTFILE");
-        fDoSplitOutputFile.store(false);
+      // split requested by the timer: advance subrun and broadcast it to DAQs/mergers
+      int target = fSplitTargetSubrun.load();
+      if (target > fSubRunNumber.load()) {
+        fSubRunNumber.store(target);
+        SendCommandToDAQs("kSPLITOUTPUTFILE", {{"subrun", target}});
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

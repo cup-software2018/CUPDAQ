@@ -21,7 +21,9 @@ CupDAQManager::CupDAQManager()
   fIsDAQOpen = false;
 
   fRunNumber = 0;
-  fSubRunNumber = 0;
+  fSubRunNumber = 1;
+  fSplitTargetSubrun = 1;
+  fOutputFileOpened = false;
 
   fDAQID = 0;
   fADCType = ADC::NONE;
@@ -70,8 +72,6 @@ CupDAQManager::CupDAQManager()
   fH5Event = nullptr;
 #endif
   fOutputSplitTime = 60 * 60;
-  fDoSplitOutputFile = false;
-  fDoSplitOutputFileTCB = false;
 
   fNBuiltEvent = 0;
   fTriggerNumber = 0;

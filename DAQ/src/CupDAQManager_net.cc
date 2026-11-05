@@ -107,8 +107,11 @@ void CupDAQManager::TF_MsgServer()
         INFO("[%s] ENDRUN command received", name.c_str());
       }
       else if (command == "kSPLITOUTPUTFILE") {
-        istcb ? fDoSplitOutputFileTCB.store(true) : fDoSplitOutputFile.store(true);
-        INFO("[%s] SPLITOUTPUTFILE command received", name.c_str());
+        // {"subrun": N} from TCB; without it, split to the next subrun
+        int subrun = req_json.value("subrun", fSubRunNumber.load() + 1);
+        RequestSplit(subrun);
+        rep_json["subrun"] = fSplitTargetSubrun.load();
+        INFO("[%s] SPLITOUTPUTFILE command received (subrun=%d)", name.c_str(), subrun);
       }
       else if (command == "kSETERROR") {
         RUNSTATE::SetError(fRunStatus);

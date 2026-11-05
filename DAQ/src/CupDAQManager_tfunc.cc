@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <memory>
 #include <mutex>
-#include <nlohmann/json.hpp>
 #include <string>
 #include <thread>
 #include <vector>
@@ -59,9 +58,16 @@ void CupDAQManager::TF_RunManager()
       }
     }
 
-    if (fDoSplitOutputFile.load() && !fDoSendEvent) {
-      if (!OpenNewOutputFile()) { RUNSTATE::SetError(fRunStatus); }
-      fDoSplitOutputFile.store(false);
+    // split output when a larger subrun is requested (own timer or TCB command)
+    int target = fSplitTargetSubrun.load();
+    if (target > fSubRunNumber.load()) {
+      if (fDoSendEvent) {
+        // no output file here (events go to the merger); just follow the subrun
+        fSubRunNumber.store(target);
+      }
+      else if (fOutputFileOpened.load()) {
+        if (!OpenNewOutputFile(target)) { RUNSTATE::SetError(fRunStatus); }
+      }
     }
 
     bool runstate = RUNSTATE::CheckState(fRunStatus, RUNSTATE::kRUNENDED) ||
@@ -285,8 +291,7 @@ void CupDAQManager::TF_SplitOutput(bool ontcb)
 
     if (elapsetime >= fOutputSplitTime) {
       start_time = std::chrono::steady_clock::now();
-      fDoSplitOutputFile.store(true);
-      fSubRunNumber.fetch_add(1);
+      RequestSplit(fSubRunNumber.load() + 1);
 
       if (fVerboseLevel >= 1) { INFO("output file will be split"); }
     }
