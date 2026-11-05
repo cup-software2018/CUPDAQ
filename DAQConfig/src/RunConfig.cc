@@ -259,18 +259,22 @@ void RunConfig::ConfigTCB(YAML::Node ymlnode)
   setSafeSW(tcb["SWI"], [&](int a, int b, int c, int d) { conf->SetSWI(a, b, c, d); });
 
   // per-channel trigger switch: SWCH: [[ch, F, SM, SL, I], ...]
+  // a single flat entry SWCH: [ch, F, SM, SL, I] is also accepted
   if (tcb["SWCH"] && tcb["SWCH"].IsSequence()) {
-    for (const auto & entry : tcb["SWCH"]) {
+    YAML::Node swch = tcb["SWCH"];
+    auto setSWCH = [&](const YAML::Node & entry) {
       if (!entry.IsSequence() || entry.size() < 5) {
         WARNING("TCB SWCH entry must be [ch, F, SM, SL, I], skipped");
-        continue;
+        return;
       }
-      int ch = entry[0].as<int>();
-      int f = entry[1].as<int>();
-      int sm = entry[2].as<int>();
-      int sl = entry[3].as<int>();
-      int i = entry[4].as<int>();
-      conf->SetSWCH(ch, f, sm, sl, i);
+      conf->SetSWCH(entry[0].as<int>(), entry[1].as<int>(), entry[2].as<int>(), entry[3].as<int>(),
+                    entry[4].as<int>());
+    };
+    if (swch.size() > 0 && swch[0].IsScalar()) { setSWCH(swch); }
+    else {
+      for (const auto & entry : swch) {
+        setSWCH(entry);
+      }
     }
   }
 
