@@ -19,7 +19,7 @@ public:
   uint32_t ReadBCount() const;
 
   // bcount: number of 256-byte blocks
-  int ReadData(uint32_t bcount, unsigned char * data, unsigned int timeout = 0) const;
+  int ReadData(uint32_t bcount, unsigned char * data, unsigned int timeout = 1000u) const;
 
   int Sid() const;
 
