@@ -103,7 +103,7 @@ public:
 
   // Data Readout
   int ReadBCount() const;
-  int ReadData(int bcount, unsigned char * data, unsigned int timeout = 0) const;
+  int ReadData(int bcount, unsigned char * data, unsigned int timeout = 1000u) const;
   void FlushData() const;
 
   // Calibration
