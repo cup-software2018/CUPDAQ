@@ -1,6 +1,7 @@
 #include "TROOT.h"
 
 #include "CupDAQManager.hh"
+#include "WCMDDoorTrigger.hh"
 #include "daqopt.hh"
 
 int main(int argc, char ** argv)
@@ -42,9 +43,15 @@ int main(int argc, char ** argv)
   //   swtrigger->SetVerboseLevel(option.vlevel);
   //   DAQ->SetSoftTrigger(swtrigger);
 
+  // WCMD door trigger; active only if WCMDDoorTrigger.Enabled is set in config
+  auto * swtrigger = new WCMDDoorTrigger();
+  swtrigger->SetVerboseLevel(option.vlevel);
+  DAQ->SetSoftTrigger(swtrigger);
+
   DAQ->Run();
 
   delete DAQ;
+  delete swtrigger;
 
   return 0;
 }
