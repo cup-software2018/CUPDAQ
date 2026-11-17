@@ -84,7 +84,13 @@ bool PSMDTrigger::DoTrigger(BuiltEvent * event)
   int nslab = 0;
   int nadc = event->GetEntries();
   for (int k = 0; k < nadc; k++) {
-    auto * adcraw = static_cast<FADCRawEvent *>(event->At(k));
+    // only IADC boards; other boards (e.g. FADC) can share the event
+    auto * raw = static_cast<AbsADCRaw *>(event->At(k));
+    if (raw->GetADCType() != ADC::IADC) continue;
+
+    // only waveform data (IADC MODE > 0, FADCRawEvent); MODE 0 (SADCRawEvent) is skipped
+    auto * adcraw = dynamic_cast<FADCRawEvent *>(raw);
+    if (!adcraw) continue;
     auto * header = adcraw->GetADCHeader();
 
     // the header carries the hardware MID (SID + 192 for IADCT); without its config the board

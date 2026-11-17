@@ -90,7 +90,12 @@ bool WCMDDoorTrigger::DoTrigger(BuiltEvent * event)
 
   int nadc = event->GetEntries();
   for (int k = 0; decision == kNoDoorCh && fDoorMID >= 0 && k < nadc; k++) {
-    auto * adcraw = static_cast<FADCRawEvent *>(event->At(k));
+    // the door channel is on an FADC; other boards (e.g. IADC, possibly SADCRawEvent) can share
+    // the event and must not be cast to FADCRawEvent
+    auto * raw = static_cast<AbsADCRaw *>(event->At(k));
+    if (raw->GetADCType() != ADC::FADC) continue;
+
+    auto * adcraw = static_cast<FADCRawEvent *>(raw);
     auto * header = adcraw->GetADCHeader();
     if (header->GetMID() != fDoorMID || fDoorCh >= adcraw->GetNCH() || header->GetZero(fDoorCh)) {
       continue;
