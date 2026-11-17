@@ -12,7 +12,7 @@
 //   2) A: max s4(tr+k), k = 0..PW-1, above ThrA
 //   3) B: sum of s4(j-1) over the pulse peaks j in [tr+W0, tr+W1), above ThrB. A peak is
 //      v[j] >= HMin && v[j] >= v[j-1] && v[j] > v[j+1].
-// Random trigger events (trigger type 1) are always kept. Events without the door channel or
+// Pedestal trigger events (trigger type 1) are always kept. Events without the door channel or
 // without a PST crossing are kept as a fail-safe; so are all events when the door channel or its
 // PSW is missing from the FADC config.
 // Spec: WCMD/door_trig/SWTRIG_DOOR.md
@@ -34,7 +34,7 @@ public:
     kReject = 0,
     kPassA = 1,       // large trigger pulse
     kPassB = 2,       // summed pulse charge in the window
-    kPeriodic = 3,    // random trigger, bypass
+    kPedestal = 3,    // pedestal trigger (trigger type 1), bypass
     kNoTrgSample = 4, // no PST crossing in the waveform, kept
     kNoDoorCh = 5,    // door channel not in the event or not configured, kept
     kNDecision

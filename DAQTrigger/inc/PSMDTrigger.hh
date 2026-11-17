@@ -15,7 +15,7 @@
 // rejected, otherwise events with no channel that fired are rejected. With
 // ZSUTBit on, channels that did not fire are also marked zero so the writer
 // drops them.
-// Random trigger events (trigger type 1) keep all channels.
+// Pedestal trigger events (trigger type 1) keep all channels.
 class PSMDTrigger : public AbsSoftTrigger {
 public:
   PSMDTrigger();

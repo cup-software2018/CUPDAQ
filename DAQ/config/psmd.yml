@@ -88,7 +88,7 @@ IADCT:
 #   A slab fires when all its channels not listed in DeadCh fired.
 #   With MinSlab > 0, rejects events with fewer than MinSlab fired slabs in the whole event;
 #   otherwise rejects events that have no channel that fired.
-#   Random-trigger events (trigger type 1) always pass with all channels.
+#   Pedestal-trigger events (trigger type 1) always pass with all channels.
 PSMDTrigger:
   Enabled: 1   # 1: on, 0 or omitted: off
   ZSUTBit: 1   # 1: zero-suppress channels that did not fire, 0 or omitted: keep all channels

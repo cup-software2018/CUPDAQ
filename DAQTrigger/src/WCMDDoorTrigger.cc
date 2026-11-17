@@ -13,7 +13,7 @@ namespace
 constexpr int kFADCSamplePeriod = 2; // ns per waveform sample, PSW is in ns
 
 const char * kDecisionName[WCMDDoorTrigger::kNDecision] = {"reject",           "A (trigger pulse)",
-                                                           "B (pulse charge)", "periodic",
+                                                           "B (pulse charge)", "pedestal",
                                                            "no PST crossing",  "no door channel"};
 } // namespace
 
@@ -86,7 +86,7 @@ bool WCMDDoorTrigger::DoTrigger(BuiltEvent * event)
   CountInput(event);
 
   unsigned int ttype = event->GetTriggerType();
-  Decision decision = ttype == 1 ? kPeriodic : kNoDoorCh;
+  Decision decision = ttype == 1 ? kPedestal : kNoDoorCh;
 
   int nadc = event->GetEntries();
   for (int k = 0; decision == kNoDoorCh && fDoorMID >= 0 && k < nadc; k++) {
@@ -111,7 +111,7 @@ bool WCMDDoorTrigger::DoTrigger(BuiltEvent * event)
 WCMDDoorTrigger::Decision WCMDDoorTrigger::Evaluate(const unsigned short * adc, int ped, int ns,
                                                     unsigned int ttype, Result * result) const
 {
-  if (ttype == 1) return kPeriodic;
+  if (ttype == 1) return kPedestal;
   if (fDoorMID < 0) return kNoDoorCh;
   if (result) *result = Result{};
   if (ns < 4 || ns < fPSTWidth) return kNoTrgSample;

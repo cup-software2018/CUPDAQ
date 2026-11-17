@@ -74,7 +74,7 @@ bool PSMDTrigger::DoTrigger(BuiltEvent * event)
 {
   CountInput(event);
 
-  // random trigger: keep all channels
+  // pedestal trigger: keep all channels
   if (event->GetTriggerType() == 1) {
     fNTriggeredEvent++;
     return true;
