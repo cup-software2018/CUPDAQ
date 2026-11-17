@@ -24,6 +24,13 @@ public:
   virtual void PrintReport() const;
 
 protected:
+  // reset the event counters and the trigger time range; call from InitTrigger
+  void ResetCounters();
+  // count one input event and track its trigger time; call at the start of DoTrigger
+  void CountInput(const BuiltEvent * event);
+  // trigger time span of the input events, in seconds
+  double GetElapsedTime() const;
+
   int fDAQID{0};
   std::string fName;
 
@@ -32,6 +39,9 @@ protected:
 
   int fTotalInputEvent{0};
   int fNTriggeredEvent{0};
+
+  unsigned long fFirstTrgTime{0}; // trigger time of the first input event, in ns
+  unsigned long fLastTrgTime{0};  // trigger time of the last input event, in ns
 };
 
 inline void AbsSoftTrigger::SetDAQID(int id) { fDAQID = id; }

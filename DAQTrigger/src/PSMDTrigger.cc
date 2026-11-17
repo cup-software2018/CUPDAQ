@@ -68,15 +68,11 @@ void PSMDTrigger::DoConfig(AbsConfList * configs)
   }
 }
 
-void PSMDTrigger::InitTrigger()
-{
-  fTotalInputEvent = 0;
-  fNTriggeredEvent = 0;
-}
+void PSMDTrigger::InitTrigger() { ResetCounters(); }
 
 bool PSMDTrigger::DoTrigger(BuiltEvent * event)
 {
-  fTotalInputEvent++;
+  CountInput(event);
 
   // random trigger: keep all channels
   if (event->GetTriggerType() == 1) {

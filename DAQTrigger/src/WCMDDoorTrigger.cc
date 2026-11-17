@@ -77,14 +77,13 @@ void WCMDDoorTrigger::DoConfig(AbsConfList * configs)
 
 void WCMDDoorTrigger::InitTrigger()
 {
-  fTotalInputEvent = 0;
-  fNTriggeredEvent = 0;
+  ResetCounters();
   std::fill(std::begin(fNDecision), std::end(fNDecision), 0L);
 }
 
 bool WCMDDoorTrigger::DoTrigger(BuiltEvent * event)
 {
-  fTotalInputEvent++;
+  CountInput(event);
 
   unsigned int ttype = event->GetTriggerType();
   Decision decision = ttype == 1 ? kPeriodic : kNoDoorCh;

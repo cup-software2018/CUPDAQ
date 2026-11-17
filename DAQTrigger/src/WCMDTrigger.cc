@@ -13,15 +13,11 @@ void WCMDTrigger::DoConfig(AbsConfList * configs)
   if (!node) return;
 }
 
-void WCMDTrigger::InitTrigger()
-{
-  fTotalInputEvent = 0;
-  fNTriggeredEvent = 0;
-}
+void WCMDTrigger::InitTrigger() { ResetCounters(); }
 
 bool WCMDTrigger::DoTrigger(BuiltEvent * event)
 {
-  fTotalInputEvent++;
+  CountInput(event);
   fNTriggeredEvent++;
   return true;
 }
