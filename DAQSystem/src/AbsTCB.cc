@@ -123,8 +123,11 @@ void AbsTCB::WriteRegisterIADC(IADCTConf * conf)
   uint32_t mid = conf->MID();
 
   int mode = conf->MODE();
-  WriteRL(mid, conf->RL());
-  WriteGW(mid, conf->GW());
+  // RL and GW share the same register address on IADC64:
+  // write only the one that applies to the current mode,
+  // otherwise the second write overwrites the first.
+  if (mode > 0) WriteRL(mid, conf->RL()); // waveform mode
+  else WriteGW(mid, conf->GW());          // mode 0
   WriteCW(mid, 1, conf->CW());
   WritePSW(mid, 1, conf->PSW());
   WriteDAQMODE(mid, mode);
