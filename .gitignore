@@ -8,6 +8,7 @@
 /lib64
 /install
 /.cache
+/.claude
 /.clangd
 /.clang-format
 /ld.sh
@@ -19,3 +20,4 @@
 /*.root*
 /*.h5*
 /*.sh
+__pycache__/
