@@ -2,7 +2,7 @@
 # CUPDAQ top-level CMakeLists.txt (Linux Optimized & Relocatable)
 # ------------------------------------------------------------
 cmake_minimum_required ( VERSION 3.16 )
-project ( CUPDAQ VERSION 1.0.0 LANGUAGES CXX )
+project ( CUPDAQ LANGUAGES CXX )
 
 # ---- Compilation Database ----
 # Generates compile_commands.json in the build directory,
@@ -176,12 +176,6 @@ configure_package_config_file (
     INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
 )
 
-write_basic_package_version_file (
-    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY AnyNewerVersion
-)
-
 install ( EXPORT CUPDAQTargets
     NAMESPACE CUPDAQ::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
@@ -189,7 +183,6 @@ install ( EXPORT CUPDAQTargets
 
 install ( FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/CUPDAQConfigVersion.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CUPDAQ
 )
 
