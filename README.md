@@ -24,7 +24,7 @@ CUPDAQ requires **C++17** and **CMake 3.16** or later. The following minimum OS/
 | Dependency | Notes |
 |------------|-------|
 | **ROOT** >= 6.00 | Core, RIO, RHTTP components required |
-| **CUPDataModel** | Raw data object library — must be installed before CUPDAQ (see below) |
+| **CUPDataModel** >= v1.4 | Raw data object library — must be installed before CUPDAQ (see below); v1.4 adds `evtnum` to the HDF5 `EventInfo_t` |
 | **libusb-1.0** | USB communication for Notice Korea boards |
 | **yaml-cpp** | Configuration file parsing |
 | **ZeroMQ / cppzmq** | Message server and network communication |

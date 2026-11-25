@@ -83,6 +83,7 @@ void CupDAQManager::WriteFADC_MOD_HDF5()
       eventinfo.tnum = ev->GetTriggerNumber();
       eventinfo.ttime = ev->GetTriggerTime();
       eventinfo.ttype = ev->GetTriggerType();
+      eventinfo.evtnum = ev->GetEventNumber();
 
       unsigned short nhit = 0;
 
@@ -223,6 +224,7 @@ void CupDAQManager::WriteSADC_MOD_HDF5()
       eventinfo.tnum = tnum;
       eventinfo.ttime = fastttime;
       eventinfo.ttype = ttype;
+      eventinfo.evtnum = ev->GetEventNumber();
       eventinfo.nhit = nhit;
 
       wlock.lock();

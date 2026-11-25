@@ -72,10 +72,7 @@ void CupDAQManager::WriteFADC_MOD_ROOT()
       eventinfo->SetTriggerTime(ev->GetTriggerTime());
       eventinfo->SetTriggerType(ev->GetTriggerType());
 
-      {
-        std::lock_guard<std::mutex> lock(fMonitorMutex);
-        eventinfo->SetEventNumber(fNBuiltEvent);
-      }
+      eventinfo->SetEventNumber(ev->GetEventNumber());
 
       int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
@@ -159,10 +156,7 @@ void CupDAQManager::WriteSADC_MOD_ROOT()
       eventinfo->SetTriggerTime(ev->GetTriggerTime());
       eventinfo->SetTriggerType(ev->GetTriggerType());
 
-      {
-        std::lock_guard<std::mutex> lock(fMonitorMutex);
-        eventinfo->SetEventNumber(fNBuiltEvent);
-      }
+      eventinfo->SetEventNumber(ev->GetEventNumber());
 
       int nadc = ev->GetEntries();
       for (int j = 0; j < nadc; j++) {
